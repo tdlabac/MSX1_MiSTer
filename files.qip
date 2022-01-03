@@ -5,3 +5,4 @@ set_global_assignment -name QIP_FILE rtl/T80/T80.qip
 set_global_assignment -name QIP_FILE rtl/vdp18/vdp18.qip
 set_global_assignment -name VHDL_FILE rtl/cv_clock.vhd
 set_global_assignment -name VHDL_FILE rtl/bram.vhd
+set_global_assignment -name VERILOG_FILE rtl/jt8255.v
