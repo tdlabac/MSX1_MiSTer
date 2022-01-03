@@ -200,12 +200,17 @@ assign BUTTONS = 0;
 localparam CONF_STR = {
 	"MSX1;;",
 	"-;",
+	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"O3,Border,No,Yes;",
+	"O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+	"OAB,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
 	"T0,Reset;",
 	"R0,Reset and close OSD;",
 	"V,v",`BUILD_DATE 
 };
 
 wire forced_scandoubler;
+wire [21:0] gamma_bus;
 wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
@@ -215,7 +220,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
 	.EXT_BUS(),
-	.gamma_bus(),
+	.gamma_bus(gamma_bus),
 
 	.forced_scandoubler(forced_scandoubler),
 
@@ -249,11 +254,72 @@ wire reset = RESET | status[0] | buttons[1];
 
 //////////////////////////////////////////////////////////////////
 
+wire [7:0] R,G,B;
+wire hblank, vblank, hsync_n, vsync_n;
 msx1 MSX1
 (
 	.clk(clk_sys),
 	.ce_10m7(ce_10m7),
 	.reset(reset),
+	
+	.border(status[3]),
+	.R(R),
+	.G(G),
+	.B(B),
+	.hsync_n(hsync_n),
+	.vsync_n(vsync_n),
+	.hblank(hblank),
+	.vblank(vblank)	
+);
+
+/////////////////  VIDEO  /////////////////////////
+
+assign CLK_VIDEO = clk_sys;
+
+always @(posedge CLK_VIDEO) 
+	en216p <= ((HDMI_WIDTH == 1920) && (HDMI_HEIGHT == 1080) && !forced_scandoubler && !scale);
+
+wire [1:0] ar = status[2:1];
+wire vga_de;
+reg  en216p;
+video_freak video_freak
+(
+	.*,
+	.VGA_DE_IN(vga_de),
+	.ARX((!ar) ? 12'd4 : (ar - 1'd1)),
+	.ARY((!ar) ? 12'd3 : 12'd0),
+	.CROP_SIZE(en216p ? 10'd216 : 10'd0),
+	.CROP_OFF(0),
+	.SCALE(status[11:10])
+);
+
+wire [2:0] scale = status[9:7];
+wire [2:0] sl = scale ? scale - 1'd1 : 3'd0;
+assign VGA_SL = sl[1:0];
+
+reg hs_o, vs_o;
+always @(posedge CLK_VIDEO) begin
+	hs_o <= ~hsync_n;
+	if(~hs_o & ~hsync_n) 
+		vs_o <= ~vsync_n;
+end
+
+wire  freeze_sync;
+video_mixer #(.LINE_LENGTH(290), .GAMMA(1)) video_mixer
+(
+	.*,
+	.ce_pix(ce_5m3),
+
+	.scandoubler(scale || forced_scandoubler),
+	.hq2x(scale==1),
+
+	.VGA_DE(vga_de),
+
+	// Positive pulses.
+	.HSync(hs_o),
+	.VSync(vs_o),
+	.HBlank(hblank),
+	.VBlank(vblank)
 );
 
 endmodule
