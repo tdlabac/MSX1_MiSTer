@@ -129,4 +129,29 @@ io_decoder io_decoder
 	.cen_n(cen_n)
 );
 
+//  -----------------------------------------------------------------------------
+//  -- 82C55 PPI
+//  -----------------------------------------------------------------------------
+wire [7:0] d_from_8255;
+wire [7:0] ppi_out_a, ppi_out_c;
+jt8255 PPI
+(
+	.rst(reset),
+	.clk(clk),
+	.addr(a[1:0]),
+	.din(d_from_cpu),
+	.dout(d_from_8255),
+	.rdn(rd_n),
+	.wrn(wr_n),
+	.csn(ppi_n),
+	
+	.porta_din(8'h0),
+	.portb_din(8'h0),
+	.portc_din(8'h0),
+
+	.porta_dout(ppi_out_a),
+	.portb_dout(),
+   .portc_dout(ppi_out_c)
+ );
+
 endmodule
