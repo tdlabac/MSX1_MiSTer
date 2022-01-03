@@ -88,8 +88,7 @@ spram #(14) vram
 //  -- TMS9928A Video Display Processor
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_vdp;
-wire vdp_n, vdp_int_n;
-assign vdp_n = ~(~iorq_n & m1_n & (a[7:1] == 7'b1001100));
+wire vdp_int_n;
 vdp18_core #(.is_pal_g(1),.compat_rgb_g(1)) vdp18
 (
 	.clk_i(clk),
@@ -113,6 +112,21 @@ vdp18_core #(.is_pal_g(1),.compat_rgb_g(1)) vdp18
 	.vsync_n_o(vsync_n),
 	.hblank_o(hblank),
 	.vblank_o(vblank)
+);
+
+//  -----------------------------------------------------------------------------
+//  -- IO Decoder
+//  -----------------------------------------------------------------------------
+wire vdp_n, psg_n, ppi_n, cen_n;
+io_decoder io_decoder
+(
+	.addr(a),
+	.iorq_n(iorq_n),
+	.m1_n(m1_n),
+	.vdp_n(vdp_n),
+	.psg_n(psg_n),
+	.ppi_n(ppi_n),
+	.cen_n(cen_n)
 );
 
 endmodule
