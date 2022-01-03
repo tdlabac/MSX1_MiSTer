@@ -235,6 +235,16 @@ pll pll
 	.outclk_0(clk_sys)
 );
 
+reg ce_10m7 = 0;
+reg ce_5m3 = 0;
+always @(posedge clk_sys) begin
+	reg [2:0] div;
+	
+	div <= div+1'd1;
+	ce_10m7 <= !div[1:0];
+	ce_5m3  <= !div[2:0];
+end
+
 wire reset = RESET | status[0] | buttons[1];
 
 //////////////////////////////////////////////////////////////////
@@ -242,7 +252,8 @@ wire reset = RESET | status[0] | buttons[1];
 msx1 MSX1
 (
 	.clk(clk_sys),
-	.reset(reset)
+	.ce_10m7(ce_10m7),
+	.reset(reset),
 );
 
 endmodule
