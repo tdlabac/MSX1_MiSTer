@@ -59,4 +59,20 @@ spram #(.addr_width(15), .mem_init_file("rtl/rom/8020-00bios.mif"), .mem_name("R
 	.q(rom_q)
 );
 
+//  -----------------------------------------------------------------------------
+//  -- Video RAM 16k
+//  -----------------------------------------------------------------------------
+wire [13:0] vram_a;
+wire [7:0]  vram_do;
+wire [7:0]  vram_di;
+wire        vram_we;
+spram #(14) vram
+(
+	.clock(clk),
+	.address(vram_a),
+	.wren(vram_we),
+	.data(vram_do),
+	.q(vram_di)
+);
+
 endmodule
