@@ -2,3 +2,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/msx1.v
 set_global_assignment -name SDC_FILE msx1.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE msx1.sv
 set_global_assignment -name QIP_FILE rtl/T80/T80.qip
+set_global_assignment -name QIP_FILE rtl/vdp18/vdp18.qip
