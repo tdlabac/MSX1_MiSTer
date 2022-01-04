@@ -33,7 +33,7 @@ cv_clock clock
 //  -----------------------------------------------------------------------------
 wire [15:0] a;
 wire [7:0] d_to_cpu, d_from_cpu;
-wire mreq_n, wr_n, m1_n, iorq_n, rd_n, rfrsh_n, wait_n = 1; 
+wire mreq_n, wr_n, m1_n, iorq_n, rd_n, rfrsh_n, wait_n; 
 t80pa #(.Mode(0)) T80
 (
 	.RESET_n(~reset),
@@ -56,6 +56,29 @@ t80pa #(.Mode(0)) T80
 	.DI(d_to_cpu),
 	.DO(d_from_cpu)
 );
+
+//  -----------------------------------------------------------------------------
+//  -- WAIT
+//  -----------------------------------------------------------------------------
+wire exwait_n = 1;
+wire exwait = ~exwait_n;
+
+reg powait;
+always @(posedge clk_en_3m58_p, posedge exwait, posedge powait) begin
+	if (exwait)
+		wait_n <= 0;
+	else if (powait)
+		wait_n <= 1;
+	else
+		wait_n <= m1_n;
+end
+
+always @(posedge clk_en_3m58_p, posedge exwait) begin
+	if (exwait)
+		powait <= 0;
+	else
+		powait <= ~wait_n;
+end
 
 //  -----------------------------------------------------------------------------
 //  -- ROM
