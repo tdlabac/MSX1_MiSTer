@@ -189,4 +189,12 @@ memory_mapper memory_mapper
 	.CS2_n(CS2_n)
 ); 
 
+//  -----------------------------------------------------------------------------
+//  -- CPU data multiplex
+//  ----------------------------------------------------------------------------- 
+assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
+						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
+						~(vdp_n | rd_n) ? d_from_vdp :
+						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
+
 endmodule
