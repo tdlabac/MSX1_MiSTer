@@ -7,3 +7,4 @@ set_global_assignment -name VHDL_FILE rtl/cv_clock.vhd
 set_global_assignment -name VHDL_FILE rtl/bram.vhd
 set_global_assignment -name VERILOG_FILE rtl/jt8255.v
 set_global_assignment -name VERILOG_FILE rtl/io_decoder.v
+set_global_assignment -name VERILOG_FILE rtl/memory_mapper.v

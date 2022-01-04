@@ -154,4 +154,25 @@ jt8255 PPI
    .portc_dout(ppi_out_c)
  );
 
+//  -----------------------------------------------------------------------------
+//  -- Memory mapper
+//  -----------------------------------------------------------------------------
+wire CS1_n, CS01_n, CS12_n, CS2_n;
+wire [3:0] SLTSL_n;
+memory_mapper memory_mapper
+(
+	.reset(reset),
+	.addr(a),
+	.ppi_n(ppi_n),
+	.RAM_CS(ppi_out_a),
+	.mreq_n(mreq_n),
+	.rfrsh_n(rfrsh_n),
+	.rd_n(rd_n),
+	.SLTSL_n(SLTSL_n),
+	.CS1_n(CS1_n),
+	.CS01_n(CS01_n),
+	.CS12_n(CS12_n),
+	.CS2_n(CS2_n)
+); 
+
 endmodule
