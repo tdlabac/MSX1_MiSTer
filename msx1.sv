@@ -269,7 +269,8 @@ msx1 MSX1
 	.hsync_n(hsync_n),
 	.vsync_n(vsync_n),
 	.hblank(hblank),
-	.vblank(vblank)	
+	.vblank(vblank),
+	.ps2_key(ps2_key)
 );
 
 /////////////////  VIDEO  /////////////////////////

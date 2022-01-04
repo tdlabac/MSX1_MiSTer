@@ -10,8 +10,8 @@ module msx1
 	output        hsync_n,
 	output        vsync_n,
 	output        hblank,
-	output        vblank
-
+	output        vblank,
+	input  [10:0] ps2_key
 );
 
 
@@ -160,7 +160,7 @@ jt8255 PPI
 	.csn(ppi_n),
 	
 	.porta_din(8'h0),
-	.portb_din(8'h0),
+	.portb_din(d_from_kb),
 	.portc_din(8'h0),
 
 	.porta_dout(ppi_out_a),
@@ -196,5 +196,18 @@ assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
 						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
 						~(vdp_n | rd_n) ? d_from_vdp :
 						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
+
+//  -----------------------------------------------------------------------------
+//  -- Keyboard decoder
+//  -----------------------------------------------------------------------------
+wire [7:0] d_from_kb;
+keyboard msx_key
+(
+	.reset_n_i(~reset),
+	.clk_i(clk),
+	.ps2_code_i(ps2_key),
+	.kb_addr_i(ppi_out_c[3:0]),
+	.kb_data_o(d_from_kb)
+);
 
 endmodule
