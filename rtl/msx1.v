@@ -11,6 +11,7 @@ module msx1
 	output        vsync_n,
 	output        hblank,
 	output        vblank,
+	output [10:0] audio,
 	input  [10:0] ps2_key
 );
 
@@ -70,7 +71,7 @@ always @(posedge clk_en_3m58_p, posedge exwait, posedge powait) begin
 	else if (powait)
 		wait_n <= 1;
 	else
-		wait_n <= m1_n;
+		wait_n <= (m1_n & a[1]) | (m1_n & psg_n);
 end
 
 always @(posedge clk_en_3m58_p, posedge exwait) begin
@@ -218,6 +219,7 @@ memory_mapper memory_mapper
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
 						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
 						~(vdp_n | rd_n) ? d_from_vdp :
+						~(psg_n | rd_n) ? d_from_psg :
 						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
 
 //  -----------------------------------------------------------------------------
@@ -231,6 +233,36 @@ keyboard msx_key
 	.ps2_code_i(ps2_key),
 	.kb_addr_i(ppi_out_c[3:0]),
 	.kb_data_o(d_from_kb)
+);
+
+//  -----------------------------------------------------------------------------
+//  -- Sound AY-3-8910
+//  -----------------------------------------------------------------------------
+wire [7:0] d_from_psg,ay_ch_a, ay_ch_b, ay_ch_c, psg_ioa, psg_iob;
+wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
+wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
+assign audio = {3'b000, ay_ch_a + ay_ch_b + ay_ch_c};
+YM2149 PSG
+(
+	.CLK(clk),
+	.CE(clk_en_3m58_p),
+	.RESET(reset),
+	.BDIR(psg_bdir),
+	.BC(psg_bc),
+	.DI(d_from_cpu),
+	.DO(d_from_psg),
+	.CHANNEL_A(ay_ch_a),
+	.CHANNEL_B(ay_ch_b),
+	.CHANNEL_C(ay_ch_c),
+
+	.SEL(1),
+	.MODE(1),
+	.ACTIVE(),
+
+	.IOA_in(8'h0),
+	.IOA_out(),
+	.IOB_in(8'h0),
+	.IOB_out(psg_iob)
 );
 
 endmodule

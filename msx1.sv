@@ -184,8 +184,8 @@ assign VGA_SCALER = 0;
 assign HDMI_FREEZE = 0;
 
 assign AUDIO_S = 0;
-assign AUDIO_L = 0;
-assign AUDIO_R = 0;
+assign AUDIO_L = {audio,5'd0};
+assign AUDIO_R = {audio,5'd0};
 assign AUDIO_MIX = 0;
 
 assign LED_DISK = 0;
@@ -256,6 +256,7 @@ wire reset = RESET | status[0] | buttons[1];
 
 wire [7:0] R,G,B;
 wire hblank, vblank, hsync_n, vsync_n;
+wire [10:0] audio;
 msx1 MSX1
 (
 	.clk(clk_sys),
@@ -270,6 +271,7 @@ msx1 MSX1
 	.vsync_n(vsync_n),
 	.hblank(hblank),
 	.vblank(vblank),
+	.audio(audio),
 	.ps2_key(ps2_key)
 );
 
