@@ -10,3 +10,4 @@ set_global_assignment -name VERILOG_FILE rtl/io_decoder.v
 set_global_assignment -name VERILOG_FILE rtl/memory_mapper.v
 set_global_assignment -name VHDL_FILE rtl/keyboard.vhd
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/YM2149.sv
+set_global_assignment -name VERILOG_FILE rtl/cart/rom.v
