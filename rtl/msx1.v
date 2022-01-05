@@ -20,7 +20,9 @@ module msx1
 	input         ioctl_wr,
 	input  [24:0] ioctl_addr,
 	input   [7:0] ioctl_dout,
-	input         ioctl_isROM
+	input         ioctl_isROM,
+	output        cas_motor,
+	input         cas_audio_in
 );
 
 
@@ -181,6 +183,7 @@ io_decoder io_decoder
 wire [7:0] d_from_8255;
 wire [7:0] ppi_out_a, ppi_out_c;
 wire keybeep = ppi_out_c[7];
+assign cas_motor =  ppi_out_c[4];
 jt8255 PPI
 (
 	.rst(reset),
@@ -251,10 +254,10 @@ keyboard msx_key
 wire [7:0] d_from_psg,ay_ch_a, ay_ch_b, ay_ch_c, psg_ioa, psg_iob;
 wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
 wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
-assign audio = {keybeep, 2'b00, ay_ch_a + ay_ch_b + ay_ch_c};
+assign audio = {keybeep, (cas_audio_in & ~cas_motor), 1'b0, ay_ch_a + ay_ch_b + ay_ch_c};
 wire [5:0] joy_a = {~joy1[5], ~joy1[4], ~joy1[0], ~joy1[1], ~joy1[2], ~joy1[3]};
 wire [5:0] joy_b = {~joy0[5], ~joy0[4], ~joy0[0], ~joy0[1], ~joy0[2], ~joy0[3]};
-assign psg_ioa = {2'b00, psg_iob[6] ? joy_a : joy_b};
+assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joy_a : joy_b};
 YM2149 PSG
 (
 	.CLK(clk),
