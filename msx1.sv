@@ -202,6 +202,10 @@ localparam CONF_STR = {
 	"-;",
 	"F1,ROM,Load Cartridge;",
 	"-;",
+	"OC,Tape Input,File,ADC;",
+	"D0F2,CAS,Cas File;",
+	"D0TD,Tape Rewind;",
+	"-;",
 	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O3,Border,No,Yes;",
 	"O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
@@ -223,6 +227,7 @@ wire        ioctl_wr;
 wire        ioctl_wait = 0;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
+wire cas_audio_in = status[12] ? tape_in : CAS_dout;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -235,6 +240,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
+	.status_menumask({status[12]}),
 	
 	.ps2_key(ps2_key),
 	.joystick_0(joy0),
@@ -248,6 +254,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 );
 
 wire ioctl_isROM = (ioctl_index[5:0] == 6'd1);
+wire ioctl_isCAS = (ioctl_index[5:0] == 6'd2);
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
@@ -299,7 +306,9 @@ msx1 MSX1
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
-	.ioctl_isROM(ioctl_isROM)
+	.ioctl_isROM(ioctl_isROM),
+	.cas_motor(motor),
+	.cas_audio_in(cas_audio_in)
 );
 
 /////////////////  VIDEO  /////////////////////////
@@ -350,6 +359,61 @@ video_mixer #(.LINE_LENGTH(290), .GAMMA(1)) video_mixer
 	.VSync(vs_o),
 	.HBlank(hblank),
 	.VBlank(vblank)
+);
+
+/////////////////  Tape In   /////////////////////////
+
+wire tape_in;
+wire tape_adc, tape_adc_act;
+
+assign tape_in = tape_adc_act & tape_adc;
+
+ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(42954545)) tape
+(
+  .clk(clk_sys),
+  .ADC_BUS(ADC_BUS),
+  .dout(tape_adc),
+  .active(tape_adc_act)
+);
+
+
+///////////// OSD CAS load //////////
+
+wire motor;
+wire CAS_dout;
+wire play, rewind;
+wire CAS_rd;
+wire [17:0] CAS_addr;
+wire [17:0] CAS_ram_addr;
+wire [7:0] CAS_di;
+wire CAS_ram_wren, CAS_ram_cs;
+
+assign CAS_ram_cs = 1'b1;
+assign CAS_ram_addr = (ioctl_download && ioctl_isCAS) ? ioctl_addr[17:0] : CAS_addr;
+assign CAS_ram_wren = ioctl_wr && ioctl_isCAS; 
+
+spram #(18) CAS_ram
+(
+	.clock(clk_sys),
+	.address(CAS_ram_addr),	
+	.wren(CAS_ram_wren), 
+	.data(ioctl_dout),
+	.q(CAS_di)
+);
+
+
+assign play = ~motor;
+assign rewind = status[13] | (ioctl_download && ioctl_isCAS) | reset;
+
+tape cass 
+(
+	.clk(clk_sys),
+	.ce_5m3(ce_5m3),
+	.cas_out(CAS_dout),
+	.ram_a(CAS_addr),
+	.ram_di(CAS_di),
+	.play(play),
+	.rewind(rewind | (ioctl_download && ioctl_isCAS))
 );
 
 endmodule
