@@ -14,7 +14,13 @@ module msx1
 	output [10:0] audio,
 	input  [10:0] ps2_key,
 	input   [5:0] joy0,
-	input   [5:0] joy1	
+	input   [5:0] joy1,
+	input         ioctl_download,
+	input   [7:0] ioctl_index,
+	input         ioctl_wr,
+	input  [24:0] ioctl_addr,
+	input   [7:0] ioctl_dout,
+	input         ioctl_isROM
 );
 
 
@@ -221,6 +227,7 @@ memory_mapper memory_mapper
 //  ----------------------------------------------------------------------------- 
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
 						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
+						~(SLTSL_n[1])   ? d_from_cart_1 :
 						~(vdp_n | rd_n) ? d_from_vdp :
 						~(psg_n | rd_n) ? d_from_psg :
 						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
@@ -269,6 +276,28 @@ YM2149 PSG
 	.IOA_out(),
 	.IOB_in(8'h0),
 	.IOB_out(psg_iob)
+);
+
+//  -----------------------------------------------------------------------------
+//  -- ROM CARTRIGE
+//  -----------------------------------------------------------------------------
+wire [7:0] d_from_cart_1;
+cart_rom cart1
+(
+	.clk(clk),
+	.addr(a),
+	.CS1_n(CS1_n),    
+	.CS2_n(CS2_n),
+	.CS12_n(CS12_n),
+	.SLTSL_n(SLTSL_n[1]),
+	.d_to_cpu(d_from_cart_1),
+
+	.ioctl_download(ioctl_download),
+	.ioctl_index(ioctl_index),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
+	.ioctl_isROM(ioctl_isROM)
 );
 
 endmodule

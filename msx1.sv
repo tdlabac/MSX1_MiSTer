@@ -200,6 +200,8 @@ assign BUTTONS = 0;
 localparam CONF_STR = {
 	"MSX1;;",
 	"-;",
+	"F1,ROM,Load Cartridge;",
+	"-;",
 	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O3,Border,No,Yes;",
 	"O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
@@ -215,6 +217,12 @@ wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
 wire [5:0]  joy0, joy1;
+wire        ioctl_download;
+wire  [7:0] ioctl_index;
+wire        ioctl_wr;
+wire        ioctl_wait = 0;
+wire [24:0] ioctl_addr;
+wire  [7:0] ioctl_dout;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -230,8 +238,16 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	
 	.ps2_key(ps2_key),
 	.joystick_0(joy0),
-	.joystick_1(joy1)
+	.joystick_1(joy1),
+	.ioctl_download(ioctl_download),
+	.ioctl_index(ioctl_index),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
+	.ioctl_wait(ioctl_wait)	
 );
+
+wire ioctl_isROM = (ioctl_index[5:0] == 6'd1);
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
@@ -253,7 +269,7 @@ always @(posedge clk_sys) begin
 	ce_5m3  <= !div[2:0];
 end
 
-wire reset = RESET | status[0] | buttons[1];
+wire reset = RESET | status[0] | buttons[1] | (ioctl_download  && ioctl_isROM);
 
 //////////////////////////////////////////////////////////////////
 
@@ -277,7 +293,13 @@ msx1 MSX1
 	.audio(audio),
 	.ps2_key(ps2_key),
 	.joy0(joy0),
-	.joy1(joy1)
+	.joy1(joy1),
+	.ioctl_download(ioctl_download),
+	.ioctl_index(ioctl_index),
+	.ioctl_wr(ioctl_wr),
+	.ioctl_addr(ioctl_addr),
+	.ioctl_dout(ioctl_dout),
+	.ioctl_isROM(ioctl_isROM)
 );
 
 /////////////////  VIDEO  /////////////////////////
