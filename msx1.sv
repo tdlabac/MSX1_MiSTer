@@ -214,6 +214,7 @@ wire [21:0] gamma_bus;
 wire  [1:0] buttons;
 wire [31:0] status;
 wire [10:0] ps2_key;
+wire [5:0]  joy0, joy1;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -227,7 +228,9 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.buttons(buttons),
 	.status(status),
 	
-	.ps2_key(ps2_key)
+	.ps2_key(ps2_key),
+	.joystick_0(joy0),
+	.joystick_1(joy1)
 );
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -272,7 +275,9 @@ msx1 MSX1
 	.hblank(hblank),
 	.vblank(vblank),
 	.audio(audio),
-	.ps2_key(ps2_key)
+	.ps2_key(ps2_key),
+	.joy0(joy0),
+	.joy1(joy1)
 );
 
 /////////////////  VIDEO  /////////////////////////
