@@ -137,7 +137,7 @@ spram #(14) vram
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_vdp;
 wire vdp_int_n;
-vdp18_core #(.is_pal_g(1),.compat_rgb_g(1)) vdp18
+vdp18_core #(.is_pal_g(1),.compat_rgb_g(0)) vdp18
 (
 	.clk_i(clk),
 	.clk_en_10m7_i(ce_10m7),
