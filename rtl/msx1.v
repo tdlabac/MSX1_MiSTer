@@ -254,7 +254,7 @@ keyboard msx_key
 wire [7:0] d_from_psg,ay_ch_a, ay_ch_b, ay_ch_c, psg_ioa, psg_iob;
 wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
 wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
-assign audio = {keybeep, (cas_audio_in & ~cas_motor), 1'b0, ay_ch_a + ay_ch_b + ay_ch_c};
+assign audio = {keybeep, (cas_audio_in & ~cas_motor), 9'h0} | (ay_ch_a + ay_ch_b + ay_ch_c);
 wire [5:0] joy_a = {~joy1[5], ~joy1[4], ~joy1[0], ~joy1[1], ~joy1[2], ~joy1[3]};
 wire [5:0] joy_b = {~joy0[5], ~joy0[4], ~joy0[0], ~joy0[1], ~joy0[2], ~joy0[3]};
 assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joy_a : joy_b};
