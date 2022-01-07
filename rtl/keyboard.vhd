@@ -85,9 +85,9 @@ begin
 						when x"5b" => keyMatrix(1)(6) <= release; -- ]
 						when x"4c" => keyMatrix(1)(7) <= release; -- ;
 						-- 2
-						when x"41" => keyMatrix(2)(0) <= release; -- '
+						when x"52" => keyMatrix(2)(0) <= release; -- '
 						when x"0e" => keyMatrix(2)(1) <= release; -- `
-						when x"52" => keyMatrix(2)(2) <= release; -- ,
+						when x"41" => keyMatrix(2)(2) <= release; -- ,
 						when x"49" => keyMatrix(2)(3) <= release; -- .
 						when x"4a" => keyMatrix(2)(4) <= release; -- /				  
 						when x"01" => keyMatrix(2)(5) <= release; -- F11 (DEAD KEY)
