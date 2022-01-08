@@ -25,13 +25,16 @@ module tape
 	input           ce_5m3,
 	input           play,
 	input           rewind,
-	output  [17:0]	 ram_a,
+	output  [26:0]	 ram_a,
 	input   [7:0]   ram_di,
-	output          cas_out	
+	output          ram_rd,
+	input           buff_mem_ready,
+	output          cas_out
 );
 
 typedef enum 
 {
+	STATE_SLLEP,
 	STATE_INIT,
 	STATE_SEARCH,
 	STATE_PLAY_SILLENT,
@@ -39,7 +42,7 @@ typedef enum
 	STATE_PLAY_DATA	
 } player_state_t;
 
-player_state_t  state = STATE_INIT;
+player_state_t  state = STATE_SLLEP;
 
 wire[63:0] cas_sig = 64'h1FA6DEBACC137d74;
 wire[63:0] sig_pos  = cas_sig  >> (8'd56 - (ram_a[2:0]<<3));
@@ -49,7 +52,7 @@ assign cas_out = output_bit & output_on;
 reg sig_ok;
 always @(posedge clk) begin
 	reg sig_temp_ok;
-	if (half_clk) begin
+	if (buff_mem_ready && ~ram_rd) begin
 		if (ram_a[2:0] == 0) begin
 			sig_temp_ok <= (sig_pos[7:0] == ram_di);
 			sig_ok <= 0;
@@ -65,25 +68,33 @@ always @(posedge clk) begin
 end
 
 reg output_on = 0;
-reg half_clk;
 reg header;
 reg [10:0] counter;
 always @(posedge clk) begin
-	half_clk <= ~half_clk;
+	if (buff_mem_ready)
+		ram_rd <= 0;
 	case (state)
+		STATE_SLLEP:	
+			begin
+			end
 		STATE_INIT:	
 			begin
-				ram_a <= 0;
-				output_on <= 0;
-				state <= STATE_SEARCH;
+				if (buff_mem_ready && ~ram_rd) begin
+					ram_a <= 0;
+					output_on <= 0;
+					state <= STATE_SEARCH;
+					ram_rd <= 1;
+				end
 			end	
 		STATE_SEARCH: 
 			begin
 				if (sig_ok) begin
 					state <= STATE_PLAY_SILLENT;
 					counter <= 1000;
-				end else if (half_clk)
+				end else if (buff_mem_ready && ~ram_rd) begin
 						ram_a <= ram_a + 1'd1;
+						ram_rd <= 1;
+					end
 			end
 		STATE_PLAY_SILLENT: 
 			begin
@@ -112,9 +123,16 @@ always @(posedge clk) begin
 				if (sig_ok) begin
 					state <= STATE_PLAY_SYNC;
 					counter <= 1454;
-					ram_a <= ram_a + 1'd1;
-				end else if (byte_pos == 0)
+					if (buff_mem_ready && ~ram_rd) begin
 						ram_a <= ram_a + 1'd1;
+						ram_rd <= 1;
+					end
+				end else if (byte_pos == 0) begin
+						if (buff_mem_ready && ~ram_rd) begin
+							ram_a <= ram_a + 1'd1;
+							ram_rd <= 1;
+						end
+					end
 			end
 	endcase
 	if (rewind) begin

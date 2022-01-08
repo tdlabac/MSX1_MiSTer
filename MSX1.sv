@@ -177,7 +177,6 @@ assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
-assign {DDRAM_CLK, DDRAM_BURSTCNT, DDRAM_ADDR, DDRAM_DIN, DDRAM_BE, DDRAM_RD, DDRAM_WE} = '0;  
 
 assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
@@ -224,8 +223,8 @@ wire [5:0]  joy0, joy1;
 wire        ioctl_download;
 wire  [7:0] ioctl_index;
 wire        ioctl_wr;
-wire        ioctl_wait = 0;
-wire [24:0] ioctl_addr;
+wire        ioctl_wait;
+wire [26:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 wire cas_audio_in = status[12] ? tape_in : CAS_dout;
 
@@ -379,29 +378,27 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(42954545)) tape
 
 ///////////// OSD CAS load //////////
 
+wire buff_mem_ready;
+assign  DDRAM_CLK = clk_sys;
+assign ioctl_wait =  ioctl_isCAS && ~buff_mem_ready;
+ddram buffer
+(
+	.*,
+	.addr(ioctl_isCAS ? ioctl_addr[26:0] : CAS_addr),
+	.dout(CAS_di),
+	.din(ioctl_dout),
+	.we(ioctl_wr && ioctl_isCAS),
+	.rd(~ioctl_isCAS && CAS_rd),
+	.ready(buff_mem_ready),
+	.reset(reset)
+);
+
 wire motor;
 wire CAS_dout;
 wire play, rewind;
 wire CAS_rd;
-wire [17:0] CAS_addr;
-wire [17:0] CAS_ram_addr;
+wire [26:0] CAS_addr;
 wire [7:0] CAS_di;
-wire CAS_ram_wren, CAS_ram_cs;
-
-assign CAS_ram_cs = 1'b1;
-assign CAS_ram_addr = (ioctl_download && ioctl_isCAS) ? ioctl_addr[17:0] : CAS_addr;
-assign CAS_ram_wren = ioctl_wr && ioctl_isCAS; 
-
-spram #(18) CAS_ram
-(
-	.clock(clk_sys),
-	.address(CAS_ram_addr),	
-	.wren(CAS_ram_wren), 
-	.data(ioctl_dout),
-	.q(CAS_di)
-);
-
-
 assign play = ~motor;
 assign rewind = status[13] | ioctl_isCAS | reset;
 
@@ -412,6 +409,8 @@ tape cass
 	.cas_out(CAS_dout),
 	.ram_a(CAS_addr),
 	.ram_di(CAS_di),
+	.ram_rd(CAS_rd),
+	.buff_mem_ready(buff_mem_ready),
 	.play(play),
 	.rewind(rewind | ioctl_isCAS)
 );
