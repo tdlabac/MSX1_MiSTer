@@ -253,8 +253,8 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.ioctl_wait(ioctl_wait)	
 );
 
-wire ioctl_isROM = (ioctl_index[5:0] == 6'd1);
-wire ioctl_isCAS = (ioctl_index[5:0] == 6'd2);
+wire ioctl_isROM = ioctl_download && (ioctl_index[5:0] == 6'd1);
+wire ioctl_isCAS = ioctl_download && (ioctl_index[5:0] == 6'd2);
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
@@ -276,7 +276,7 @@ always @(posedge clk_sys) begin
 	ce_5m3  <= !div[2:0];
 end
 
-wire reset = RESET | status[0] | buttons[1] | (ioctl_download  && ioctl_isROM);
+wire reset = RESET | status[0] | buttons[1] | ioctl_isROM;
 
 //////////////////////////////////////////////////////////////////
 
@@ -403,7 +403,7 @@ spram #(18) CAS_ram
 
 
 assign play = ~motor;
-assign rewind = status[13] | (ioctl_download && ioctl_isCAS) | reset;
+assign rewind = status[13] | ioctl_isCAS | reset;
 
 tape cass 
 (
@@ -413,7 +413,7 @@ tape cass
 	.ram_a(CAS_addr),
 	.ram_di(CAS_di),
 	.play(play),
-	.rewind(rewind | (ioctl_download && ioctl_isCAS))
+	.rewind(rewind | ioctl_isCAS)
 );
 
 endmodule
