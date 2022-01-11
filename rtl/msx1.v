@@ -288,15 +288,16 @@ wire [7:0] d_from_cart_1;
 cart_rom cart1
 (
 	.clk(clk),
+    .reset(reset),
 	.addr(a),
+	.wr(~wr_n),
 	.CS1_n(CS1_n),    
 	.CS2_n(CS2_n),
 	.CS12_n(CS12_n),
 	.SLTSL_n(SLTSL_n[1]),
+	.d_from_cpu(d_from_cpu),
 	.d_to_cpu(d_from_cart_1),
 
-	.ioctl_download(ioctl_download),
-	.ioctl_index(ioctl_index),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
