@@ -39,6 +39,7 @@ wire [24:0] mem_addr;
 // 5 ASCII 8
 // 6 ASCII 16
 assign mem_addr = ioctl_isROM ? ioctl_addr :
+                  mapper == 3 ? mem_addr_konami :
                   addr - {offset,12'd0}; // default nomaper
 
 wire [3:0]  offset;
@@ -56,4 +57,18 @@ rom_detect rom_detect
     .offset(offset),
     .rom_size(rom_size)
 );
+
+wire [24:0] mem_addr_konami;
+cart_konami konami
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_konami)
+);
+
 endmodule
