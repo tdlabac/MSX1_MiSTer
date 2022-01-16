@@ -13,7 +13,7 @@ module msx1
 	output        vsync_n,
 	output        hblank,
 	output        vblank,
-	output [10:0] audio,
+	output [15:0] audio,
 	input  [10:0] ps2_key,
 	input   [5:0] joy0,
 	input   [5:0] joy1,
@@ -40,6 +40,16 @@ module msx1
 	output        SDRAM_CLK
 );
 
+//  -----------------------------------------------------------------------------
+//  -- Audio MIX
+//  -----------------------------------------------------------------------------
+wire [9:0]  audio_psg_mix = 10'h0 | (ay_ch_a + ay_ch_b + ay_ch_c);
+wire [9:0]  audio_core_mix = audio_psg_mix + {keybeep, 7'h0} + {(cas_audio_in & ~cas_motor),6'h0};
+wire [15:0] audio_core    = 16'h0 | {audio_core_mix,3'b000};
+wire [16:0] audio_cart    = {sound_cart_1[14],sound_cart_1[14],sound_cart_1};
+wire [16:0] audio_mix = audio_cart + audio_core;
+wire [15:0] compr[7:0] = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 16'h8000, 16'h7FFF, 16'h7FFF, 16'h7FFF,  {1'b0, audio_mix[13:0], 1'b0}};
+assign audio = compr[audio_mix[16:14]];
 
 //  -----------------------------------------------------------------------------
 //  -- Clock generation
@@ -269,7 +279,6 @@ keyboard msx_key
 wire [7:0] d_from_psg,ay_ch_a, ay_ch_b, ay_ch_c, psg_ioa, psg_iob;
 wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
 wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
-assign audio = {keybeep, (cas_audio_in & ~cas_motor), 9'h0} | (ay_ch_a + ay_ch_b + ay_ch_c);
 wire [5:0] joy_a = {~joy1[5], ~joy1[4], ~joy1[0], ~joy1[1], ~joy1[2], ~joy1[3]};
 wire [5:0] joy_b = {~joy0[5], ~joy0[4], ~joy0[0], ~joy0[1], ~joy0[2], ~joy0[3]};
 assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joy_a : joy_b};
@@ -300,19 +309,22 @@ YM2149 PSG
 //  -- ROM CARTRIGE
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_cart_1;
+wire [14:0] sound_cart_1; 
 cart_rom cart1
 (
 	.clk(clk),
+	.clk_en(clk_en_3m58_p),
     .reset(reset),
 	.addr(a),
 	.wr(~wr_n),
+	.rd(~rd_n),
 	.CS1_n(CS1_n),    
 	.CS2_n(CS2_n),
 	.CS12_n(CS12_n),
 	.SLTSL_n(SLTSL_n[1]),
 	.d_from_cpu(d_from_cpu),
 	.d_to_cpu(d_from_cart_1),
-
+    .sound(sound_cart_1),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),

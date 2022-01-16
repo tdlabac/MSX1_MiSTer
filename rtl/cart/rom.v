@@ -1,15 +1,18 @@
 module cart_rom
 (
     input            clk,
+    input            clk_en,
     input            reset,
     input     [15:0] addr,
     input            wr,
+    input            rd,
     input            CS1_n,
     input            CS2_n,
     input            CS12_n,
     input	         SLTSL_n,
     input      [7:0] d_from_cpu,
     output     [7:0] d_to_cpu,
+    output    [14:0] sound,
 
     input            ioctl_wr,
     input     [24:0] ioctl_addr,
@@ -31,8 +34,14 @@ module cart_rom
     output           SDRAM_CKE,
     output           SDRAM_CLK
 );
+wire sdram = 0;
 
-assign d_to_cpu = d_to_cpu_bram;
+assign d_to_cpu = mapper == 4 && scc_ack ? d_to_cpu_scc   :
+                  sdram                  ? d_to_cpu_sdram :
+                                           d_to_cpu_bram;
+
+assign sound = mapper == 4 ? scc_sound :
+                             14'h0;
 
 wire rom_we = ioctl_isROM & ioctl_wr;
 wire [7:0] d_to_cpu_bram;
@@ -82,6 +91,7 @@ sdram rom_cart2
 // 6 ASCII 16
 assign mem_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 3 ? mem_addr_konami :
+                  mapper == 4 ? mem_addr_konami_scc :
                   addr - {offset,12'd0}; // default nomaper
 
 wire [3:0]  offset;
@@ -111,6 +121,27 @@ cart_konami konami
     .wr(wr),
     .cs(~SLTSL_n),
     .mem_addr(mem_addr_konami)
+);
+
+wire [24:0] mem_addr_konami_scc;
+wire [7:0]  d_to_cpu_scc;
+wire        scc_ack;
+wire [14:0] scc_sound;
+cart_konami_scc konami_scc
+(
+    .clk(clk),
+    .clk_en(clk_en),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .d_to_cpu(d_to_cpu_scc),
+    .ack(scc_ack),
+    .wr(wr),
+    .rd(rd),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_konami_scc),
+    .scc_sound(scc_sound)
 );
 
 endmodule

@@ -13,6 +13,9 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/YM2149.sv
 set_global_assignment -name VERILOG_FILE rtl/cart/rom.v
 set_global_assignment -name VERILOG_FILE rtl/cart/rom_detect.v
 set_global_assignment -name VERILOG_FILE rtl/cart/konami.v
+set_global_assignment -name VERILOG_FILE rtl/cart/konami_scc.v
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/tape.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/ddram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sdram.sv
+set_global_assignment -name VHDL_FILE rtl/cart/scc_wave.vhd
+set_global_assignment -name VHDL_FILE rtl/cart/ram.vhd
