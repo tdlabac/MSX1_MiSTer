@@ -34,11 +34,12 @@ module cart_rom
     output           SDRAM_CKE,
     output           SDRAM_CLK
 );
-wire sdram = 0;
+wire bram = rom_size <= 24'h20000;
 
-assign d_to_cpu = mapper == 4 && scc_ack ? d_to_cpu_scc   :
-                  sdram                  ? d_to_cpu_sdram :
-                                           d_to_cpu_bram;
+assign d_to_cpu = mapper == 4 && scc_ack             ? d_to_cpu_scc   :
+                  mapper == 2 && sram_oe_gamemaster2 ? d_to_cpu_sram  :
+                  bram                               ? d_to_cpu_bram  :
+                                                       d_to_cpu_sdram ;
 
 assign sound = mapper == 4 ? scc_sound :
                              14'h0;
@@ -54,9 +55,20 @@ spram #(.addr_width(18),.mem_name("CART")) rom_cart
     .data(ioctl_dout)
 );
 
+wire [7:0] d_to_cpu_sram;
+spram #(.addr_width(13),.mem_name("CART_SRAM")) cart_sram
+(
+    .clock(clk),
+    .address(sram_addr_gamemaster2),
+    .wren(sram_we_gamemaster2),
+    .q(d_to_cpu_sram),
+    .data(d_from_cpu)
+);
+
 wire sdram_ready;
 assign ioctl_wait = ~sdram_ready && ioctl_isROM;
 wire [24:0] mem_addr;
+wire [12:0] sram_addr;
 wire [7:0] d_to_cpu_sdram;
 sdram rom_cart2
 (
@@ -90,6 +102,7 @@ sdram rom_cart2
 // 5 ASCII 8
 // 6 ASCII 16
 assign mem_addr = ioctl_isROM ? ioctl_addr :
+                  mapper == 2 ? mem_addr_gamemaster2 :
                   mapper == 3 ? mem_addr_konami :
                   mapper == 4 ? mem_addr_konami_scc :
                   mapper == 5 ? mem_addr_ascii8 :
@@ -170,6 +183,24 @@ cart_asci16 ascii16
     .wr(wr),
     .cs(~SLTSL_n),
     .mem_addr(mem_addr_ascii16)
+);
+
+wire [24:0] mem_addr_gamemaster2;
+wire [12:0] sram_addr_gamemaster2;
+wire        sram_we_gamemaster2;
+wire        sram_oe_gamemaster2;
+cart_gamemaster2 gamemaster2
+(
+    .clk(clk),
+    .reset(reset),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_gamemaster2),
+    .sram_addr(sram_addr_gamemaster2),
+    .sram_we(sram_we_gamemaster2),
+    .sram_oe(sram_oe_gamemaster2)
 );
 
 endmodule
