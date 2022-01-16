@@ -93,6 +93,7 @@ assign mem_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 3 ? mem_addr_konami :
                   mapper == 4 ? mem_addr_konami_scc :
                   mapper == 5 ? mem_addr_ascii8 :
+                  mapper == 6 ? mem_addr_ascii16 :
                   addr - {offset,12'd0}; // default nomaper
 
 wire [3:0]  offset;
@@ -156,6 +157,19 @@ cart_asci8 ascii8
     .wr(wr),
     .cs(~SLTSL_n),
     .mem_addr(mem_addr_ascii8)
+);
+
+wire [24:0] mem_addr_ascii16;
+cart_asci16 ascii16
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_ascii16)
 );
 
 endmodule
