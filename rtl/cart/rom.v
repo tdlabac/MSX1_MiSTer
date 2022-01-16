@@ -92,6 +92,7 @@ sdram rom_cart2
 assign mem_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 3 ? mem_addr_konami :
                   mapper == 4 ? mem_addr_konami_scc :
+                  mapper == 5 ? mem_addr_ascii8 :
                   addr - {offset,12'd0}; // default nomaper
 
 wire [3:0]  offset;
@@ -142,6 +143,19 @@ cart_konami_scc konami_scc
     .cs(~SLTSL_n),
     .mem_addr(mem_addr_konami_scc),
     .scc_sound(scc_sound)
+);
+
+wire [24:0] mem_addr_ascii8;
+cart_asci8 ascii8
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_ascii8)
 );
 
 endmodule
