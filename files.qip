@@ -20,3 +20,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/sdram.sv
 set_global_assignment -name VHDL_FILE rtl/cart/scc_wave.vhd
 set_global_assignment -name VHDL_FILE rtl/cart/ram.vhd
 set_global_assignment -name VERILOG_FILE rtl/cart/ascii8.v
+set_global_assignment -name VERILOG_FILE rtl/cart/ascii16.v
