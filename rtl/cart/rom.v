@@ -14,7 +14,22 @@ module cart_rom
     input            ioctl_wr,
     input     [24:0] ioctl_addr,
     input      [7:0] ioctl_dout,
-    input            ioctl_isROM
+    input            ioctl_isROM,
+    output           ioctl_wait,
+    //SDRAM
+    input            clk_sdram,
+    input            locked_sdram,
+    inout     [15:0] SDRAM_DQ,
+    output    [12:0] SDRAM_A,
+    output           SDRAM_DQML,
+    output           SDRAM_DQMH,
+    output     [1:0] SDRAM_BA,
+    output           SDRAM_nCS,
+    output           SDRAM_nWE,
+    output           SDRAM_nRAS,
+    output           SDRAM_nCAS,
+    output           SDRAM_CKE,
+    output           SDRAM_CLK
 );
 
 assign d_to_cpu = d_to_cpu_bram;
@@ -30,7 +45,34 @@ spram #(.addr_width(18),.mem_name("CART")) rom_cart
     .data(ioctl_dout)
 );
 
+wire sdram_ready;
+assign ioctl_wait = ~sdram_ready && ioctl_isROM;
 wire [24:0] mem_addr;
+wire [7:0] d_to_cpu_sdram;
+sdram rom_cart2
+(
+    .init(~locked_sdram),
+    .clk(clk_sdram),
+    .SDRAM_DQ(SDRAM_DQ),
+    .SDRAM_A(SDRAM_A),
+    .SDRAM_DQML(SDRAM_DQML),
+    .SDRAM_DQMH(SDRAM_DQMH),
+    .SDRAM_BA(SDRAM_BA),
+    .SDRAM_nCS(SDRAM_nCS),
+    .SDRAM_nWE(SDRAM_nWE),
+    .SDRAM_nRAS(SDRAM_nRAS),
+    .SDRAM_nCAS(SDRAM_nCAS),
+    .SDRAM_CKE(SDRAM_CKE),
+    .SDRAM_CLK(SDRAM_CLK),
+
+    .dout(d_to_cpu_sdram),
+    .din (ioctl_dout),
+    .addr(mem_addr),
+    .we(rom_we),
+    .rd(~SLTSL_n && ~ioctl_isROM),
+    .ready(sdram_ready)
+);
+
 // 0 uknown
 // 1 nomaper
 // 2 gamemaster2
