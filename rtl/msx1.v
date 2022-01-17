@@ -1,6 +1,8 @@
 module msx1
 (
 	input         clk,
+	input         clk_sdram,
+	input         locked_sdram, 
 	input         ce_10m7,
 	input         reset,
 	input         border,
@@ -21,8 +23,21 @@ module msx1
 	input  [24:0] ioctl_addr,
 	input   [7:0] ioctl_dout,
 	input         ioctl_isROM,
+	output        ioctl_wait,
 	output        cas_motor,
-	input         cas_audio_in
+	input         cas_audio_in,
+	    //SDRAM
+    inout  [15:0] SDRAM_DQ,
+    output [12:0] SDRAM_A,
+    output        SDRAM_DQML,
+    output        SDRAM_DQMH,
+    output  [1:0] SDRAM_BA,
+    output        SDRAM_nCS,
+    output        SDRAM_nWE,
+    output        SDRAM_nRAS,
+    output        SDRAM_nCAS,
+    output        SDRAM_CKE,
+	output        SDRAM_CLK
 );
 
 
@@ -301,7 +316,22 @@ cart_rom cart1
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
-	.ioctl_isROM(ioctl_isROM)
+	.ioctl_isROM(ioctl_isROM),
+	.ioctl_wait(ioctl_wait),
+
+	.clk_sdram(clk_sdram),
+	.locked_sdram(locked_sdram),
+    .SDRAM_DQ(SDRAM_DQ),
+    .SDRAM_A(SDRAM_A),
+    .SDRAM_DQML(SDRAM_DQML),
+    .SDRAM_DQMH(SDRAM_DQMH),
+    .SDRAM_BA(SDRAM_BA),
+    .SDRAM_nCS(SDRAM_nCS),
+    .SDRAM_nWE(SDRAM_nWE),
+    .SDRAM_nRAS(SDRAM_nRAS),
+    .SDRAM_nCAS(SDRAM_nCAS),
+    .SDRAM_CKE(SDRAM_CKE),
+    .SDRAM_CLK(SDRAM_CLK)
 );
 
 endmodule
