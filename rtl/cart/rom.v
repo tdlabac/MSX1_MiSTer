@@ -1,71 +1,206 @@
 module cart_rom
 (
-	input         clk,
-	input  [15:0] addr,
-	input         CS1_n,
-	input         CS2_n,
-	input         CS12_n,
-	input	        SLTSL_n,
-	output  [7:0] d_to_cpu,
+    input            clk,
+    input            clk_en,
+    input            reset,
+    input     [15:0] addr,
+    input            wr,
+    input            rd,
+    input            CS1_n,
+    input            CS2_n,
+    input            CS12_n,
+    input	         SLTSL_n,
+    input      [7:0] d_from_cpu,
+    output     [7:0] d_to_cpu,
+    output    [14:0] sound,
 
-	input         ioctl_download,
-	input   [7:0] ioctl_index,
-	input         ioctl_wr,
-	input  [24:0] ioctl_addr,
-	input   [7:0] ioctl_dout,
-	input         ioctl_isROM
+    input            ioctl_wr,
+    input     [24:0] ioctl_addr,
+    input      [7:0] ioctl_dout,
+    input            ioctl_isROM,
+    output           ioctl_wait,
+    //SDRAM
+    input            clk_sdram,
+    input            locked_sdram,
+    inout     [15:0] SDRAM_DQ,
+    output    [12:0] SDRAM_A,
+    output           SDRAM_DQML,
+    output           SDRAM_DQMH,
+    output     [1:0] SDRAM_BA,
+    output           SDRAM_nCS,
+    output           SDRAM_nWE,
+    output           SDRAM_nRAS,
+    output           SDRAM_nCAS,
+    output           SDRAM_CKE,
+    output           SDRAM_CLK
+);
+wire bram = rom_size <= 24'h20000;
+
+assign d_to_cpu = mapper == 4 && scc_ack             ? d_to_cpu_scc   :
+                  mapper == 2 && sram_oe_gamemaster2 ? d_to_cpu_sram  :
+                  bram                               ? d_to_cpu_bram  :
+                                                       d_to_cpu_sdram ;
+
+assign sound = mapper == 4 ? scc_sound :
+                             14'h0;
+
+wire rom_we = ioctl_isROM & ioctl_wr;
+wire [7:0] d_to_cpu_bram;
+spram #(.addr_width(18),.mem_name("CART")) rom_cart
+(
+    .clock(clk),
+    .address(mem_addr[17:0]),
+    .wren(rom_we & ioctl_addr < 24'h20000),
+    .q(d_to_cpu_bram),
+    .data(ioctl_dout)
 );
 
-wire rom_we = ioctl_download & ioctl_isROM & ioctl_wr;
-spram #(.addr_width(16),.mem_name("CART")) rom_cart
-(   
-	.clock(clk),
-	.address(ioctl_download && ioctl_isROM ? ioctl_addr[15:0] : addr - start_addr),
-	.wren(rom_we),
-	.q(d_to_cpu),
-	.data(ioctl_dout)
+wire [7:0] d_to_cpu_sram;
+spram #(.addr_width(13),.mem_name("CART_SRAM")) cart_sram
+(
+    .clock(clk),
+    .address(sram_addr_gamemaster2),
+    .wren(sram_we_gamemaster2),
+    .q(d_to_cpu_sram),
+    .data(d_from_cpu)
 );
 
-reg [7:0] head [0:7];
-reg [7:0] head2 [0:7];
-always @(posedge rom_we) begin
-	rom_size <= ioctl_addr;
-	if (ioctl_addr[15:3] == 0)
-		head [ioctl_addr[2:0]] <= ioctl_dout;
-	if (ioctl_addr[15:3] == 13'b0100000000000)
-		head2[ioctl_addr[2:0]] <= ioctl_dout;	
-end
+wire sdram_ready;
+assign ioctl_wait = ~sdram_ready && ioctl_isROM;
+wire [24:0] mem_addr;
+wire [12:0] sram_addr;
+wire [7:0] d_to_cpu_sdram;
+sdram rom_cart2
+(
+    .init(~locked_sdram),
+    .clk(clk_sdram),
+    .SDRAM_DQ(SDRAM_DQ),
+    .SDRAM_A(SDRAM_A),
+    .SDRAM_DQML(SDRAM_DQML),
+    .SDRAM_DQMH(SDRAM_DQMH),
+    .SDRAM_BA(SDRAM_BA),
+    .SDRAM_nCS(SDRAM_nCS),
+    .SDRAM_nWE(SDRAM_nWE),
+    .SDRAM_nRAS(SDRAM_nRAS),
+    .SDRAM_nCAS(SDRAM_nCAS),
+    .SDRAM_CKE(SDRAM_CKE),
+    .SDRAM_CLK(SDRAM_CLK),
 
-wire [15:0] start = head[3] << 8 | head[2];
-wire [15:0] start4000 = head2[3] << 8 | head2[2];
-wire romSig_at_0000 = head[0] == "A" && head[1] == "B";
-wire romSig_at_4000 = head[0] == "A" && head[1] == "B";
-reg [15:0] start_addr;
-reg [24:0] rom_size;
+    .dout(d_to_cpu_sdram),
+    .din (ioctl_dout),
+    .addr(mem_addr),
+    .we(rom_we),
+    .rd(~SLTSL_n && ~ioctl_isROM),
+    .ready(sdram_ready)
+);
 
-always @(clk, start, start4000, romSig_at_0000, romSig_at_4000, rom_size) begin
-	start_addr <= 16'h4000;
-	case (rom_size)
-		16'h1fff,
-		16'h3fff: begin
-			if (start == 0) begin
-				if ((head[5] & 8'hC0) != 8'h40)
-					start_addr <= 16'h8000;
-			end else if ((start & 16'hC000) == 16'h8000)
-					start_addr <= 16'h8000;
-		end
-		16'h7fff: begin
-			if (~romSig_at_0000 && romSig_at_4000)
-				if ((start4000 == 0 && (head2[5] & 8'hC0) == 8'h40) || start4000 < 16'h8000 || start4000 >= 16'hC000)
-					start_addr <= 16'h0000;
-		end
-		16'hbfff: begin
-			if (~(romSig_at_0000 && ~romSig_at_4000))
-				start_addr <= 16'h0000;
-		end
-		default:
-			start_addr <= 16'h0000;
-	endcase
-end
+// 0 uknown
+// 1 nomaper
+// 2 gamemaster2
+// 3 konami
+// 4 konami SCC
+// 5 ASCII 8
+// 6 ASCII 16
+assign mem_addr = ioctl_isROM ? ioctl_addr :
+                  mapper == 2 ? mem_addr_gamemaster2 :
+                  mapper == 3 ? mem_addr_konami :
+                  mapper == 4 ? mem_addr_konami_scc :
+                  mapper == 5 ? mem_addr_ascii8 :
+                  mapper == 6 ? mem_addr_ascii16 :
+                  addr - {offset,12'd0}; // default nomaper
+
+wire [3:0]  offset;
+wire [24:0] rom_size;
+wire [2:0]  mapper;
+
+rom_detect rom_detect
+(
+    .clk(clk),
+    .ioctl_isROM(ioctl_isROM),
+    .ioctl_addr(ioctl_addr),
+    .ioctl_dout(ioctl_dout),
+    .rom_we(rom_we),
+    .mapper(mapper),
+    .offset(offset),
+    .rom_size(rom_size)
+);
+
+wire [24:0] mem_addr_konami;
+cart_konami konami
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_konami)
+);
+
+wire [24:0] mem_addr_konami_scc;
+wire [7:0]  d_to_cpu_scc;
+wire        scc_ack;
+wire [14:0] scc_sound;
+cart_konami_scc konami_scc
+(
+    .clk(clk),
+    .clk_en(clk_en),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .d_to_cpu(d_to_cpu_scc),
+    .ack(scc_ack),
+    .wr(wr),
+    .rd(rd),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_konami_scc),
+    .scc_sound(scc_sound)
+);
+
+wire [24:0] mem_addr_ascii8;
+cart_asci8 ascii8
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_ascii8)
+);
+
+wire [24:0] mem_addr_ascii16;
+cart_asci16 ascii16
+(
+    .clk(clk),
+    .reset(reset),
+    .rom_size(rom_size),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_ascii16)
+);
+
+wire [24:0] mem_addr_gamemaster2;
+wire [12:0] sram_addr_gamemaster2;
+wire        sram_we_gamemaster2;
+wire        sram_oe_gamemaster2;
+cart_gamemaster2 gamemaster2
+(
+    .clk(clk),
+    .reset(reset),
+    .addr(addr),
+    .d_from_cpu(d_from_cpu),
+    .wr(wr),
+    .cs(~SLTSL_n),
+    .mem_addr(mem_addr_gamemaster2),
+    .sram_addr(sram_addr_gamemaster2),
+    .sram_we(sram_we_gamemaster2),
+    .sram_oe(sram_oe_gamemaster2)
+);
 
 endmodule

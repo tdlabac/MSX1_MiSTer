@@ -176,15 +176,14 @@ assign ADC_BUS  = 'Z;
 assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
 assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
-assign {SDRAM_DQ, SDRAM_A, SDRAM_BA, SDRAM_CLK, SDRAM_CKE, SDRAM_DQML, SDRAM_DQMH, SDRAM_nWE, SDRAM_nCAS, SDRAM_nRAS, SDRAM_nCS} = 'Z;
 
 assign VGA_F1 = 0;
 assign VGA_SCALER = 0;
 assign HDMI_FREEZE = 0;
 
-assign AUDIO_S = 0;
-assign AUDIO_L = {audio,5'd0};
-assign AUDIO_R = {audio,5'd0};
+assign AUDIO_S = 1;
+assign AUDIO_L = audio;
+assign AUDIO_R = audio;
 assign AUDIO_MIX = 0;
 
 assign LED_DISK = 0;
@@ -257,12 +256,14 @@ wire ioctl_isCAS = ioctl_download && (ioctl_index[5:0] == 6'd2);
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
-wire clk_sys;
+wire clk_sys, clk_sdram, locked_sdram;
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys)
+	.outclk_1(clk_sys),
+	.outclk_0(clk_sdram),
+	.locked(locked_sdram)
 );
 
 reg ce_10m7 = 0;
@@ -281,10 +282,13 @@ wire reset = RESET | status[0] | buttons[1] | ioctl_isROM;
 
 wire [7:0] R,G,B;
 wire hblank, vblank, hsync_n, vsync_n;
-wire [10:0] audio;
+wire [15:0] audio;
+wire ioctl_waitROM;
 msx1 MSX1
 (
 	.clk(clk_sys),
+	.clk_sdram(clk_sdram),
+	.locked_sdram(locked_sdram),
 	.ce_10m7(ce_10m7),
 	.reset(reset),
 	
@@ -306,8 +310,20 @@ msx1 MSX1
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_isROM(ioctl_isROM),
+	.ioctl_wait(ioctl_waitROM),
 	.cas_motor(motor),
-	.cas_audio_in(cas_audio_in)
+	.cas_audio_in(cas_audio_in),
+	.SDRAM_DQ(SDRAM_DQ),
+    .SDRAM_A(SDRAM_A),
+    .SDRAM_DQML(SDRAM_DQML),
+    .SDRAM_DQMH(SDRAM_DQMH),
+    .SDRAM_BA(SDRAM_BA),
+    .SDRAM_nCS(SDRAM_nCS),
+    .SDRAM_nWE(SDRAM_nWE),
+    .SDRAM_nRAS(SDRAM_nRAS),
+    .SDRAM_nCAS(SDRAM_nCAS),
+    .SDRAM_CKE(SDRAM_CKE),
+    .SDRAM_CLK(SDRAM_CLK)
 );
 
 /////////////////  VIDEO  /////////////////////////
@@ -380,7 +396,7 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(42954545)) tape
 
 wire buff_mem_ready;
 assign  DDRAM_CLK = clk_sys;
-assign ioctl_wait =  ioctl_isCAS && ~buff_mem_ready;
+assign ioctl_wait =  (ioctl_isCAS && ~buff_mem_ready) || ioctl_waitROM;
 ddram buffer
 (
 	.*,
