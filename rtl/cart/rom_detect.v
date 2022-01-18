@@ -13,7 +13,7 @@ module rom_detect
 reg last_isROM;
 reg [7:0]  head  [0:7];
 reg [7:0]  head2 [0:7];
-reg [15:0] asc16, asc8, kon4, kon5;
+reg signed [15:0] asc16, asc8, kon4, kon5;
 reg game1, game2;
 
 always @(posedge clk) begin
