@@ -77,6 +77,8 @@ always @(posedge CLK) begin
 	if(RESET) begin
 		ymreg     <= '{default:0};
 		ymreg[7]  <= '1;
+		ymreg[14] <= '{default:1};
+		ymreg[15] <= '{default:1};
 		addr      <= '0;
 		env_reset <= 0;
 	end else begin
@@ -84,7 +86,11 @@ always @(posedge CLK) begin
 		if(BDIR) begin
 			if(BC) addr <= DI;
 			else if(!addr[7:4]) begin
-				ymreg[addr[3:0]] <= DI;
+				case(addr[3:0])
+					14: if (ymreg[7][6]) ymreg[addr[3:0]] <= DI;
+					15: if (ymreg[7][7]) ymreg[addr[3:0]] <= DI;
+					default: ymreg[addr[3:0]] <= DI;
+				endcase;
 				env_reset <= (addr == 13);
 			end
 		end
@@ -112,8 +118,8 @@ always_comb begin
 			11: dout = ymreg[11];
 			12: dout = ymreg[12];
 			13: dout = ymreg[13][3:0];
-			14: dout = ymreg[7][6] ? ymreg[14] : IOA_in;
-			15: dout = ymreg[7][7] ? ymreg[15] : IOB_in;
+			14: dout = ymreg[7][6] ? ymreg[14] & IOA_in : IOA_in;
+			15: dout = ymreg[7][7] ? ymreg[15] & IOB_in : IOB_in;
 		endcase
 	end
 end
