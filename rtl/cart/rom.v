@@ -1,3 +1,5 @@
+//https://www.msx.org/wiki/ROM_mappers
+
 module cart_rom
 (
     input            clk,
@@ -19,6 +21,7 @@ module cart_rom
     input      [7:0] ioctl_dout,
     input            ioctl_isROM,
     output           ioctl_wait,
+    input      [2:0] user_mapper,
     //SDRAM
     input            clk_sdram,
     input            locked_sdram,
@@ -70,6 +73,7 @@ assign ioctl_wait = ~sdram_ready && ioctl_isROM;
 wire [24:0] mem_addr;
 wire [12:0] sram_addr;
 wire [7:0] d_to_cpu_sdram;
+wire [2:0] mapper;
 sdram rom_cart2
 (
     .init(~locked_sdram),
@@ -101,17 +105,21 @@ sdram rom_cart2
 // 4 konami SCC
 // 5 ASCII 8
 // 6 ASCII 16
+// 7 linear (nomaper) 64kb. Aligned ROM image is replicated to 64KB area.
+
+assign mapper   = user_mapper == 0 ? auto_mapper : user_mapper;
 assign mem_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 2 ? mem_addr_gamemaster2 :
                   mapper == 3 ? mem_addr_konami :
                   mapper == 4 ? mem_addr_konami_scc :
                   mapper == 5 ? mem_addr_ascii8 :
                   mapper == 6 ? mem_addr_ascii16 :
+                  mapper == 7 ? addr & (rom_size - 1) :
                   addr - {offset,12'd0}; // default nomaper
 
 wire [3:0]  offset;
 wire [24:0] rom_size;
-wire [2:0]  mapper;
+wire [2:0]  auto_mapper;
 
 rom_detect rom_detect
 (
@@ -120,7 +128,7 @@ rom_detect rom_detect
     .ioctl_addr(ioctl_addr),
     .ioctl_dout(ioctl_dout),
     .rom_we(rom_we),
-    .mapper(mapper),
+    .mapper(auto_mapper),
     .offset(offset),
     .rom_size(rom_size)
 );
