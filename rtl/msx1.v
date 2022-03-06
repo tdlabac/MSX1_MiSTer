@@ -26,6 +26,7 @@ module msx1
 	output        ioctl_wait,
 	output        cas_motor,
 	input         cas_audio_in,
+	input   [2:0] user_mapper,
 	    //SDRAM
     inout  [15:0] SDRAM_DQ,
     output [12:0] SDRAM_A,
@@ -316,7 +317,7 @@ cart_rom cart1
 (
 	.clk(clk),
 	.clk_en(clk_en_3m58_p),
-    .reset(reset),
+	.reset(reset),
 	.addr(a),
 	.wr(~wr_n),
 	.rd(~rd_n),
@@ -326,26 +327,27 @@ cart_rom cart1
 	.SLTSL_n(SLTSL_n[1]),
 	.d_from_cpu(d_from_cpu),
 	.d_to_cpu(d_from_cart_1),
-    .sound(sound_cart_1),
+	.sound(sound_cart_1),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_isROM(ioctl_isROM),
 	.ioctl_wait(ioctl_wait),
 
+	.user_mapper(user_mapper),
 	.clk_sdram(clk_sdram),
 	.locked_sdram(locked_sdram),
-    .SDRAM_DQ(SDRAM_DQ),
-    .SDRAM_A(SDRAM_A),
-    .SDRAM_DQML(SDRAM_DQML),
-    .SDRAM_DQMH(SDRAM_DQMH),
-    .SDRAM_BA(SDRAM_BA),
-    .SDRAM_nCS(SDRAM_nCS),
-    .SDRAM_nWE(SDRAM_nWE),
-    .SDRAM_nRAS(SDRAM_nRAS),
-    .SDRAM_nCAS(SDRAM_nCAS),
-    .SDRAM_CKE(SDRAM_CKE),
-    .SDRAM_CLK(SDRAM_CLK)
+	.SDRAM_DQ(SDRAM_DQ),
+	.SDRAM_A(SDRAM_A),
+	.SDRAM_DQML(SDRAM_DQML),
+	.SDRAM_DQMH(SDRAM_DQMH),
+	.SDRAM_BA(SDRAM_BA),
+	.SDRAM_nCS(SDRAM_nCS),
+	.SDRAM_nWE(SDRAM_nWE),
+	.SDRAM_nRAS(SDRAM_nRAS),
+	.SDRAM_nCAS(SDRAM_nCAS),
+	.SDRAM_CKE(SDRAM_CKE),
+	.SDRAM_CLK(SDRAM_CLK)
 );
 
 endmodule

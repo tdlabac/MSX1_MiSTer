@@ -199,6 +199,7 @@ localparam CONF_STR = {
 	"MSX1;;",
 	"-;",
 	"F1,ROM,Load Cartridge;",
+	"O46,Maper,Auto,none,gamemaster 2,Konami,Konami SCC,ASCII 8,ASCCII 16,linear 64k;",
 	"-;",
 	"OC,Tape Input,File,ADC;",
 	"D0F2,CAS,Cas File;",
@@ -276,7 +277,15 @@ always @(posedge clk_sys) begin
 	ce_5m3  <= !div[2:0];
 end
 
-wire reset = RESET | status[0] | buttons[1] | ioctl_isROM;
+///////////////////////    RESET   ///////////////////////////////
+
+reg [2:0] last_mapper = 3'b000;
+always @(posedge clk_sys) begin
+	last_mapper = status[6:4];
+end
+
+wire mapper_reset = last_mapper != status[6:4];
+wire reset = RESET | status[0] | buttons[1] | ioctl_isROM | mapper_reset;
 
 //////////////////////////////////////////////////////////////////
 
@@ -313,6 +322,7 @@ msx1 MSX1
 	.ioctl_wait(ioctl_waitROM),
 	.cas_motor(motor),
 	.cas_audio_in(cas_audio_in),
+	.user_mapper(status[6:4]),
 	.SDRAM_DQ(SDRAM_DQ),
     .SDRAM_A(SDRAM_A),
     .SDRAM_DQML(SDRAM_DQML),

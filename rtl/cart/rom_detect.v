@@ -104,7 +104,7 @@ wire [15:0] start4000 = head2[3] << 8 | head2[2];
 wire romSig_at_0000 = head [0] == "A" && head [1] == "B";
 wire romSig_at_4000 = head2[0] == "A" && head2[1] == "B";
 
-wire [3:0]  start_1 = start == 0 ?  ((head[5] & 8'hC0) != 8'h40 ? 4'h8 : 4'h4) : ((start & 16'hC000) == 16'h8000 ? 4'h8 : 4'h4);
+wire [3:0] start_1 = start == 0 ?  ((head[5] & 8'hC0) != 8'h40 ? 4'h8 : 4'h4) : ((start & 16'hC000) == 16'h8000 ? 4'h8 : 4'h4);
 wire [3:0] start_2 = (~romSig_at_0000 && romSig_at_4000) ? ((start4000 == 0 && (head2[5] & 8'hC0) == 8'h40) || start4000 < 16'h8000 || start4000 >= 16'hC000) ? 4'h0 : 4'h4 : 4'h4;
 wire [3:0] start_3 = (~(romSig_at_0000 && ~romSig_at_4000)) ? 4'h0 : 4'h4;
 assign offset = rom_size == 16'h1000 ? start_1 :
