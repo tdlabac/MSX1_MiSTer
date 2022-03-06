@@ -257,6 +257,7 @@ memory_mapper memory_mapper
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
 						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
 						~(SLTSL_n[1])   ? d_from_cart_1 :
+						~(SLTSL_n[2])   ? d_from_cart_2 :
 						~(vdp_n | rd_n) ? d_from_vdp :
 						~(psg_n | rd_n) ? d_from_psg :
 						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
@@ -350,4 +351,11 @@ cart_rom cart1
 	.SDRAM_CLK(SDRAM_CLK)
 );
 
+wire [7:0] d_from_cart_2;
+vy0010 cart2
+(
+	.clk(clk),
+	.addr(a),
+	.d_to_cpu(d_from_cart_2)
+);
 endmodule
