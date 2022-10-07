@@ -65,8 +65,8 @@ module YM2149
 );
 
 assign ACTIVE  = ~ymreg[7][5:0];
-assign IOA_out = ymreg[14];
-assign IOB_out = ymreg[15];
+assign IOA_out = ymreg[7][6] ? ymreg[14] : 8'hFF;
+assign IOB_out = ymreg[7][7] ? ymreg[15] : 8'hFF;
 
 reg [7:0] addr;
 reg [7:0] ymreg[16];
@@ -87,7 +87,7 @@ always @(posedge CLK) begin
 			if(BC) addr <= DI;
 			else if(!addr[7:4]) begin
 				case(addr[3:0])
-					14: if (ymreg[7][6]) ymreg[addr[3:0]] <= DI;
+					14: ; 
 					15: if (ymreg[7][7]) ymreg[addr[3:0]] <= DI;
 					default: ymreg[addr[3:0]] <= DI;
 				endcase;

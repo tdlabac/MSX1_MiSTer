@@ -304,7 +304,7 @@ YM2149 PSG
 
 	.IOA_in(psg_ioa),
 	.IOA_out(),
-	.IOB_in(8'h1),
+	.IOB_in(8'hFF),
 	.IOB_out(psg_iob)
 );
 
