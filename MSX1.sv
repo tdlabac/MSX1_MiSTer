@@ -207,6 +207,8 @@ localparam CONF_STR = {
 	"D0F2,CAS,Cas File;",
 	"D0TD,Tape Rewind;",
 	"-;",
+	"S0,DSK,Mount Drive A:;",
+	"-;",
 	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O3,Border,No,Yes;",
 	"O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
@@ -228,6 +230,17 @@ wire        ioctl_wr;
 wire        ioctl_wait;
 wire [26:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
+wire [31:0] sd_lba[1];
+wire        sd_rd;
+wire        sd_wr;
+wire        sd_ack;
+wire  [8:0] sd_buff_addr;
+wire  [7:0] sd_buff_dout;
+wire  [7:0] sd_buff_din[1];
+wire        sd_buff_wr;
+wire        img_mounted;
+wire [31:0] img_size;
+wire        img_readonly;
 wire cas_audio_in = status[12] ? tape_in : CAS_dout;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
@@ -251,7 +264,18 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
-	.ioctl_wait(ioctl_wait)	
+	.ioctl_wait(ioctl_wait),
+	.img_mounted(img_mounted),
+	.img_size(img_size),
+	.img_readonly(img_readonly),
+	.sd_lba(sd_lba),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr),
+	.sd_ack(sd_ack),
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din),
+	.sd_buff_wr(sd_buff_wr)
 );
 
 wire ioctl_isROM = ioctl_download && (ioctl_index[5:0] == 6'd1);
@@ -335,7 +359,18 @@ msx1 MSX1
     .SDRAM_nRAS(SDRAM_nRAS),
     .SDRAM_nCAS(SDRAM_nCAS),
     .SDRAM_CKE(SDRAM_CKE),
-    .SDRAM_CLK(SDRAM_CLK)
+    .SDRAM_CLK(SDRAM_CLK),
+	.img_mounted(img_mounted), // signaling that new image has been mounted
+	.img_size(img_size), // size of image in bytes
+	.img_wp(img_readonly), // write protect
+	.sd_lba(sd_lba[0]),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr),
+	.sd_ack(sd_ack),
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din[0]),
+	.sd_buff_wr(sd_buff_wr)
 );
 
 /////////////////  VIDEO  /////////////////////////
