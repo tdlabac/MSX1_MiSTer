@@ -58,8 +58,8 @@ module msx1
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
 //  -----------------------------------------------------------------------------
-wire [9:0]  audio_psg_mix = 10'h0 | (ay_ch_a + ay_ch_b + ay_ch_c);
-wire [9:0]  audio_core_mix = audio_psg_mix + {keybeep, 7'h0} + {(cas_audio_in & ~cas_motor),6'h0};
+
+wire [9:0]  audio_core_mix = ay_ch_mix + {keybeep, 7'h0} + {(cas_audio_in & ~cas_motor),6'h0};
 wire [15:0] audio_core    = 16'h0 | {audio_core_mix,3'b000};
 wire [16:0] audio_cart    = {sound_cart_1[14],sound_cart_1[14],sound_cart_1};
 wire [16:0] audio_mix = audio_cart + audio_core;
@@ -292,7 +292,7 @@ keyboard msx_key
 //  -----------------------------------------------------------------------------
 //  -- Sound AY-3-8910
 //  -----------------------------------------------------------------------------
-wire [7:0] d_from_psg,ay_ch_a, ay_ch_b, ay_ch_c, psg_ioa, psg_iob;
+wire [7:0] d_from_psg, psg_ioa, psg_iob;
 wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
 wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
 wire [5:0] joy_a = psg_iob[4] ? 6'b111111 : {~joy0[5], ~joy0[4], ~joy0[0], ~joy0[1], ~joy0[2], ~joy0[3]};
@@ -300,23 +300,22 @@ wire [5:0] joy_b = psg_iob[5] ? 6'b111111 : {~joy1[5], ~joy1[4], ~joy1[0], ~joy1
 wire [5:0] joyA = joy_a & {psg_iob[0], psg_iob[1], 4'b1111};
 wire [5:0] joyB = joy_b & {psg_iob[2], psg_iob[3], 4'b1111};
 assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joyB : joyA};
-YM2149 PSG
+
+wire [9:0] ay_ch_mix;
+jt49_bus PSG
 (
-	.CLK(clk),
-	.CE(clk_en_3m58_p),
-	.RESET(reset),
-	.BDIR(psg_bdir),
-	.BC(psg_bc),
-	.DI(d_from_cpu),
-	.DO(d_from_psg),
-	.CHANNEL_A(ay_ch_a),
-	.CHANNEL_B(ay_ch_b),
-	.CHANNEL_C(ay_ch_c),
-
-	.SEL(1),
-	.MODE(1),
-	.ACTIVE(),
-
+	.rst_n(~reset),
+	.clk(clk),
+	.clk_en(clk_en_3m58_p),
+	.bdir(psg_bdir),
+	.bc1(psg_bc),
+	.din(d_from_cpu),
+	.sel(1),
+	.dout(d_from_psg),
+	.sound(ay_ch_mix),
+	.A(),
+	.B(),
+	.C(),
 	.IOA_in(psg_ioa),
 	.IOA_out(),
 	.IOB_in(8'hFF),

@@ -9,7 +9,6 @@ set_global_assignment -name VERILOG_FILE rtl/jt8255.v
 set_global_assignment -name VERILOG_FILE rtl/io_decoder.v
 set_global_assignment -name VERILOG_FILE rtl/memory_mapper.v
 set_global_assignment -name VHDL_FILE rtl/keyboard.vhd
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/YM2149.sv
 set_global_assignment -name VERILOG_FILE rtl/cart/rom.v
 set_global_assignment -name VERILOG_FILE rtl/cart/rom_detect.v
 set_global_assignment -name VERILOG_FILE rtl/cart/konami.v
@@ -24,3 +23,4 @@ set_global_assignment -name VERILOG_FILE rtl/cart/ascii16.v
 set_global_assignment -name VERILOG_FILE rtl/cart/gamemaster2.v
 set_global_assignment -name VERILOG_FILE rtl/cart/vy0010.v
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/cart/wd1793.sv
+set_global_assignment -name QIP_FILE rtl/jt49/jt49.qip
