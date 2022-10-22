@@ -58,10 +58,10 @@ reg Amix, Bmix, Cmix;
 
 wire cen16, cen256;
 
-assign IOA_out = regarray[14];
-assign IOB_out = regarray[15];
-assign port_A  = !regarray[7][6] ? IOA_in : IOA_out;
-assign port_B  = !regarray[7][7] ? IOB_in : IOB_out;
+assign IOA_out = regarray[7][6] ? regarray[14] : 8'hFF;
+assign IOB_out = regarray[7][7] ? regarray[15] : 8'hFF;
+assign port_A  = !regarray[7][6] ? IOA_in : IOA_out & IOA_in;
+assign port_B  = !regarray[7][7] ? IOB_in : IOB_out & IOB_in;
 assign sample  = cen16;
 
 jt49_cen #(.CLKDIV(CLKDIV)) u_cen(
@@ -225,8 +225,8 @@ always @(posedge clk, negedge rst_n) begin
         eg_restart <= 0;
         regarray[0]<=8'd0; regarray[4]<=8'd0; regarray[ 8]<=8'd0; regarray[12]<=8'd0;
         regarray[1]<=8'd0; regarray[5]<=8'd0; regarray[ 9]<=8'd0; regarray[13]<=8'd0;
-        regarray[2]<=8'd0; regarray[6]<=8'd0; regarray[10]<=8'd0; regarray[14]<=8'd0;
-        regarray[3]<=8'd0; regarray[7]<=8'd0; regarray[11]<=8'd0; regarray[15]<=8'd0;
+        regarray[2]<=8'd0; regarray[6]<=8'd0; regarray[10]<=8'd0; regarray[14]<=8'hFF;
+        regarray[3]<=8'd0; regarray[7]<=8'hFF; regarray[11]<=8'd0; regarray[15]<=8'hFF;
     end else begin
         last_write  <= write;
         // Data read
@@ -237,7 +237,11 @@ always @(posedge clk, negedge rst_n) begin
         endcase
         // Data write
         if( write ) begin
-            regarray[addr] <= din;
+            case( addr )
+               4'he: ;
+               4'hf: if (regarray[7][7]) regarray[addr] <= din;
+               default: regarray[addr] <= din;
+            endcase
             if ( addr == 4'hD && wr_edge ) eg_restart <= 1;
         end else begin
             eg_restart <= 0;
