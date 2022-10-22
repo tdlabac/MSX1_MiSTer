@@ -207,7 +207,8 @@ localparam CONF_STR = {
 	"D0F2,CAS,Cas File;",
 	"D0TD,Tape Rewind;",
 	"-;",
-	"S0,DSK,Mount Drive A:;",
+	"OE,FDD VY0010,No,Yes;",
+	"D1S0,DSK,Mount Drive A:;",
 	"-;",
 	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"O3,Border,No,Yes;",
@@ -254,7 +255,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({status[12]}),
+	.status_menumask({~status[14], status[12]}),
 	
 	.ps2_key(ps2_key),
 	.joystick_0(joy0),
@@ -370,7 +371,8 @@ msx1 MSX1
 	.sd_buff_addr(sd_buff_addr),
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din[0]),
-	.sd_buff_wr(sd_buff_wr)
+	.sd_buff_wr(sd_buff_wr),
+	.fdd_enable(status[14])
 );
 
 /////////////////  VIDEO  /////////////////////////

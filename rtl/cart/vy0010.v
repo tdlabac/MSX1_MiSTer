@@ -21,7 +21,8 @@ module vy0010
    input      [7:0] sd_buff_dout,
    input      [7:0] sd_buff_din,
    input            sd_buff_wr,
-   input            sd_din_strobe
+   input            sd_din_strobe,
+   input            fdd_enable
 );
 
 reg side_select, m_on, in_use = 1'b0;
@@ -47,7 +48,9 @@ always @(posedge reset, posedge wr7ffc) begin
    if (reset) begin
       side_select <= 1'b0;
    end else begin
-      side_select <= d_from_cpu[0];
+      if (fdd_enable) begin
+         side_select <= d_from_cpu[0];
+      end
    end
 end
 
@@ -58,10 +61,12 @@ always @(posedge reset, posedge wr7ffd) begin
       in_use      <= 1'b0;
       ds          <= 2'b00;
    end else begin
-      ds[0]  <=  d_from_cpu[0];
-      ds[1]  <= ~d_from_cpu[1];     
-      in_use <=  d_from_cpu[6];
-      m_on   <=  d_from_cpu[7];
+      if (fdd_enable) begin
+         ds[0]  <=  d_from_cpu[0];
+         ds[1]  <= ~d_from_cpu[1];     
+         in_use <=  d_from_cpu[6];
+         m_on   <=  d_from_cpu[7];
+      end
    end
 end
    
