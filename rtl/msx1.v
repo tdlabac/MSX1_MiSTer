@@ -38,7 +38,20 @@ module msx1
     output        SDRAM_nRAS,
     output        SDRAM_nCAS,
     output        SDRAM_CKE,
-	output        SDRAM_CLK
+	output        SDRAM_CLK,
+	input         img_mounted,
+	input  [31:0] img_size,
+	input         img_wp,
+	output [31:0] sd_lba,
+	output        sd_rd,
+	output        sd_wr,
+	input         sd_ack,
+	input   [8:0] sd_buff_addr,
+	input   [7:0] sd_buff_dout,
+	output  [7:0] sd_buff_din,
+	input         sd_buff_wr,
+	input         sd_din_strobe,
+	input         fdd_enable
 );
 
 //  -----------------------------------------------------------------------------
@@ -257,6 +270,7 @@ memory_mapper memory_mapper
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
 						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
 						~(SLTSL_n[1])   ? d_from_cart_1 :
+						~(SLTSL_n[2] | ~fdd_enable)   ? d_from_cart_2 :
 						~(vdp_n | rd_n) ? d_from_vdp :
 						~(psg_n | rd_n) ? d_from_psg :
 						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
@@ -350,4 +364,31 @@ cart_rom cart1
 	.SDRAM_CLK(SDRAM_CLK)
 );
 
+wire [7:0] d_from_cart_2;
+vy0010 cart2
+(
+	.clk(clk),
+	.clk_en(clk_en_3m58_p),
+	.reset(reset),
+	.addr(a),
+	.d_to_cpu(d_from_cart_2),
+	.d_from_cpu(d_from_cpu),
+	.wr_n(wr_n),
+	.rd_n(rd_n),
+	.CS1_n(CS1_n),
+	.stlsl_n(SLTSL_n[2]),
+	.img_mounted(img_mounted),
+	.img_size(img_size),
+	.img_wp(img_wp),
+	.sd_lba(sd_lba),
+	.sd_rd(sd_rd),
+	.sd_wr(sd_wr),
+	.sd_ack(sd_ack),
+	.sd_buff_addr(sd_buff_addr),
+	.sd_buff_dout(sd_buff_dout),
+	.sd_buff_din(sd_buff_din),
+	.sd_buff_wr(sd_buff_wr),
+	.sd_din_strobe(sd_din_strobe),
+	.fdd_enable(fdd_enable)
+);
 endmodule

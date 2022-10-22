@@ -22,3 +22,5 @@ set_global_assignment -name VHDL_FILE rtl/cart/ram.vhd
 set_global_assignment -name VERILOG_FILE rtl/cart/ascii8.v
 set_global_assignment -name VERILOG_FILE rtl/cart/ascii16.v
 set_global_assignment -name VERILOG_FILE rtl/cart/gamemaster2.v
+set_global_assignment -name VERILOG_FILE rtl/cart/vy0010.v
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/cart/wd1793.sv
