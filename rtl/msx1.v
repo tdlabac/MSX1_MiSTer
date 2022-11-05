@@ -310,7 +310,7 @@ jt49_bus PSG
 	.bdir(psg_bdir),
 	.bc1(psg_bc),
 	.din(d_from_cpu),
-	.sel(1),
+	.sel(0),
 	.dout(d_from_psg),
 	.sound(ay_ch_mix),
 	.A(),
