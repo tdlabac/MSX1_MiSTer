@@ -76,8 +76,7 @@ use work.vdp18_pack.all;
 
 entity vdp18_core is
 
-  generic (
-    is_pal_g      : integer := 0;
+  generic (    
     compat_rgb_g  : integer := 0
   );
   port (
@@ -99,6 +98,7 @@ entity vdp18_core is
     vram_d_i      : in  std_logic_vector(0 to  7);
     -- Video Interface --------------------------------------------------------
     border_i      : in  std_logic;
+    is_pal_i      : in  std_logic;
     col_o         : out std_logic_vector(0 to 3);
     rgb_r_o       : out std_logic_vector(0 to 7);
     rgb_g_o       : out std_logic_vector(0 to 7);
@@ -202,10 +202,7 @@ begin
   -----------------------------------------------------------------------------
   -- Horizontal and Vertical Timing Generator
   -----------------------------------------------------------------------------
-  hor_vert_b : work.vdp18_hor_vert
-    generic map (
-      is_pal_g => is_pal_g
-    )
+  hor_vert_b : work.vdp18_hor_vert    
     port map (
       clk_i         => clk_i,
       clk_en_5m37_i => clk_en_5m37_s,
@@ -218,7 +215,8 @@ begin
       vsync_n_o     => vsync_n_s,
       blank_o       => blank_s,
       hblank_o      => hblank_s,
-      vblank_o      => vblank_s
+      vblank_o      => vblank_s,
+      is_pal_i      => is_pal_i
     );
 
   hsync_n_o     <= hsync_n_s;

@@ -13,6 +13,7 @@ module msx1
 	output        vsync_n,
 	output        hblank,
 	output        vblank,
+	input         vdp_pal,
 	output [15:0] audio,
 	input  [10:0] ps2_key,
 	input   [5:0] joy0,
@@ -177,7 +178,7 @@ spram #(14) vram
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_vdp;
 wire vdp_int_n;
-vdp18_core #(.is_pal_g(1),.compat_rgb_g(0)) vdp18
+vdp18_core #(.compat_rgb_g(0)) vdp18
 (
 	.clk_i(clk),
 	.clk_en_10m7_i(ce_10m7),
@@ -199,7 +200,8 @@ vdp18_core #(.is_pal_g(1),.compat_rgb_g(0)) vdp18
 	.hsync_n_o(hsync_n),
 	.vsync_n_o(vsync_n),
 	.hblank_o(hblank),
-	.vblank_o(vblank)
+	.vblank_o(vblank),
+	.is_pal_i(vdp_pal)
 );
 
 //  -----------------------------------------------------------------------------
