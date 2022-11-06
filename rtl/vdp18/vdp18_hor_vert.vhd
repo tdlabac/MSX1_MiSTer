@@ -177,26 +177,18 @@ begin
         end if;
 
         -- Vertical sync ------------------------------------------------------
-        if is_pal_g = 1 then
-          if    cnt_vert_q = 244 then
-            vsync_n_o <= '0';
-          elsif cnt_vert_q = 247 then
-            vsync_n_o <= '1';
-          end if;
-        else
-          if    cnt_vert_q = 218 then
-            vsync_n_o <= '0';
-          elsif cnt_vert_q = 221 then
-            vsync_n_o <= '1';
-          end if;
-
-          if    cnt_vert_q = 214 then
-            vblank_q  <= true;
-          elsif cnt_vert_q = first_line_s + 14 then
-            vblank_q  <= false;
-          end if;
-        end if;
-
+        
+		  if    cnt_vert_q = last_line_s - 3 then
+		    vsync_n_o <= '0';
+		  elsif cnt_vert_q = last_line_s then
+		    vsync_n_o <= '1';
+		  end if;
+		  
+		  if    cnt_vert_q = last_line_s - 6  then 
+		    vblank_q  <= true;
+		  elsif cnt_vert_q = first_line_s + 14 then
+		    vblank_q  <= false;
+		  end if;		  
       end if;
     end if;
   end process counters;
