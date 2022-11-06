@@ -53,9 +53,6 @@ use work.vdp18_pack.hv_t;
 
 entity vdp18_hor_vert is
 
-  generic (
-    is_pal_g      : integer := 0
-  );
   port (
     clk_i         : in  std_logic;
     clk_en_5m37_i : in  boolean;
@@ -68,7 +65,8 @@ entity vdp18_hor_vert is
     vsync_n_o     : out std_logic;
     blank_o       : out boolean;
     hblank_o      : out boolean;
-    vblank_o      : out boolean
+    vblank_o      : out boolean;
+    is_pal_i      : in  std_logic
   );
 
 end vdp18_hor_vert;
@@ -97,15 +95,8 @@ begin
   -----------------------------------------------------------------------------
   -- Prepare comparison signals for NTSC and PAL.
   --
-  is_ntsc: if is_pal_g /= 1 generate
-    first_line_s <= hv_first_line_ntsc_c;
-    last_line_s  <= hv_last_line_ntsc_c;
-  end generate;
-  --
-  is_pal: if is_pal_g = 1 generate
-    first_line_s <= hv_first_line_pal_c;
-    last_line_s  <= hv_last_line_pal_c;
-  end generate;
+  first_line_s <= hv_first_line_pal_c when is_pal_i = '1' else hv_first_line_ntsc_c;
+  last_line_s  <= hv_last_line_pal_c  when is_pal_i = '1' else hv_last_line_ntsc_c;   
   --
   -----------------------------------------------------------------------------
 
