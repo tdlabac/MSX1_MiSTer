@@ -215,11 +215,15 @@ localparam CONF_STR = {
 	"OE,FDD VY0010,No,Yes;",
 	"D1S0,DSK,Mount Drive A:;",
 	"-;",
-	"OG,Video mode,PAL,NTSC;",
-	"O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
-	"O3,Border,No,Yes;",
-	"O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
-	"OAB,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
+	"P1,Video settings;",
+	"P1OG,Video mode,PAL,NTSC;",
+	"P1O12,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
+	"P1O3,Border,No,Yes;",
+	"P1O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
+	"P1OAB,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",	
+	"P2,Advanced settings;",
+	"P2F3,ROM,Load BIOS;",	
+	"-;",
 	"T0,Reset;",
 	"RF,Reset & Detach ROM Cartridge;",
 	"R0,Reset and close OSD;",
@@ -288,6 +292,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 reg rom_loaded = 0;
 wire ioctl_isROM = ioctl_download && (ioctl_index[5:0] == 6'd1);
+wire ioctl_isBIOS = ioctl_download && (ioctl_index[5:0] == 6'd3);
 wire ioctl_isCAS = ioctl_download && (ioctl_index[5:0] == 6'd2);
 
 always @(posedge ioctl_isROM, posedge status[15]) begin
@@ -328,7 +333,7 @@ always @(posedge clk_sys) begin
 end
 
 wire mapper_reset = last_mapper != status[6:4];
-wire reset = RESET | status[0] | buttons[1] | ioctl_isROM | mapper_reset | status[15];
+wire reset = RESET | status[0] | buttons[1] | ioctl_isROM | ioctl_isBIOS | mapper_reset | status[15];
 
 //////////////////////////////////////////////////////////////////
 
@@ -363,6 +368,7 @@ msx1 MSX1
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_isROM(ioctl_isROM),
+	.ioctl_isBIOS(ioctl_isBIOS),
 	.ioctl_wait(ioctl_waitROM),
 	.rom_loaded(rom_loaded),
 	.cas_motor(motor),

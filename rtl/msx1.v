@@ -24,6 +24,7 @@ module msx1
 	input  [24:0] ioctl_addr,
 	input   [7:0] ioctl_dout,
 	input         ioctl_isROM,
+	input         ioctl_isBIOS,
 	output        ioctl_wait,
 	input         rom_loaded,
 	output        cas_motor,
@@ -139,8 +140,10 @@ wire [7:0] rom_q;
 spram #(.addr_width(15), .mem_init_file("rtl/rom/8020-00bios.mif"), .mem_name("ROM")) rom
 (   
 	.clock(clk),
-	.address(a[14:0]),
-	.q(rom_q)
+	.address(ioctl_isBIOS ? ioctl_addr[14:0] : a[14:0]),
+	.q(rom_q),
+	.wren(ioctl_isBIOS),
+	.data(ioctl_dout)
 );
 
 //  -----------------------------------------------------------------------------
