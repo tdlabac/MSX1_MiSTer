@@ -19,7 +19,7 @@ module vy0010
    input            sd_ack,
    input      [8:0] sd_buff_addr,
    input      [7:0] sd_buff_dout,
-   input      [7:0] sd_buff_din,
+   output     [7:0] sd_buff_din,
    input            sd_buff_wr,
    input            sd_din_strobe,
    input            fdd_enable
