@@ -39,6 +39,7 @@ architecture rtl of keyboard is
 	signal scancode : std_logic_vector(7 downto 0);
 	signal changed : std_logic := '0';
 	signal release : std_logic := '1';
+	signal shift : std_logic_vector(1 downto 0) := (others => '1');
   	
 begin
 	kb_data_o <= keyMatrix(to_integer(unsigned(kb_addr_i)))(7 downto 0) 
@@ -121,7 +122,8 @@ begin
 						when x"35" => keyMatrix(5)(6) <= release; -- Y
 						when x"1a" => keyMatrix(5)(7) <= release; -- Z
 						-- 6
-						when x"12" => keyMatrix(6)(0) <= release; -- LEFT SHIFT
+						when x"12" => shift(0) <= release; -- LEFT SHIFT
+						when x"59" => shift(1) <= release; -- RIGHT SHIFT
 						when x"14" => keyMatrix(6)(1) <= release; -- LEFT CTRL
 						-- when x"11" => keyMatrix(6)(2) <= release; -- RIGHT ALT (GRAPH)
 						when x"58" => keyMatrix(6)(3) <= release; -- CAPS LOCK
@@ -165,5 +167,6 @@ begin
 				end if;
 			end if;
 		end if;
+		keyMatrix(6)(0) <= shift(0) and shift(1);
 	end process;
 end; 
