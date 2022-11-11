@@ -136,7 +136,7 @@ begin
 						when x"03" => keyMatrix(7)(1) <= release; -- F5  
 						when x"76" => keyMatrix(7)(2) <= release; -- ESC
 						when x"0D" => keyMatrix(7)(3) <= release; -- TAB
-						-- when x"7b" => keyMatrix(7)(4) <= release; -- pause/break (STOP)
+						-- when x"E1" => keyMatrix(7)(4) <= release; -- pause/break (STOP)
 						when x"66" => keyMatrix(7)(5) <= release; -- BACKSPACE
 						when x"78" => keyMatrix(7)(6) <= release; -- F11 (SELECT)
 						when x"5a" => keyMatrix(7)(7) <= release; -- ENTER
@@ -154,7 +154,7 @@ begin
 				else 
 					case scancode is
 					   when x"11" => keyMatrix(6)(2) <= release; -- RIGHT ALT (GRAPH)
-					   when x"7b" => keyMatrix(7)(4) <= release; -- pause/break (STOP)
+					   when x"7c" => keyMatrix(7)(4) <= release; -- Print Screen (STOP)
 						when x"6c" => keyMatrix(8)(1) <= release; -- HOME
 						when x"70" => keyMatrix(8)(2) <= release; -- INS
 						when x"71" => keyMatrix(8)(3) <= release; -- DEL
