@@ -29,7 +29,7 @@ module msx1
 	input         rom_loaded,
 	output        cas_motor,
 	input         cas_audio_in,
-	input   [2:0] user_mapper,
+	input   [3:0] user_mapper,
 	    //SDRAM
     inout  [15:0] SDRAM_DQ,
     output [12:0] SDRAM_A,
