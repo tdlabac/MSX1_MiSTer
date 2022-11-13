@@ -26,10 +26,10 @@ package vdp18_pack is
   -- Constants for first and last vertical line of NTSC and PAL mode.
   --
   constant hv_first_line_ntsc_c : hv_t := to_signed(-40, hv_t'length);
-  constant hv_last_line_ntsc_c  : hv_t := to_signed(221, hv_t'length);
+  constant hv_last_line_ntsc_c  : hv_t := to_signed(222, hv_t'length);
   --
   constant hv_first_line_pal_c  : hv_t := to_signed(-65, hv_t'length);
-  constant hv_last_line_pal_c   : hv_t := to_signed(247, hv_t'length);
+  constant hv_last_line_pal_c   : hv_t := to_signed(248, hv_t'length);
   --
   -----------------------------------------------------------------------------
 
