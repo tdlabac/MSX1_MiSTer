@@ -292,7 +292,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 reg rom_loaded = 0;
 wire ioctl_isROM = ioctl_download && (ioctl_index[5:0] == 6'd1);
-wire ioctl_isBIOS = ioctl_download && (ioctl_index[5:0] == 6'd3);
+wire ioctl_isBIOS = ioctl_download && ((ioctl_index[5:0] == 6'd3) || ! ioctl_index[5:0]);
 wire ioctl_isCAS = ioctl_download && (ioctl_index[5:0] == 6'd2);
 
 always @(posedge ioctl_isROM, posedge status[15]) begin
