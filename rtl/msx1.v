@@ -114,25 +114,25 @@ t80pa #(.Mode(0)) T80
 //  -- WAIT
 //  -----------------------------------------------------------------------------
 wire exwait_n = 1;
-wire exwait = ~exwait_n;
+reg wait_n2;
+ls74 u1_1
+(
+   .clr(exwait_n),
+   .pre(u1_2_q),
+   .clk(clk_en_3m58_p),
+   .d(m1_n),
+   .q(wait_n)
+);
 
-reg powait;
-always @(posedge clk_en_3m58_p, posedge exwait, posedge powait) begin
-	if (exwait)
-		wait_n <= 0;
-	else if (powait)
-		wait_n <= 1;
-	else
-		wait_n <= (m1_n & a[1]) | (m1_n & psg_n);
-end
-
-always @(posedge clk_en_3m58_p, posedge exwait) begin
-	if (exwait)
-		powait <= 0;
-	else
-		powait <= ~wait_n;
-end
-
+wire u1_2_q;
+ls74 u1_2
+(
+   .clr(1),
+   .pre(exwait_n),
+   .clk(clk_en_3m58_p),
+   .d(wait_n),
+   .q(u1_2_q)
+);
 //  -----------------------------------------------------------------------------
 //  -- ROM
 //  -----------------------------------------------------------------------------
@@ -298,20 +298,41 @@ keyboard msx_key
 //  -- Sound AY-3-8910
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_psg, psg_ioa, psg_iob;
-wire psg_bdir = ~(~(~wait_n | powait) | wr_n);
-wire psg_bc = ~((~(~rd_n & a[1]) | psg_n ) & ~(~a[0] & psg_bdir));
 wire [5:0] joy_a = psg_iob[4] ? 6'b111111 : {~joy0[5], ~joy0[4], ~joy0[0], ~joy0[1], ~joy0[2], ~joy0[3]};
 wire [5:0] joy_b = psg_iob[5] ? 6'b111111 : {~joy1[5], ~joy1[4], ~joy1[0], ~joy1[1], ~joy1[2], ~joy1[3]};
 wire [5:0] joyA = joy_a & {psg_iob[0], psg_iob[1], 4'b1111};
 wire [5:0] joyB = joy_b & {psg_iob[2], psg_iob[3], 4'b1111};
 assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joyB : joyA};
-
 wire [9:0] ay_ch_mix;
+
+wire u21_1_q;
+ls74 u21_1
+(
+   .clr(!psg_n),
+   .pre(1),
+   .clk(clk_en_3m58_p),
+   .d(!psg_n),
+   .q(u21_1_q)
+);
+
+wire u21_2_q;
+ls74 u21_2
+(
+   .clr(!psg_n),
+   .pre(1),
+   .clk(clk_en_3m58_p),
+   .d(u21_1_q),
+   .q(u21_2_q)
+);
+
+wire psg_e = !(!u21_2_q | clk_en_3m58_p) | psg_n;
+wire psg_bc   = !(a[0] | psg_e);
+wire psg_bdir = !(a[1] | psg_e);
 jt49_bus PSG
 (
 	.rst_n(~reset),
 	.clk(clk),
-	.clk_en(clk_en_3m58_p),
+	.clk_en(clk_en_3m58_n),
 	.bdir(psg_bdir),
 	.bc1(psg_bc),
 	.din(d_from_cpu),
