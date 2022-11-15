@@ -25,3 +25,4 @@ set_global_assignment -name VERILOG_FILE rtl/cart/vy0010.v
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/cart/wd1793.sv
 set_global_assignment -name QIP_FILE rtl/jt49/jt49.qip
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/ls74.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/slots.sv

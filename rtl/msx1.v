@@ -1,8 +1,6 @@
 module msx1
 (
 	input         clk,
-	input         clk_sdram,
-	input         locked_sdram, 
 	input         ce_10m7,
 	input         reset,
 	input         border,
@@ -23,25 +21,24 @@ module msx1
 	input         ioctl_wr,
 	input  [24:0] ioctl_addr,
 	input   [7:0] ioctl_dout,
-	input         ioctl_isROM,
+	input         ioctl_isROMA,
+	input         ioctl_isROMB,
 	input         ioctl_isBIOS,
 	output        ioctl_wait,
-	input         rom_loaded,
+	input   [1:0] rom_enabled,
 	output        cas_motor,
 	input         cas_audio_in,
-	input   [3:0] user_mapper,
-	    //SDRAM
-    inout  [15:0] SDRAM_DQ,
-    output [12:0] SDRAM_A,
-    output        SDRAM_DQML,
-    output        SDRAM_DQMH,
-    output  [1:0] SDRAM_BA,
-    output        SDRAM_nCS,
-    output        SDRAM_nWE,
-    output        SDRAM_nRAS,
-    output        SDRAM_nCAS,
-    output        SDRAM_CKE,
-	output        SDRAM_CLK,
+	input   [3:0] slot_A,
+	input   [3:0] slot_B,
+	//SDRAM
+	input   [7:0] sdram_dout[2],
+	output  [7:0] sdram_din[2],
+	output [24:0] sdram_addr[2],
+	output        sdram_we[2],
+	output        sdram_rd[2],
+	input         sdram_ready[2],
+	input   [1:0] sdram_size, 
+   
 	input         img_mounted,
 	input  [31:0] img_size,
 	input         img_wp,
@@ -53,8 +50,7 @@ module msx1
 	input   [7:0] sd_buff_dout,
 	output  [7:0] sd_buff_din,
 	input         sd_buff_wr,
-	input         sd_din_strobe,
-	input         fdd_enable
+	input         sd_din_strobe
 );
 
 //  -----------------------------------------------------------------------------
@@ -63,7 +59,7 @@ module msx1
 
 wire [9:0]  audio_core_mix = ay_ch_mix + {keybeep, 7'h0} + {(cas_audio_in & ~cas_motor),6'h0};
 wire [15:0] audio_core    = 16'h0 | {audio_core_mix,3'b000};
-wire [16:0] audio_cart    = {sound_cart_1[14],sound_cart_1[14],sound_cart_1};
+wire [16:0] audio_cart    = {sound_slots[14],sound_slots[14],sound_slots};
 wire [16:0] audio_mix = audio_cart + audio_core;
 wire [15:0] compr[7:0] = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 16'h8000, 16'h7FFF, 16'h7FFF, 16'h7FFF,  {1'b0, audio_mix[13:0], 1'b0}};
 assign audio = compr[audio_mix[16:14]];
@@ -144,20 +140,6 @@ spram #(.addr_width(15), .mem_init_file("rtl/rom/8020-00bios.mif"), .mem_name("R
 	.q(rom_q),
 	.wren(ioctl_isBIOS),
 	.data(ioctl_dout)
-);
-
-//  -----------------------------------------------------------------------------
-//  -- RAM
-//  -----------------------------------------------------------------------------
-
-wire [7:0] ram_q;
-spram #(.addr_width(16), .mem_name("RAM")) ram
-(   
-	.clock(clk),
-	.address (a[15:0]),
-	.q(ram_q),
-	.data(d_from_cpu),
-	.wren(~(SLTSL_n[3] | wr_n ))
 );
 
 //  -----------------------------------------------------------------------------
@@ -274,12 +256,13 @@ memory_mapper memory_mapper
 //  -- CPU data multiplex
 //  ----------------------------------------------------------------------------- 
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
-						~(mreq_n | rd_n | ~rfrsh_n | SLTSL_n[3]) ? ram_q :
-						~(SLTSL_n[1] | ~rom_loaded)   ? d_from_cart_1 :
-						~(SLTSL_n[2] | ~fdd_enable)   ? d_from_cart_2 :
-						~(vdp_n | rd_n) ? d_from_vdp :
-						~(psg_n | rd_n) ? d_from_psg :
-						~(ppi_n | rd_n) ? d_from_8255 : 8'hFF;
+						~(SLTSL_n[1])          ? d_from_slots:
+						~(SLTSL_n[2])          ? d_from_slots:
+						~(SLTSL_n[3])          ? d_from_slots:                 
+						~(vdp_n | rd_n)        ? d_from_vdp :
+						~(psg_n | rd_n)        ? d_from_psg :
+						~(ppi_n | rd_n)        ? d_from_8255 : 
+						                         8'hFF;
 
 //  -----------------------------------------------------------------------------
 //  -- Keyboard decoder
@@ -349,60 +332,41 @@ jt49_bus PSG
 );
 
 //  -----------------------------------------------------------------------------
-//  -- ROM CARTRIGE
+//  -- SLOTS
 //  -----------------------------------------------------------------------------
-wire [7:0] d_from_cart_1;
-wire [14:0] sound_cart_1; 
-cart_rom cart1
+wire [7:0] d_from_slots;
+wire [14:0] sound_slots; 
+slots slots
 (
 	.clk(clk),
 	.clk_en(clk_en_3m58_p),
 	.reset(reset),
 	.addr(a),
-	.wr(~wr_n),
-	.rd(~rd_n),
+	.wr_n(wr_n),
+	.rd_n(rd_n),
 	.CS1_n(CS1_n),    
 	.CS2_n(CS2_n),
 	.CS12_n(CS12_n),
-	.SLTSL_n(SLTSL_n[1]),
+	.SLTSL_n(SLTSL_n),
 	.d_from_cpu(d_from_cpu),
-	.d_to_cpu(d_from_cart_1),
-	.sound(sound_cart_1),
+	.d_to_cpu(d_from_slots),
+	.sound(sound_slots),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
-	.ioctl_isROM(ioctl_isROM),
+	.ioctl_isROMA(ioctl_isROMA),
+	.ioctl_isROMB(ioctl_isROMB),
 	.ioctl_wait(ioctl_wait),
-
-	.user_mapper(user_mapper),
-	.clk_sdram(clk_sdram),
-	.locked_sdram(locked_sdram),
-	.SDRAM_DQ(SDRAM_DQ),
-	.SDRAM_A(SDRAM_A),
-	.SDRAM_DQML(SDRAM_DQML),
-	.SDRAM_DQMH(SDRAM_DQMH),
-	.SDRAM_BA(SDRAM_BA),
-	.SDRAM_nCS(SDRAM_nCS),
-	.SDRAM_nWE(SDRAM_nWE),
-	.SDRAM_nRAS(SDRAM_nRAS),
-	.SDRAM_nCAS(SDRAM_nCAS),
-	.SDRAM_CKE(SDRAM_CKE),
-	.SDRAM_CLK(SDRAM_CLK)
-);
-
-wire [7:0] d_from_cart_2;
-vy0010 cart2
-(
-	.clk(clk),
-	.clk_en(clk_en_3m58_p),
-	.reset(reset),
-	.addr(a),
-	.d_to_cpu(d_from_cart_2),
-	.d_from_cpu(d_from_cpu),
-	.wr_n(wr_n),
-	.rd_n(rd_n),
-	.CS1_n(CS1_n),
-	.stlsl_n(SLTSL_n[2]),
+	.sdram_dout(sdram_dout),
+	.sdram_din(sdram_din),
+	.sdram_addr(sdram_addr),
+	.sdram_we(sdram_we),
+	.sdram_rd(sdram_rd),
+	.sdram_ready(sdram_ready),
+	.sdram_size(sdram_size),
+	.slot_A(slot_A),
+	.slot_B(slot_B),
+	.rom_enabled(rom_enabled),
 	.img_mounted(img_mounted),
 	.img_size(img_size),
 	.img_wp(img_wp),
@@ -414,7 +378,7 @@ vy0010 cart2
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din),
 	.sd_buff_wr(sd_buff_wr),
-	.sd_din_strobe(sd_din_strobe),
-	.fdd_enable(fdd_enable)
+	.sd_din_strobe(sd_din_strobe)
 );
+
 endmodule
