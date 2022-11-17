@@ -49,6 +49,7 @@ module slots
     output     [2:0] mapper_info
 );
 
+assign sound = slot_A == 4 ? sound_slot_A : sound_slot_B;
 assign ioctl_wait = ioctl_wait_slot_A | ioctl_wait_slot_B;
 
 assign d_to_cpu = ~(SLTSL_n[1]) ? (enableFDD_n ? d_from_slot_A : d_from_FDD) :

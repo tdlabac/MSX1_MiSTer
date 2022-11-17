@@ -58,10 +58,13 @@ module msx1
 //  -- Audio MIX
 //  -----------------------------------------------------------------------------
 
-wire [9:0]  audio_core_mix = ay_ch_mix + {keybeep, 7'h0} + {(cas_audio_in & ~cas_motor),6'h0};
-wire [15:0] audio_core    = 16'h0 | {audio_core_mix,3'b000};
-wire [16:0] audio_cart    = {sound_slots[14],sound_slots[14],sound_slots};
-wire [16:0] audio_mix = audio_cart + audio_core;
+wire [9:0]  pAudioPSG = {1'b0, ay_ch_mix[9:1]} + {keybeep,5'b00000} + {(cas_audio_in & ~cas_motor),5'b00000};
+wire [15:0] pAudioPCM = {sound_slots[14],sound_slots};
+
+wire [16:0] pcm   = {pAudioPCM[15], pAudioPCM};
+wire [15:0] fm    = {1'b0, pAudioPSG, 5'b00000};
+wire [16:0] audio_mix = {pcm[16], pcm[16:1]} + {fm[15], fm};
+
 wire [15:0] compr[7:0] = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 16'h8000, 16'h7FFF, 16'h7FFF, 16'h7FFF,  {1'b0, audio_mix[13:0], 1'b0}};
 assign audio = compr[audio_mix[16:14]];
 
