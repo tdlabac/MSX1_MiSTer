@@ -30,6 +30,7 @@ module msx1
 	input         cas_audio_in,
 	input   [3:0] slot_A,
 	input   [3:0] slot_B,
+	output  [2:0] mapper_info,
 	//SDRAM
 	input   [7:0] sdram_dout[2],
 	output  [7:0] sdram_din[2],
@@ -366,6 +367,7 @@ slots slots
 	.sdram_size(sdram_size),
 	.slot_A(slot_A),
 	.slot_B(slot_B),
+	.mapper_info(mapper_info),
 	.rom_enabled(rom_enabled),
 	.img_mounted(img_mounted),
 	.img_size(img_size),

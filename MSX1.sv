@@ -228,6 +228,7 @@ localparam CONF_STR = {
 	"T0,Reset;",
 	"RF,Reset & Detach ROM Cartridge;",
 	"R0,Reset and close OSD;",
+   "I,Unkn,NOmpaer,GM2,Konami,KonamiSCC,Ascii8,Ascii16;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -260,6 +261,8 @@ wire        fdd_enable  = sdram_size ? status[20:17] == 9 : status[20:17]  == 1;
 wire        romA_hide   = sdram_size ? status[20:17] == 9 : 1'b1;
 wire        sdram_present = |sdram_size;
 wire        cas_audio_in = status[12] ? tape_in : CAS_dout;
+wire  [7:0] osd_info;
+wire        osd_info_req;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -294,8 +297,12 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din),
 	.sd_buff_wr(sd_buff_wr),
-	.sdram_sz(sdram_sz)
+	.sdram_sz(sdram_sz),
+	.info(osd_info),
+	.info_req(osd_info_req)
 );
+assign osd_info_req = buttons[1];
+assign osd_info = {5'b00000,mapper_info}+1;
 
 reg [1:0] rom_enabled = 2'b00;
 wire ioctl_isBIOS = ioctl_download && ((ioctl_index[5:0] == 6'd1) || ! ioctl_index[5:0]);
@@ -343,7 +350,7 @@ always @(posedge clk_sys) begin
 end
 
 wire mapper_reset = last_mapper != status[24:17];
-wire reset = RESET | status[0] | buttons[1] | ioctl_isROMA | ioctl_isROMB | ioctl_isBIOS | mapper_reset | status[15];
+wire reset = RESET | status[0] | ioctl_isROMA | ioctl_isROMB | ioctl_isBIOS | mapper_reset | status[15];
 
 //////////////////////////////////////////////////////////////////
 
@@ -351,6 +358,7 @@ wire [7:0] R,G,B;
 wire hblank, vblank, hsync_n, vsync_n;
 wire [15:0] audio;
 wire ioctl_waitROM;
+wire [2:0] mapper_info;
 msx1 MSX1
 (
 	.clk(clk_sys),
@@ -384,6 +392,7 @@ msx1 MSX1
 	.cas_audio_in(cas_audio_in),
 	.slot_A(status[20:17]),
 	.slot_B(status[24:21]),
+	.mapper_info(mapper_info),
 	.img_mounted(img_mounted), // signaling that new image has been mounted
 	.img_size(img_size), // size of image in bytes
 	.img_wp(img_readonly), // write protect

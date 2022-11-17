@@ -45,7 +45,8 @@ module slots
     //User mode
     input      [3:0] slot_A,
     input      [3:0] slot_B,
-    input      [1:0] rom_enabled
+    input      [1:0] rom_enabled,
+    output     [2:0] mapper_info
 );
 
 assign ioctl_wait = ioctl_wait_slot_A | ioctl_wait_slot_B;
@@ -77,6 +78,15 @@ assign ram_dout_B   = sdram_size == 0 ? bram_dout : sdram_dout[0];
 assign ram_ready_A  = sdram_size <  2 ? 1'b1 : sdram_ready[1];
 assign ram_ready_B  = sdram_size == 0 ? 1'b1 : sdram_ready[0];
                                  
+//MapperInfo
+reg    last_loadRom;
+always @(posedge ioctl_isROMA, posedge ioctl_isROMB) begin
+   if (ioctl_isROMA) last_loadRom <= 0;
+   if (ioctl_isROMB) last_loadRom <= 1;
+end
+
+assign mapper_info = last_loadRom ?  rom_enabled[1] ? detected_mapper_B : 3'h0 :
+                                     rom_enabled[0] ? detected_mapper_A : 3'h0 ;
                                   
 //SLOT A
 wire enableFDD_n = SLTSL_n[1] | ~((|sdram_size &  slot_A == 9) | (sdram_size == 0 & slot_A == 1));
@@ -92,7 +102,7 @@ wire [24:0] ram_addr_A;
 wire        ram_we_A;
 wire        ram_rd_A;
 wire        ram_ready_A;
-
+wire  [2:0] detected_mapper_A;
 cart_rom ROM_slot_A
 (
 	.clk(clk),
@@ -120,6 +130,7 @@ cart_rom ROM_slot_A
    .ram_rd(ram_rd_A),
    .ram_ready(ram_ready_A),
    .user_mapper(slot_A),
+   .detected_mapper(detected_mapper_A),
    .rom_enabled(rom_enabled[0])
 );
 
@@ -161,6 +172,7 @@ wire [24:0] ram_addr_B;
 wire        ram_we_B;
 wire        ram_rd_B;
 wire        ram_ready_B;
+wire  [2:0] detected_mapper_B;
 cart_rom ROM_slot_B
 (
 	.clk(clk),
@@ -188,6 +200,7 @@ cart_rom ROM_slot_B
    .ram_rd(ram_rd_B),
    .ram_ready(ram_ready_B),
 	.user_mapper(slot_B),
+   .detected_mapper(detected_mapper_B),
    .rom_enabled(rom_enabled[1])
 );                                  
 
