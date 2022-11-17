@@ -20,7 +20,7 @@ always @(posedge clk) begin
     last_isROM = ioctl_isROM;
 end
 
-always @(posedge rom_we) begin
+always @(posedge clk) begin
 reg [7:0] a0,a1,a2;
 
     if (ioctl_isROM && ~last_isROM) begin
@@ -30,6 +30,9 @@ reg [7:0] a0,a1,a2;
         kon5  <= 0;
         game1 <= 0;
         game2 <= 0;
+        a0    <= 0;
+        a1    <= 0;
+        a2    <= 0;
     end
     if (rom_we) begin
         rom_size <= ioctl_addr + 1'd1 ;
