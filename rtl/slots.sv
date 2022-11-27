@@ -13,7 +13,7 @@ module slots
     input            CS12_n,
     input            CS2_n,
     input      [3:0] SLTSL_n,
-    output    [14:0] sound,
+    output    [15:0] sound,
     //IOCTL
     input            ioctl_wr,
     input     [24:0] ioctl_addr,
@@ -49,7 +49,7 @@ module slots
     output     [2:0] mapper_info
 );
 
-assign sound = slot_A == 4 ? sound_slot_A : sound_slot_B;
+assign sound = {sound_slot_A[14],sound_slot_A} + {sound_slot_B[14],sound_slot_B};
 assign ioctl_wait = ioctl_wait_slot_A | ioctl_wait_slot_B;
 
 assign d_to_cpu = ~(SLTSL_n[1]) ? (enableFDD_n ? d_from_slot_A : d_from_FDD) :

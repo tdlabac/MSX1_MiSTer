@@ -58,14 +58,9 @@ module msx1
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
 //  -----------------------------------------------------------------------------
-
-wire [9:0]  pAudioPSG = {1'b0, ay_ch_mix[9:1]} + {keybeep,5'b00000} + {(cas_audio_in & ~cas_motor),5'b00000};
-wire [15:0] pAudioPCM = {sound_slots[14],sound_slots};
-
-wire [16:0] pcm   = {pAudioPCM[15], pAudioPCM};
-wire [15:0] fm    = {1'b0, pAudioPSG, 5'b00000};
-wire [16:0] audio_mix = {pcm[16], pcm[16:1]} + {fm[15], fm};
-
+wire  [9:0] audioPSG = ay_ch_mix + {keybeep,5'b00000} + {(cas_audio_in & ~cas_motor),4'b0000};                                        
+wire [15:0] fm       = {2'b0, audioPSG, 4'b0000};
+wire [16:0] audio_mix = {sound_slots[15], sound_slots} + {fm[15], fm};
 wire [15:0] compr[7:0] = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 16'h8000, 16'h7FFF, 16'h7FFF, 16'h7FFF,  {1'b0, audio_mix[13:0], 1'b0}};
 assign audio = compr[audio_mix[16:14]];
 
@@ -351,7 +346,7 @@ jt49_bus PSG
 //  -- SLOTS
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_slots;
-wire [14:0] sound_slots; 
+wire [15:0] sound_slots; 
 slots slots
 (
 	.clk(clk),
