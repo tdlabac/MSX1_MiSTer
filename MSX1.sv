@@ -205,15 +205,16 @@ assign BUTTONS = 0;
 localparam CONF_STR = {
 	"MSX1;;",
 	"-;",
-	"F1,ROM,Load Cartridge;",
-	"OHK,Maper,Auto,none,gamemaster 2,Konami,Konami SCC,ASCII 8,ASCII 16,linear 64k,R-TYPE;",
+	"h2OHK,SLOT A,ROM mapper auto,ROM mapper none,ROM mapper gamemaster2,ROM mapper Konami,ROM mapper KonamiSCC,ROM mapper ASCII8,ROM mapper ASCII16,ROM mapper linear64k,ROM mapper R-TYPE,FDD VY0010;",   
+	"H2OHK,SLOT A,Empty,FDD VY0010,Gamemaster2;",
+	"h1S0,DSK,Mount Drive A:;",
+	"H3F2,ROM,SLOT A load;",
+	"OLO,SLOT B,ROM mapper Auto,ROM mapper none,ROM mapper gamemaster2,ROM mapper Konami,ROM mapper KonamiSCC,ROM mapper ASCII8,ROM mapper ASCII16,ROM mapper linear64k,ROM mapper R-TYPE;",
+	"F3,ROM,SLOT B load;",
 	"-;",
 	"OC,Tape Input,File,ADC;",
-	"H0F2,CAS,Cas File;",
+	"H0F4,CAS,Cas File;",
 	"H0TD,Tape Rewind;",
-	"-;",
-	"OE,FDD VY0010,No,Yes;",
-	"H1S0,DSK,Mount Drive A:;",
 	"-;",
 	"P1,Video settings;",
 	"P1OG,Video mode,PAL,NTSC;",
@@ -222,11 +223,12 @@ localparam CONF_STR = {
 	"P1O79,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%;",
 	"P1OAB,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",	
 	"P2,Advanced settings;",
-	"P2F3,ROM,Load BIOS;",	
+	"P2F1,ROM,Load BIOS;",	
 	"-;",
 	"T0,Reset;",
 	"RF,Reset & Detach ROM Cartridge;",
 	"R0,Reset and close OSD;",
+   "I,Unkn,NOmpaer,GM2,Konami,KonamiSCC,Ascii8,Ascii16;",
 	"V,v",`BUILD_DATE 
 };
 
@@ -237,7 +239,7 @@ wire [31:0] status;
 wire [10:0] ps2_key;
 wire [5:0]  joy0, joy1;
 wire        ioctl_download;
-wire  [7:0] ioctl_index;
+wire [15:0] ioctl_index;
 wire        ioctl_wr;
 wire        ioctl_wait;
 wire [26:0] ioctl_addr;
@@ -253,7 +255,14 @@ wire        sd_buff_wr;
 wire        img_mounted;
 wire [31:0] img_size;
 wire        img_readonly;
-wire cas_audio_in = status[12] ? tape_in : CAS_dout;
+wire [15:0] sdram_sz;
+wire  [1:0] sdram_size  = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
+wire        fdd_enable  = sdram_size ? status[20:17] == 9 : status[20:17]  == 1;
+wire        romA_hide   = sdram_size ? status[20:17] == 9 : 1'b1;
+wire        sdram_present = |sdram_size;
+wire        cas_audio_in = status[12] ? tape_in : CAS_dout;
+wire  [7:0] osd_info;
+wire        osd_info_req;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -266,7 +275,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({~status[14], status[12]}),
+	.status_menumask({romA_hide, sdram_present, fdd_enable, status[12]}),
 	
 	.ps2_key(ps2_key),
 	.joystick_0(joy0),
@@ -287,20 +296,29 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.sd_buff_addr(sd_buff_addr),
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din),
-	.sd_buff_wr(sd_buff_wr)
+	.sd_buff_wr(sd_buff_wr),
+	.sdram_sz(sdram_sz),
+	.info(osd_info),
+	.info_req(osd_info_req)
 );
+assign osd_info_req = buttons[1];
+assign osd_info = {5'b00000,mapper_info}+1;
 
-reg rom_loaded = 0;
-wire ioctl_isROM = ioctl_download && (ioctl_index[5:0] == 6'd1);
-wire ioctl_isBIOS = ioctl_download && ((ioctl_index[5:0] == 6'd3) || ! ioctl_index[5:0]);
-wire ioctl_isCAS = ioctl_download && (ioctl_index[5:0] == 6'd2);
+reg [1:0] rom_enabled = 2'b00;
+wire ioctl_isBIOS = ioctl_download && ((ioctl_index[5:0] == 6'd1) || ! ioctl_index[5:0]);
+wire ioctl_isFWBIOS = ioctl_download && ! ioctl_index[5:0] && ioctl_index[15:6];
+wire ioctl_isROMA = ioctl_download && (ioctl_index[5:0] == 6'd2);
+wire ioctl_isROMB = ioctl_download && (ioctl_index[5:0] == 6'd3);
+wire ioctl_isCAS  = ioctl_download && (ioctl_index[5:0] == 6'd4);
 
-always @(posedge ioctl_isROM, posedge status[15]) begin
+always @(posedge ioctl_isROMA, posedge ioctl_isROMB, posedge status[15]) begin
    if (status[15])
-      rom_loaded <= 0;
+      rom_enabled <= 2'b00;
    else
-      if (ioctl_isROM)
-         rom_loaded <= 1;
+      if (ioctl_isROMA) 
+         rom_enabled[0] <= 1;
+      if (ioctl_isROMB) 
+         rom_enabled[1] <= 1;
 end 
 
 ///////////////////////   CLOCKS   ///////////////////////////////
@@ -327,13 +345,13 @@ end
 
 ///////////////////////    RESET   ///////////////////////////////
 
-reg [3:0] last_mapper = 4'b0000;
+reg [7:0] last_mapper = 8'h0;
 always @(posedge clk_sys) begin
-	last_mapper = status[20:17];
+	last_mapper = status[24:17];
 end
 
-wire mapper_reset = last_mapper != status[20:17];
-wire reset = RESET | status[0] | buttons[1] | ioctl_isROM | ioctl_isBIOS | mapper_reset | status[15];
+wire mapper_reset = last_mapper != status[24:17];
+wire reset = RESET | status[0] | ioctl_isROMA | ioctl_isROMB | ioctl_isBIOS | mapper_reset | status[15];
 
 //////////////////////////////////////////////////////////////////
 
@@ -341,11 +359,10 @@ wire [7:0] R,G,B;
 wire hblank, vblank, hsync_n, vsync_n;
 wire [15:0] audio;
 wire ioctl_waitROM;
+wire [2:0] mapper_info;
 msx1 MSX1
 (
 	.clk(clk_sys),
-	.clk_sdram(clk_sdram),
-	.locked_sdram(locked_sdram),
 	.ce_10m7(ce_10m7),
 	.reset(reset),
 	
@@ -363,28 +380,21 @@ msx1 MSX1
 	.joy0(joy0),
 	.joy1(joy1),
 	.ioctl_download(ioctl_download),
-	.ioctl_index(ioctl_index),
+	.ioctl_index(ioctl_index[7:0]),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
-	.ioctl_isROM(ioctl_isROM),
+	.ioctl_isROMA(ioctl_isROMA),
+	.ioctl_isROMB(ioctl_isROMB),
 	.ioctl_isBIOS(ioctl_isBIOS),
+	.ioctl_isFWBIOS(ioctl_isFWBIOS),
 	.ioctl_wait(ioctl_waitROM),
-	.rom_loaded(rom_loaded),
+	.rom_enabled(rom_enabled),
 	.cas_motor(motor),
 	.cas_audio_in(cas_audio_in),
-	.user_mapper(status[20:17]),
-	.SDRAM_DQ(SDRAM_DQ),
-    .SDRAM_A(SDRAM_A),
-    .SDRAM_DQML(SDRAM_DQML),
-    .SDRAM_DQMH(SDRAM_DQMH),
-    .SDRAM_BA(SDRAM_BA),
-    .SDRAM_nCS(SDRAM_nCS),
-    .SDRAM_nWE(SDRAM_nWE),
-    .SDRAM_nRAS(SDRAM_nRAS),
-    .SDRAM_nCAS(SDRAM_nCAS),
-    .SDRAM_CKE(SDRAM_CKE),
-    .SDRAM_CLK(SDRAM_CLK),
+	.slot_A(status[20:17]),
+	.slot_B(status[24:21]),
+	.mapper_info(mapper_info),
 	.img_mounted(img_mounted), // signaling that new image has been mounted
 	.img_size(img_size), // size of image in bytes
 	.img_wp(img_readonly), // write protect
@@ -396,7 +406,45 @@ msx1 MSX1
 	.sd_buff_dout(sd_buff_dout),
 	.sd_buff_din(sd_buff_din[0]),
 	.sd_buff_wr(sd_buff_wr),
-	.fdd_enable(status[14])
+	.sdram_dout(sdram_dout),
+	.sdram_din(sdram_din),
+	.sdram_addr(sdram_addr),
+	.sdram_we(sdram_we),
+	.sdram_rd(sdram_rd),
+	.sdram_ready(sdram_ready),
+	.sdram_size(sdram_size)
+);
+
+/////////////////  SDRAM  /////////////////////////
+wire  [7:0] sdram_dout[2];
+wire  [7:0] sdram_din[2];
+wire [24:0] sdram_addr[2];
+wire        sdram_we[2];
+wire        sdram_rd[2];
+wire        sdram_ready[2];
+
+sdram sdram
+(
+    .init(~locked_sdram),
+    .clk(clk_sdram),
+    .SDRAM_DQ(SDRAM_DQ),
+    .SDRAM_A(SDRAM_A),
+    .SDRAM_DQML(SDRAM_DQML),
+    .SDRAM_DQMH(SDRAM_DQMH),
+    .SDRAM_BA(SDRAM_BA),
+    .SDRAM_nCS(SDRAM_nCS),
+    .SDRAM_nWE(SDRAM_nWE),
+    .SDRAM_nRAS(SDRAM_nRAS),
+    .SDRAM_nCAS(SDRAM_nCAS),
+    .SDRAM_CKE(SDRAM_CKE),
+    .SDRAM_CLK(SDRAM_CLK),
+
+    .dout(sdram_dout),
+    .din (sdram_din),
+    .addr(sdram_addr),
+    .we(sdram_we),
+    .rd(sdram_rd),
+    .ready(sdram_ready)
 );
 
 /////////////////  VIDEO  /////////////////////////

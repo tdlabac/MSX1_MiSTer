@@ -22,41 +22,30 @@ module cart_rom
     input            ioctl_isROM,
     output           ioctl_wait,
     input      [3:0] user_mapper,
-    //SDRAM
-    input            clk_sdram,
-    input            locked_sdram,
-    inout     [15:0] SDRAM_DQ,
-    output    [12:0] SDRAM_A,
-    output           SDRAM_DQML,
-    output           SDRAM_DQMH,
-    output     [1:0] SDRAM_BA,
-    output           SDRAM_nCS,
-    output           SDRAM_nWE,
-    output           SDRAM_nRAS,
-    output           SDRAM_nCAS,
-    output           SDRAM_CKE,
-    output           SDRAM_CLK
+    output     [2:0] detected_mapper,
+    input      [7:0] ram_dout,
+    output     [7:0] ram_din,
+    output    [24:0] ram_addr,
+    output           ram_we,
+    output           ram_rd,
+    input            ram_ready,
+    input            rom_enabled
 );
-wire bram = rom_size <= 24'h20000;
+
+assign ram_din = ioctl_dout;
+assign ram_rd = ~SLTSL_n & ~ioctl_isROM;
+assign ram_we = rom_we;
+assign detected_mapper = auto_mapper;
 
 assign d_to_cpu = mapper == 4 && scc_ack             ? d_to_cpu_scc   :
                   mapper == 2 && sram_oe_gamemaster2 ? d_to_cpu_sram  :
-                  bram                               ? d_to_cpu_bram  :
-                                                       d_to_cpu_sdram ;
+                  ~rom_enabled                       ? 8'hFF :
+                                                       ram_dout ;
 
 assign sound = mapper == 4 ? scc_sound :
                              14'h0;
 
 wire rom_we = ioctl_isROM & ioctl_wr;
-wire [7:0] d_to_cpu_bram;
-spram #(.addr_width(18),.mem_name("CART")) rom_cart
-(
-    .clock(clk),
-    .address(mem_addr[17:0]),
-    .wren(rom_we & ioctl_addr < 24'h20000),
-    .q(d_to_cpu_bram),
-    .data(ioctl_dout)
-);
 
 wire [7:0] d_to_cpu_sram;
 spram #(.addr_width(13),.mem_name("CART_SRAM")) cart_sram
@@ -68,35 +57,10 @@ spram #(.addr_width(13),.mem_name("CART_SRAM")) cart_sram
     .data(d_from_cpu)
 );
 
-wire sdram_ready;
-assign ioctl_wait = ~sdram_ready && ioctl_isROM;
-wire [24:0] mem_addr;
-wire [12:0] sram_addr;
-wire [7:0] d_to_cpu_sdram;
-wire [3:0] mapper;
-sdram rom_cart2
-(
-    .init(~locked_sdram),
-    .clk(clk_sdram),
-    .SDRAM_DQ(SDRAM_DQ),
-    .SDRAM_A(SDRAM_A),
-    .SDRAM_DQML(SDRAM_DQML),
-    .SDRAM_DQMH(SDRAM_DQMH),
-    .SDRAM_BA(SDRAM_BA),
-    .SDRAM_nCS(SDRAM_nCS),
-    .SDRAM_nWE(SDRAM_nWE),
-    .SDRAM_nRAS(SDRAM_nRAS),
-    .SDRAM_nCAS(SDRAM_nCAS),
-    .SDRAM_CKE(SDRAM_CKE),
-    .SDRAM_CLK(SDRAM_CLK),
+assign ioctl_wait = ~ram_ready && ioctl_isROM;
 
-    .dout(d_to_cpu_sdram),
-    .din (ioctl_dout),
-    .addr(mem_addr),
-    .we(rom_we),
-    .rd(~SLTSL_n && ~ioctl_isROM),
-    .ready(sdram_ready)
-);
+wire [12:0] sram_addr;
+wire [3:0] mapper;
 
 // 0 uknown
 // 1 nomaper
@@ -107,9 +71,10 @@ sdram rom_cart2
 // 6 ASCII 16
 // 7 linear (nomaper) 64kb. Aligned ROM image is replicated to 64KB area.
 // 8 R-TYPE
+// 9 FDD VY0010
 
 assign mapper   = user_mapper[3:0] == 0 ? {1'b0,auto_mapper} : user_mapper[3:0];
-assign mem_addr = ioctl_isROM ? ioctl_addr :
+assign ram_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 2 ? mem_addr_gamemaster2 :
                   mapper == 3 ? mem_addr_konami :
                   mapper == 4 ? mem_addr_konami_scc :
