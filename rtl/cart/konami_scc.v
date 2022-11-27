@@ -46,14 +46,15 @@ wire [7:0] bank_base = addr[15:13] == 3'b010 ? bank0 :
 assign mem_addr = {3'h0, (bank_base & mask), addr[12:0]};
 
 wire [7:0] d_to_cpu_scc;
-wire [7:0] scc_addr = toCopy ? {3'b100,addr[4:0]} :
-                               addr[7:0] ^ 8'h20;
-wire scc_req = (cs || toCopy)  && addr[15:11] == 5'b10011 && bank2[5:0] == 6'b111111 && (rd || wr) ;
+wire scc_req = cs && addr[15:11] == 5'b10011 && bank2[5:0] == 6'b111111 && (rd || wr) ;
+wire [7:0] scc_addr = toCopy                 ? {3'b100,addr[4:0]} : 
+                      (~addr[13] && addr[7]) ? addr[7:0] ^ 8'h20  : 
+                                               addr[7:0];
 
 //Copy channel 5
 reg toCopy;
+reg cp;
 always @(posedge clk) begin
-    reg cp;
     if (reset) begin
         toCopy <= 0;
         cp <= 0;
@@ -64,11 +65,12 @@ always @(posedge clk) begin
             end else begin
                 cp <= 0;
             end
+        end
+        if (cp) begin
+            toCopy <= 1;
+        end
+        if (~wr) begin
             toCopy <= 0;
-        end else begin
-            if (cp && ~ack) begin
-                toCopy <= 1;
-            end
         end
     end
 end
@@ -78,7 +80,7 @@ scc_wave  k051649
     .clk21m(clk),
     .reset(reset),
     .clkena(clk_en),
-    .req(scc_req),
+    .req(scc_req & (~(ack & cp) | toCopy)),
     .ack(ack),
     .wrt(wr),
     .adr(scc_addr),
