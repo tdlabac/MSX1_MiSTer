@@ -164,7 +164,7 @@ wire [13:0] vram_a;
 wire [7:0]  vram_do;
 wire [7:0]  vram_di;
 wire        vram_we;
-spram #(14) vram
+spram #(.addr_width(14),.mem_name("VRAM")) vram
 (
 	.clock(clk),
 	.address(vram_a),
