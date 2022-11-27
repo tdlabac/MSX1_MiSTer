@@ -24,6 +24,7 @@ module msx1
 	input         ioctl_isROMA,
 	input         ioctl_isROMB,
 	input         ioctl_isBIOS,
+	input         ioctl_isFWBIOS,
 	output        ioctl_wait,
 	input   [1:0] rom_enabled,
 	output        cas_motor,
@@ -146,6 +147,16 @@ spram #(.addr_width(15), .mem_init_file("rtl/rom/8020-00bios.mif"), .mem_name("R
 	.data(ioctl_dout)
 );
 
+wire [7:0] fw_rom_q;
+spram #(.addr_width(14), .mem_name("FWROM")) fw_rom
+(   
+	.clock(clk),
+	.address(ioctl_isFWBIOS ? ioctl_addr[13:0] : a[13:0]),
+	.q(fw_rom_q),
+	.wren(ioctl_isFWBIOS),
+	.data(ioctl_dout)
+);
+
 //  -----------------------------------------------------------------------------
 //  -- Video RAM 16k
 //  -----------------------------------------------------------------------------
@@ -260,6 +271,7 @@ memory_mapper memory_mapper
 //  -- CPU data multiplex
 //  ----------------------------------------------------------------------------- 
 assign d_to_cpu = ~(CS01_n | SLTSL_n[0]) ? rom_q :
+                  ~(CS2_n  | SLTSL_n[0]) ? fw_rom_q :
 						~(SLTSL_n[1])          ? d_from_slots:
 						~(SLTSL_n[2])          ? d_from_slots:
 						~(SLTSL_n[3])          ? d_from_slots:                 

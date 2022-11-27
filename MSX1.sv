@@ -239,7 +239,7 @@ wire [31:0] status;
 wire [10:0] ps2_key;
 wire [5:0]  joy0, joy1;
 wire        ioctl_download;
-wire  [7:0] ioctl_index;
+wire [15:0] ioctl_index;
 wire        ioctl_wr;
 wire        ioctl_wait;
 wire [26:0] ioctl_addr;
@@ -306,6 +306,7 @@ assign osd_info = {5'b00000,mapper_info}+1;
 
 reg [1:0] rom_enabled = 2'b00;
 wire ioctl_isBIOS = ioctl_download && ((ioctl_index[5:0] == 6'd1) || ! ioctl_index[5:0]);
+wire ioctl_isFWBIOS = ioctl_download && ! ioctl_index[5:0] && ioctl_index[15:6];
 wire ioctl_isROMA = ioctl_download && (ioctl_index[5:0] == 6'd2);
 wire ioctl_isROMB = ioctl_download && (ioctl_index[5:0] == 6'd3);
 wire ioctl_isCAS  = ioctl_download && (ioctl_index[5:0] == 6'd4);
@@ -379,13 +380,14 @@ msx1 MSX1
 	.joy0(joy0),
 	.joy1(joy1),
 	.ioctl_download(ioctl_download),
-	.ioctl_index(ioctl_index),
+	.ioctl_index(ioctl_index[7:0]),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_isROMA(ioctl_isROMA),
 	.ioctl_isROMB(ioctl_isROMB),
 	.ioctl_isBIOS(ioctl_isBIOS),
+	.ioctl_isFWBIOS(ioctl_isFWBIOS),
 	.ioctl_wait(ioctl_waitROM),
 	.rom_enabled(rom_enabled),
 	.cas_motor(motor),
