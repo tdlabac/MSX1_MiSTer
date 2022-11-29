@@ -33,12 +33,12 @@ module msx1
 	input   [3:0] slot_B,
 	output  [2:0] mapper_info,
 	//SDRAM
-	input   [7:0] sdram_dout[2],
-	output  [7:0] sdram_din[2],
-	output [24:0] sdram_addr[2],
-	output        sdram_we[2],
-	output        sdram_rd[2],
-	input         sdram_ready[2],
+	input   [7:0] sdram_dout,
+	output  [7:0] sdram_din,
+	output [24:0] sdram_addr,
+	output        sdram_we,
+	output        sdram_rd,
+	input         sdram_ready,
 	input   [1:0] sdram_size, 
    
 	input         img_mounted,

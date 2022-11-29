@@ -22,12 +22,12 @@ module slots
     input            ioctl_isROMB,
     output           ioctl_wait,
     //SDRAM
-    input      [7:0] sdram_dout[2],
-    output     [7:0] sdram_din[2],
-    output    [24:0] sdram_addr[2],
-    output           sdram_we[2],
-    output           sdram_rd[2],
-    input            sdram_ready[2],
+    input      [7:0] sdram_dout,
+    output     [7:0] sdram_din,
+    output    [24:0] sdram_addr,
+    output           sdram_we,
+    output           sdram_rd,
+    input            sdram_ready,
     input      [1:0] sdram_size,
     //image
     input            img_mounted,
@@ -57,27 +57,30 @@ assign d_to_cpu = ~(SLTSL_n[1]) ? (enableFDD_n ? d_from_slot_A : d_from_FDD) :
                   ~(SLTSL_n[3]) ? ram_q :
                                   8'hFF;
                                   
-assign sdram_addr[0] = {3'b000,ram_addr_B[21:0]};
-assign sdram_addr[1] = {3'b001,ram_addr_A[21:0]};
-assign bram_addr     = ram_addr_B;
 
-assign sdram_din[1]  = ram_din_A; 
-assign sdram_din[0]  = ram_din_B;
-assign bram_din      = ram_din_B;
+                                  
+assign sdram_addr    = ioctl_isROMA ? {3'b001,ram_addr_A[21:0]} :
+                       ioctl_isROMB ? {3'b000,ram_addr_B[21:0]} :
+                       ~SLTSL_n[1]  ? enableFDD_n ? {3'b001,ram_addr_A[21:0]} : 'd0 :
+                       ~SLTSL_n[2]  ? {3'b000,ram_addr_B[21:0]} :                                  
+                                      'd0;
+assign bram_addr     = ram_addr_B;                       
+assign sdram_din     = ioctl_dout;
+assign bram_din      = ioctl_dout;
+assign sdram_we      = ioctl_isROMA  ? ram_we_A :
+                       ioctl_isROMB  ? ram_we_B :
+                                       0;
 
-assign sdram_we[1]   = ram_we_A; 
-assign sdram_we[0]   = ram_we_B;
-assign bram_we       = sdram_size == 0 & ram_we_B;
+assign bram_we       = sdram_size == 0 & ioctl_isROMB & ioctl_wr;
+assign sdram_rd      = ~SLTSL_n[1] ?  enableFDD_n ? ram_rd_A : 0 :
+                       ~SLTSL_n[2] ?  ram_rd_B :
+                                      0;                                      
 
-assign sdram_rd[1]   = ram_rd_A;
-assign sdram_rd[0]   = ram_rd_B;
+assign ram_dout_A   = sdram_size == 0 ? 8'hFF     : (sdram_size == 1 ? bram_dout : sdram_dout);
+assign ram_dout_B   = sdram_size == 0 ? bram_dout : sdram_dout;
 
-
-assign ram_dout_A   = sdram_size == 0 ? 8'hFF     : (sdram_size == 1 ? bram_dout : sdram_dout[1]);
-assign ram_dout_B   = sdram_size == 0 ? bram_dout : sdram_dout[0];
-
-assign ram_ready_A  = sdram_size <  2 ? 1'b1 : sdram_ready[1];
-assign ram_ready_B  = sdram_size == 0 ? 1'b1 : sdram_ready[0];
+assign ram_ready_A  = sdram_size <  2 ? 1'b1 : sdram_ready;
+assign ram_ready_B  = sdram_size == 0 ? 1'b1 : sdram_ready;
                                  
 //MapperInfo
 reg    last_loadRom;

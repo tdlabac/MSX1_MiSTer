@@ -44,12 +44,12 @@ module sdram
    output            SDRAM_CKE,   // clock enable
 	output            SDRAM_CLK,
                                   //
-   input      [24:0] addr[2],        // 25 bit address for 8bit mode. addr[0] = 0 for 16bit mode for correct operations.
-   output      [7:0] dout[2],        // data output to cpu
-   input       [7:0] din[2],         // data input from cpu
-   input             we[2],          // cpu requests write
-   input             rd[2],          // cpu requests read
-   output reg        ready[2]        // dout is valid. Ready to accept new read/write.
+   input      [24:0] addr,        // 25 bit address for 8bit mode. addr[0] = 0 for 16bit mode for correct operations.
+   output      [7:0] dout,        // data output to cpu
+   input       [7:0] din,         // data input from cpu
+   input             we,          // cpu requests write
+   input             rd,          // cpu requests read
+   output reg        ready        // dout is valid. Ready to accept new read/write.
 );
 
 assign SDRAM_CKE  = 1;
@@ -83,11 +83,10 @@ wire [2:0] CMD_LOAD_MODE       = 3'b000;
 
 reg [13:0] refresh_count = startup_refresh_max - sdram_startup_cycles;
 reg  [2:0] command;
-reg [24:0] save_addr[2];
+reg [24:0] save_addr;
 
-reg [15:0] data[2];
-assign dout[0] = save_addr[0][0] ? data[0][15:8] : data[0][7:0];
-assign dout[1] = save_addr[1][0] ? data[1][15:8] : data[1][7:0];
+reg [15:0] data;
+assign dout = save_addr[0] ? data[15:8] : data[7:0];
 
 typedef enum
 {
@@ -98,14 +97,13 @@ typedef enum
 } state_t;
 
 always @(posedge clk) begin
-	reg old_we[2], old_rd[2];
-	reg [CAS_LATENCY:0] data_ready_delay[2];
+	reg old_we, old_rd;
+	reg [CAS_LATENCY:0] data_ready_delay;
 
-	reg  [7:0] new_data[2];
-	reg        new_we[2];
-	reg        new_rd[2];
-	reg        save_we[2] = '{1'b1, 1'b1};
-   reg        ch;
+	reg  [7:0] new_data;
+	reg        new_we;
+	reg        new_rd;
+	reg        save_we = 1;
 
 	state_t state = STATE_STARTUP;
 
@@ -113,11 +111,9 @@ always @(posedge clk) begin
 	command  <= CMD_NOP;
 	refresh_count  <= refresh_count+1'b1;
 
-	data_ready_delay[0] <= {1'b0, data_ready_delay[0][CAS_LATENCY:1]};
-	data_ready_delay[1] <= {1'b0, data_ready_delay[1][CAS_LATENCY:1]};
+	data_ready_delay <= {1'b0, data_ready_delay[CAS_LATENCY:1]};
 
-	if(data_ready_delay[0][0]) {ready[0], data[0]}  <= {1'b1, SDRAM_DQ};
-	if(data_ready_delay[1][0]) {ready[1], data[1]}  <= {1'b1, SDRAM_DQ};
+	if(data_ready_delay[0]) {ready, data}  <= {1'b1, SDRAM_DQ};
 
 	case(state)
 		STATE_STARTUP: begin
@@ -142,8 +138,7 @@ always @(posedge clk) begin
 
 			if(!refresh_count) begin
 				state   <= STATE_IDLE;
-				ready[0]   <= 1;
-				ready[1]   <= 1;
+				ready   <= 1;
 				refresh_count <= 0;
 			end
 		end
@@ -167,43 +162,31 @@ always @(posedge clk) begin
 		STATE_IDLE: begin
 			// Priority is to issue a refresh if one is outstanding
 			if(refresh_count > (cycles_per_refresh<<1)) state <= STATE_IDLE_1;
-			else if(new_rd[0] | new_we[0]) begin
-				new_we[0]   <= 0;
-				new_rd[0]   <= 0;
+			else if(new_rd | new_we) begin
+				new_we   <= 0;
+				new_rd   <= 0;
 				save_addr<= addr;
-				save_we[0]  <= new_we[0];
+				save_we  <= new_we;
 				state    <= STATE_OPEN_1;
 				command  <= CMD_ACTIVE;
-				SDRAM_A  <= addr[0][13:1];
-				SDRAM_BA <= addr[0][24:23];
-            ch <= 0;
-			end
-         else if(new_rd[1] | new_we[1]) begin
-				new_we[1]   <= 0;
-				new_rd[1]   <= 0;
-				save_addr<= addr;
-				save_we[1]  <= new_we[1];
-				state    <= STATE_OPEN_1;
-				command  <= CMD_ACTIVE;
-				SDRAM_A  <= addr[1][13:1];
-				SDRAM_BA <= addr[1][24:23];
-            ch <= 1;
+				SDRAM_A  <= addr[13:1];
+				SDRAM_BA <= addr[24:23];
 			end
 		end
 
 		STATE_OPEN_1: state <= STATE_OPEN_2;
 
 		STATE_OPEN_2: begin
-			SDRAM_A     <= {save_we[ch] & ~save_addr[ch], save_we[ch] & save_addr[ch][0], 2'b10, save_addr[ch][22:14]};
-			if(save_we[ch]) begin
+			SDRAM_A     <= {save_we & ~save_addr[0], save_we & save_addr[0], 2'b10, save_addr[22:14]};
+			if(save_we) begin
 				command  <= CMD_WRITE;
-				SDRAM_DQ <= {new_data[ch][7:0], new_data[ch][7:0]};
-				ready[ch]    <= 1;
+				SDRAM_DQ <= {new_data[7:0], new_data[7:0]};
+				ready    <= 1;
 				state    <= STATE_IDLE_2;
 			end
 			else begin
 				command  <= CMD_READ;
-				data_ready_delay[ch][CAS_LATENCY] <= 1;
+				data_ready_delay[CAS_LATENCY] <= 1;
 				state    <= STATE_IDLE_5;
 			end
 		end
@@ -215,17 +198,12 @@ always @(posedge clk) begin
 	end
 
 	old_we <= we;
-	if(we[0] & ~old_we[0]) {ready[0], new_we[0], new_data[0]} <= {1'b0, 1'b1, din[0]};
-   if(we[1] & ~old_we[1]) {ready[1], new_we[1], new_data[1]} <= {1'b0, 1'b1, din[1]};
+	if(we & ~old_we) {ready, new_we, new_data} <= {1'b0, 1'b1, din};
 
 	old_rd <= rd;
-	if(rd[0] & ~old_rd[0]) begin
-		if(ready[0] & ~save_we[0] & (save_addr[0][24:1] == addr[0][24:1])) save_addr[0] <= addr[0];
-			else {ready[0], new_rd[0]} <= {1'b0, 1'b1};
-	end
-   if(rd[1] & ~old_rd[1]) begin
-		if(ready[1] & ~save_we[1] & (save_addr[1][24:1] == addr[1][24:1])) save_addr[1] <= addr[1];
-			else {ready[1], new_rd[1]} <= {1'b0, 1'b1};
+	if(rd & ~old_rd) begin
+		if(ready & ~save_we & (save_addr[24:1] == addr[24:1])) save_addr <= addr;
+			else {ready, new_rd} <= {1'b0, 1'b1};
 	end
 end
 

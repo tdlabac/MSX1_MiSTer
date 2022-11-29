@@ -416,12 +416,12 @@ msx1 MSX1
 );
 
 /////////////////  SDRAM  /////////////////////////
-wire  [7:0] sdram_dout[2];
-wire  [7:0] sdram_din[2];
-wire [24:0] sdram_addr[2];
-wire        sdram_we[2];
-wire        sdram_rd[2];
-wire        sdram_ready[2];
+wire  [7:0] sdram_dout;
+wire  [7:0] sdram_din;
+wire [24:0] sdram_addr;
+wire        sdram_we;
+wire        sdram_rd;
+wire        sdram_ready;
 
 sdram sdram
 (
