@@ -39,6 +39,8 @@ assign detected_mapper = auto_mapper;
 
 assign d_to_cpu = mapper == 4 && scc_ack             ? d_to_cpu_scc   :
                   mapper == 2 && sram_oe_gamemaster2 ? d_to_cpu_sram  :
+                  mapper == 6 && sram_oe_ascii16     ? d_to_cpu_sram  :
+                  mapper == 5 && sram_oe_ascii8      ? d_to_cpu_sram  :
                   ~rom_enabled                       ? 8'hFF :
                                                        ram_dout ;
 
@@ -48,18 +50,19 @@ assign sound = mapper == 4 ? scc_sound :
 wire rom_we = ioctl_isROM & ioctl_wr;
 
 wire [7:0] d_to_cpu_sram;
+wire [12:0] sram_addr;
+wire sram_we;
 spram #(.addr_width(13),.mem_name("CART_SRAM")) cart_sram
 (
     .clock(clk),
-    .address(sram_addr_gamemaster2),
-    .wren(sram_we_gamemaster2),
+    .address(sram_addr),
+    .wren(sram_we),
     .q(d_to_cpu_sram),
     .data(d_from_cpu)
 );
 
 assign ioctl_wait = ~ram_ready && ioctl_isROM;
 
-wire [12:0] sram_addr;
 wire [3:0] mapper;
 
 // 0 uknown
@@ -84,6 +87,17 @@ assign ram_addr = ioctl_isROM ? ioctl_addr :
                   mapper == 7 ? addr & (rom_size - 1) :
                   addr - {offset,12'd0}; // default nomaper
 
+                  
+assign sram_addr = mapper == 2 ? sram_addr_gamemaster2 :
+                   mapper == 6 ? sram_addr_ascii16     :
+                   mapper == 5 ? sram_addr_ascii8      :
+                                'h0;
+                                
+assign sram_we   = mapper == 2 ? sram_we_gamemaster2 :
+                   mapper == 6 ? sram_we_ascii16     :
+                   mapper == 5 ? sram_we_ascii8      :
+                                'h0;
+                  
 wire [3:0]  offset;
 wire [24:0] rom_size;
 wire [2:0]  auto_mapper;
@@ -135,6 +149,9 @@ cart_konami_scc konami_scc
 );
 
 wire [24:0] mem_addr_ascii8;
+wire [12:0] sram_addr_ascii8;
+wire        sram_we_ascii8;
+wire        sram_oe_ascii8;
 cart_asci8 ascii8
 (
     .clk(clk),
@@ -144,10 +161,16 @@ cart_asci8 ascii8
     .d_from_cpu(d_from_cpu),
     .wr(wr),
     .cs(~SLTSL_n),
-    .mem_addr(mem_addr_ascii8)
+    .mem_addr(mem_addr_ascii8),
+    .sram_addr(sram_addr_ascii8),
+    .sram_we(sram_we_ascii8),
+    .sram_oe(sram_oe_ascii8)    
 );
 
 wire [24:0] mem_addr_ascii16;
+wire [12:0] sram_addr_ascii16;
+wire        sram_we_ascii16;
+wire        sram_oe_ascii16;
 cart_asci16 ascii16
 (
     .clk(clk),
@@ -158,7 +181,10 @@ cart_asci16 ascii16
     .wr(wr),
     .cs(~SLTSL_n),
     .mem_addr(mem_addr_ascii16),
-    .r_type(mapper == 8)
+    .r_type(mapper == 8),
+    .sram_addr(sram_addr_ascii16),
+    .sram_we(sram_we_ascii16),
+    .sram_oe(sram_oe_ascii16)
 );
 
 wire [24:0] mem_addr_gamemaster2;

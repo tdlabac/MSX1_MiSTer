@@ -7,10 +7,14 @@ module cart_asci8
     input      [7:0] d_from_cpu,
     input            wr,
     input            cs,
-    output    [24:0] mem_addr
+    output    [24:0] mem_addr,
+    output    [12:0] sram_addr,
+    output           sram_we,
+    output           sram_oe    
 );
 reg  [7:0] bank0, bank1, bank2, bank3;
 wire [7:0] mask = rom_size[20:13] - 1'd1;
+wire [7:0] sram_mask = rom_size[20:13] > 8'h20 ? rom_size[20:13] : 8'h20;
 
 always @(posedge reset, posedge clk) begin
     if (reset) begin
@@ -39,5 +43,9 @@ wire [7:0] bank_base = addr[15:13] == 3'b010 ? bank0 :
                        addr[15:13] == 3'b100 ? bank2 : bank3;
 
 assign mem_addr = {3'h0, (bank_base & mask), addr[12:0]};
+
+assign sram_addr = addr[12:0];
+assign sram_we   = cs && ((bank2 & sram_mask && addr[15:13] == 3'b100) || (bank3 & sram_mask && addr[15:13] == 3'b101)) && wr;
+assign sram_oe   = cs && (bank_base & sram_mask);
 
 endmodule
