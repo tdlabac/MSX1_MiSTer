@@ -76,10 +76,10 @@ assign sdram_rd      = ~SLTSL_n[1] ?  enableFDD_n ? ram_rd_A : 0 :
                        ~SLTSL_n[2] ?  ram_rd_B :
                                       0;                                      
 
-assign ram_dout_A   = sdram_size == 0 ? 8'hFF     : (sdram_size == 1 ? bram_dout : sdram_dout);
+assign ram_dout_A   = sdram_size == 0 ? 8'hFF     : sdram_dout;
 assign ram_dout_B   = sdram_size == 0 ? bram_dout : sdram_dout;
 
-assign ram_ready_A  = sdram_size <  2 ? 1'b1 : sdram_ready;
+assign ram_ready_A  = sdram_size == 0 ? 1'b1 : sdram_ready;
 assign ram_ready_B  = sdram_size == 0 ? 1'b1 : sdram_ready;
                                  
 //MapperInfo
