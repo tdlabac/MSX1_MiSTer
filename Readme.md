@@ -15,7 +15,7 @@
 
 ## Memory limitations
 - No SDRAM 
-  - Slot 1 only FDD or Gamemaster2 ROM
+  - Slot 1 only FDD or Gamemaster2 SRAM
   - Slot 2 ROM image max size 256kB
   - Slot 3 64Kb RAM
 - 32MB SDRAM - 128MB SDRAM
