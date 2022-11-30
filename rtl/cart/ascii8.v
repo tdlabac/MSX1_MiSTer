@@ -14,7 +14,7 @@ module cart_asci8
 );
 reg  [7:0] bank0, bank1, bank2, bank3;
 wire [7:0] mask = rom_size[20:13] - 1'd1;
-wire [7:0] sram_mask = rom_size[20:13] > 8'h20 ? rom_size[20:13] : 8'h20;
+wire [7:0] sram_mask = rom_size[20:13];
 
 always @(posedge reset, posedge clk) begin
     if (reset) begin
