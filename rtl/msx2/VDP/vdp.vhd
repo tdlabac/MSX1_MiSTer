@@ -279,6 +279,7 @@ ENTITY VDP IS
         PVIDEOR             : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
         PVIDEOG             : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
         PVIDEOB             : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
+        PVIDEODE            : OUT   STD_LOGIC;
 
         PVIDEOHS_N          : OUT   STD_LOGIC;
         PVIDEOVS_N          : OUT   STD_LOGIC;
@@ -461,6 +462,7 @@ ARCHITECTURE RTL OF VDP IS
             VIDEOROUT           : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
             VIDEOGOUT           : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
             VIDEOBOUT           : OUT   STD_LOGIC_VECTOR(  5 DOWNTO 0 );
+            VIDEODEOUT          : OUT   STD_LOGIC;
             VIDEOHSOUT_N        : OUT   STD_LOGIC;
             VIDEOVSOUT_N        : OUT   STD_LOGIC;
             -- HDMI SUPPORT
@@ -834,6 +836,7 @@ ARCHITECTURE RTL OF VDP IS
     SIGNAL BWINDOW_X                    : STD_LOGIC;
     SIGNAL BWINDOW_Y                    : STD_LOGIC;
     SIGNAL BWINDOW                      : STD_LOGIC;
+    SIGNAL BWINDOW_VGA                  : STD_LOGIC;
 
     -- DOT COUNTER - 8 ( READING ADDR )
     SIGNAL PREDOTCOUNTER_X              : STD_LOGIC_VECTOR(  8 DOWNTO 0 );
@@ -1069,6 +1072,7 @@ BEGIN
         VIDEOROUT           => IVIDEOR_VGA,
         VIDEOGOUT           => IVIDEOG_VGA,
         VIDEOBOUT           => IVIDEOB_VGA,
+        VIDEODEOUT          => BWINDOW_VGA,
         VIDEOHSOUT_N        => IVIDEOHS_N_VGA,
         VIDEOVSOUT_N        => IVIDEOVS_N_VGA,
         BLANK_O             => BLANK_O,
@@ -1083,6 +1087,8 @@ BEGIN
     PVIDEOB     <=  IVIDEOB_NTSC_PAL WHEN( DISPMODEVGA = '0' )ELSE
                     IVIDEOB_VGA;
 
+    PVIDEODE    <=  BWINDOW WHEN( DISPMODEVGA = '0' ) ELSE
+                    BWINDOW_VGA;
     -- H SYNC SIGNAL
     PVIDEOHS_N  <=  IVIDEOHS_N_NTSC_PAL WHEN( DISPMODEVGA = '0' )ELSE
                     IVIDEOHS_N_VGA;
