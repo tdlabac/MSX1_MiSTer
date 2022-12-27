@@ -360,7 +360,7 @@ wire hblank, vblank, hsync_n, vsync_n;
 wire [15:0] audio;
 wire ioctl_waitROM;
 wire [2:0] mapper_info;
-msx1 MSX1
+msx MSX
 (
 	.clk(clk_sys),
 	.ce_10m7(ce_10m7),

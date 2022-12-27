@@ -1,4 +1,4 @@
-module msx1
+module msx
 (
 	input         clk,
 	input         ce_10m7,
