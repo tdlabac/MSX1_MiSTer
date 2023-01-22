@@ -1,8 +1,12 @@
 module msx
 (
-	input         clk,
-	input         ce_10m7,
-	input         reset,
+   input         reset,
+   //Clock
+   input         clk21m,
+   input         ce_10m7_p,
+   input         ce_3m58_p,
+   input         ce_3m58_n,
+   input         ce_10hz,
 	input         border,
 	output  [7:0] R,
 	output  [7:0] G,
@@ -65,17 +69,8 @@ wire [15:0] compr[7:0] = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 1
 assign audio = compr[audio_mix[16:14]];
 
 //  -----------------------------------------------------------------------------
-//  -- Clock generation
+//  -- Audio MIX
 //  -----------------------------------------------------------------------------
-wire clk_en_3m58_p, clk_en_3m58_n;
-cv_clock clock
-(
-	.clk_i(clk),
-	.clk_en_10m7_i(ce_10m7),
-	.reset_n_i(~reset),
-	.clk_en_3m58_p_o(clk_en_3m58_p),
-	.clk_en_3m58_n_o(clk_en_3m58_n)
-);
 
 //  -----------------------------------------------------------------------------
 //  -- T80 CPU
@@ -86,9 +81,9 @@ wire mreq_n, wr_n, m1_n, iorq_n, rd_n, rfrsh_n, wait_n;
 t80pa #(.Mode(0)) T80
 (
 	.RESET_n(~reset),
-	.CLK(clk),
-	.CEN_p(clk_en_3m58_p),
-	.CEN_n(clk_en_3m58_n),
+   .CLK(clk21m),
+   .CEN_p(ce_3m58_p),
+   .CEN_n(ce_3m58_n),
 	.WAIT_n(wait_n),
 	.INT_n(vdp_int_n),
 	.NMI_n(1),
@@ -115,7 +110,7 @@ ls74 u1_1
 (
    .clr(exwait_n),
    .pre(u1_2_q),
-   .clk(clk_en_3m58_p),
+   .clk(ce_3m58_p),
    .d(m1_n),
    .q(wait_n)
 );
@@ -125,7 +120,7 @@ ls74 u1_2
 (
    .clr(1),
    .pre(exwait_n),
-   .clk(clk_en_3m58_p),
+   .clk(ce_3m58_p),
    .d(wait_n),
    .q(u1_2_q)
 );
@@ -135,7 +130,7 @@ ls74 u1_2
 wire [7:0] rom_q;
 spram #(.addr_width(15), .mem_init_file("rtl/rom/cbios_main_msx1_eu.mif"), .mem_name("ROM")) rom
 (   
-	.clock(clk),
+	.clock(clk21m),
 	.address(ioctl_isBIOS ? ioctl_addr[14:0] : a[14:0]),
 	.q(rom_q),
 	.wren(ioctl_isBIOS),
@@ -145,7 +140,7 @@ spram #(.addr_width(15), .mem_init_file("rtl/rom/cbios_main_msx1_eu.mif"), .mem_
 wire [7:0] fw_rom_q;
 spram #(.addr_width(14), .mem_name("FWROM")) fw_rom
 (   
-	.clock(clk),
+	.clock(clk21m),
 	.address(ioctl_isFWBIOS ? ioctl_addr[13:0] : a[13:0]),
 	.q(fw_rom_q),
 	.wren(ioctl_isFWBIOS),
@@ -161,7 +156,7 @@ wire [7:0]  vram_di;
 wire        vram_we;
 spram #(.addr_width(14),.mem_name("VRAM")) vram
 (
-	.clock(clk),
+	.clock(clk21m),
 	.address(vram_a),
 	.wren(vram_we),
 	.data(vram_do),
@@ -175,8 +170,8 @@ wire [7:0] d_from_vdp;
 wire vdp_int_n;
 vdp18_core #(.compat_rgb_g(0)) vdp18
 (
-	.clk_i(clk),
-	.clk_en_10m7_i(ce_10m7),
+	.clk_i(clk21m),
+	.clk_en_10m7_i(ce_10m7_p),
 	.reset_n_i(~reset),
 	.csr_n_i(vdp_n | rd_n),
 	.csw_n_i(vdp_n | wr_n),
@@ -224,7 +219,7 @@ assign cas_motor =  ppi_out_c[4];
 jt8255 PPI
 (
 	.rst(reset),
-	.clk(clk),
+	.clk(clk21m),
 	.addr(a[1:0]),
 	.din(d_from_cpu),
 	.dout(d_from_8255),
@@ -282,7 +277,7 @@ wire [7:0] d_from_kb;
 keyboard msx_key
 (
 	.reset_n_i(~reset),
-	.clk_i(clk),
+	.clk_i(clk21m),
 	.ps2_code_i(ps2_key),
 	.kb_addr_i(ppi_out_c[3:0]),
 	.kb_data_o(d_from_kb)
@@ -304,7 +299,7 @@ ls74 u21_1
 (
    .clr(!psg_n),
    .pre(1),
-   .clk(clk_en_3m58_p),
+   .clk(ce_3m58_p),
    .d(!psg_n),
    .q(u21_1_q)
 );
@@ -314,19 +309,19 @@ ls74 u21_2
 (
    .clr(!psg_n),
    .pre(1),
-   .clk(clk_en_3m58_p),
+   .clk(ce_3m58_p),
    .d(u21_1_q),
    .q(u21_2_q)
 );
 
-wire psg_e = !(!u21_2_q | clk_en_3m58_p) | psg_n;
+wire psg_e = !(!u21_2_q | ce_3m58_p) | psg_n;
 wire psg_bc   = !(a[0] | psg_e);
 wire psg_bdir = !(a[1] | psg_e);
 jt49_bus PSG
 (
 	.rst_n(~reset),
-	.clk(clk),
-	.clk_en(clk_en_3m58_n),
+	.clk(clk21m),
+	.clk_en(ce_3m58_n),
 	.bdir(psg_bdir),
 	.bc1(psg_bc),
 	.din(d_from_cpu),
@@ -349,9 +344,9 @@ wire [7:0] d_from_slots;
 wire [15:0] sound_slots; 
 slots slots
 (
-	.clk(clk),
-	.clk_en(clk_en_3m58_p),
+	.clk(clk21m),
 	.reset(reset),
+   .clk_en(ce_3m58_p),
 	.addr(a),
 	.wr_n(wr_n),
 	.rd_n(rd_n),

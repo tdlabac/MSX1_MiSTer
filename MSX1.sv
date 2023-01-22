@@ -266,8 +266,8 @@ wire        osd_info_req;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
-	.clk_sys(clk_sys),
-	.HPS_BUS(HPS_BUS),
+	.clk_sys(clk21m),
+   .HPS_BUS(HPS_BUS),
 	.EXT_BUS(),
 	.gamma_bus(gamma_bus),
 
@@ -323,31 +323,26 @@ end
 
 ///////////////////////   CLOCKS   ///////////////////////////////
 
-wire clk_sys, clk_sdram, locked_sdram;
+wire clk21m, clk_sdram, locked_sdram;
 pll pll
 (
-	.refclk(CLK_50M),
-	.rst(0),
-	.outclk_1(clk_sys),
-	.outclk_0(clk_sdram),
-	.locked(locked_sdram)
+   .refclk(CLK_50M),
+   .rst(0),
+   .outclk_0(clk_sdram), //85.909090
+   .outclk_1(clk21m),    //21.477270
+   .locked(locked_sdram)
 );
 
-reg ce_10m7 = 0;
-reg ce_5m3 = 0;
-always @(posedge clk_sys) begin
-	reg [2:0] div;
-	
-	div <= div+1'd1;
-	ce_10m7 <= !div[1:0];
-	ce_5m3  <= !div[2:0];
-end
+wire ce_10m7_p, ce_10m7_n, ce_5m39_p, ce_5m39_n, ce_3m58_p, ce_3m58_n, ce_10hz;
+clock clock
+(
+   .*
+);
 
-///////////////////////    RESET   ///////////////////////////////
-
+/////////////////    RESET   /////////////////
 reg [7:0] last_mapper = 8'h0;
-always @(posedge clk_sys) begin
-	last_mapper = status[24:17];
+always @(posedge clk21m) begin
+   last_mapper <= status[24:17];
 end
 
 wire mapper_reset = last_mapper != status[24:17];
@@ -362,10 +357,12 @@ wire ioctl_waitROM;
 wire [2:0] mapper_info;
 msx MSX
 (
-	.clk(clk_sys),
-	.ce_10m7(ce_10m7),
 	.reset(reset),
-	
+	.clk21m(clk21m),
+   .ce_10m7_p(ce_10m7_p),
+   .ce_3m58_p(ce_3m58_p),
+   .ce_3m58_n(ce_3m58_n),
+   .ce_10hz(ce_10hz),
 	.border(status[3]),
 	.R(R),
 	.G(G),
@@ -448,8 +445,8 @@ sdram sdram
 );
 
 /////////////////  VIDEO  /////////////////////////
+assign CLK_VIDEO = clk21m;
 
-assign CLK_VIDEO = clk_sys;
 
 always @(posedge CLK_VIDEO) 
 	en216p <= ((HDMI_WIDTH == 1920) && (HDMI_HEIGHT == 1080) && !forced_scandoubler && !scale);
@@ -483,7 +480,7 @@ wire  freeze_sync;
 video_mixer #(.LINE_LENGTH(290), .GAMMA(1)) video_mixer
 (
 	.*,
-	.ce_pix(ce_5m3),
+	.ce_pix(ce_3m58_p),
 
 	.scandoubler(scale || forced_scandoubler),
 	.hq2x(scale==1),
@@ -506,7 +503,7 @@ assign tape_in = tape_adc_act & tape_adc;
 
 ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(42954545)) tape
 (
-  .clk(clk_sys),
+  .clk(clk21m),
   .ADC_BUS(ADC_BUS),
   .dout(tape_adc),
   .active(tape_adc_act)
@@ -516,7 +513,7 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(42954545)) tape
 ///////////// OSD CAS load //////////
 
 wire buff_mem_ready;
-assign  DDRAM_CLK = clk_sys;
+assign  DDRAM_CLK = 	clk21m;
 assign ioctl_wait =  (ioctl_isCAS && ~buff_mem_ready) || ioctl_waitROM;
 ddram buffer
 (
@@ -541,8 +538,8 @@ assign rewind = status[13] | ioctl_isCAS | reset;
 
 tape cass 
 (
-	.clk(clk_sys),
-	.ce_5m3(ce_5m3),
+   .clk(clk21m),
+   .ce_5m3(ce_5m39_p),
 	.cas_out(CAS_dout),
 	.ram_a(CAS_addr),
 	.ram_di(CAS_di),
