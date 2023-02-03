@@ -70,6 +70,6 @@ Load them manually from the menu
 
 ## ROM BIOS
 Copy bios files to Games/MSX1 folder or load them manually from the menu
-boot1.rom MSX2 BIOS 
-boot2.rom MSX2 EXT
-boot3.rom MSX2 DSK
+- boot1.rom MSX2 BIOS 
+- boot2.rom MSX2 EXT
+- boot3.rom MSX2 DSK
