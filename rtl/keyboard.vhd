@@ -61,7 +61,7 @@ begin
 		end if;
 	end process;
   
-	decode : process (clk_i)
+	decode : process (clk_i, shift)
 	begin
 		if clk_i'event and clk_i = '1' then	
 			if changed = '1' then

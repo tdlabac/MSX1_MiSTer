@@ -7,7 +7,8 @@ module cart_konami
     input      [7:0] d_from_cpu,
     input            wr,
     input            cs,
-    output    [24:0] mem_addr
+    output    [24:0] mem_addr,
+    output           mem_oe
 );
 reg  [7:0] bank1, bank2, bank3;
 wire [7:0] mask = rom_size[20:13] - 1'd1;
@@ -36,5 +37,6 @@ wire [7:0] bank_base = addr[15:13] == 3'b010 ? 8'h00 :
                        addr[15:13] == 3'b100 ? bank2 : bank3;
 
 assign mem_addr = {3'h0, (bank_base & mask), addr[12:0]};
+assign mem_oe     = cs;
 
 endmodule

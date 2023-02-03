@@ -87,7 +87,8 @@ entity scc_wave is
         adr         : in    std_logic_vector( 7 downto 0 );
         dbi         : out   std_logic_vector( 7 downto 0 );
         dbo         : in    std_logic_vector( 7 downto 0 );
-        wave        : out   std_logic_vector( 14 downto 0 )
+        wave        : out   std_logic_vector( 14 downto 0 );
+        sccplus     : in    std_logic
     );
 end scc_wave;
 
@@ -303,11 +304,12 @@ begin
     ----------------------------------------------------------------
     -- wave memory control
     ----------------------------------------------------------------
-    w_wave_adr   <= adr                 when( w_wave_ce = '1'   )else
-                ("000" & ff_ptr_ch_a)   when( ff_ch_num = "000" )else
-                ("001" & ff_ptr_ch_b)   when( ff_ch_num = "001" )else
-                ("010" & ff_ptr_ch_c)   when( ff_ch_num = "010" )else
-                ("011" & ff_ptr_ch_d)   when( ff_ch_num = "011" )else
+    w_wave_adr   <= adr                 when( w_wave_ce = '1'                    )else
+                ("000" & ff_ptr_ch_a)   when( ff_ch_num = "000"                  )else
+                ("001" & ff_ptr_ch_b)   when( ff_ch_num = "001"                  )else
+                ("010" & ff_ptr_ch_c)   when( ff_ch_num = "010"                  )else
+                ("011" & ff_ptr_ch_d)   when( ff_ch_num = "011"                  )else
+                ("011" & ff_ptr_ch_e)   when( sccplus = '0' and ff_ch_num = "100")else
                 ("100" & ff_ptr_ch_e);
 
     wavemem : work.ram

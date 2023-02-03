@@ -87,12 +87,12 @@ always @(posedge clk, posedge rst) begin
         inte_a_obf <= 0;
         inte_b     <= 0;
 
-        last_write <= 0;
+//        last_write <= 0;
         last_acka  <= 0;
         last_ackb  <= 0;
         last_stba  <= 0;
     end else begin
-        last_write <= write;
+//        last_write <= write;
         last_acka  <= acka;
         last_ackb  <= ackb;
         last_stba  <= stba;

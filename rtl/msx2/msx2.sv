@@ -49,6 +49,10 @@ module msx2
    input MSX::config_t MSXconf
 );
 
+//unused signals 
+assign hblank = 1'b0;
+assign vblank = 1'b0;
+
 //IO PORTS
 wire vdp_en = (addr[7:3] == 5'b10011)    & ~iorq_n & m1_n;
 wire rtc_en = (addr[7:1] == 7'b1011010)  & ~iorq_n & m1_n;
@@ -118,9 +122,9 @@ always @( posedge reset, posedge clk21m ) begin
       mem_seg[addr[1:0]] <= d_from_cpu & ~ram_mask;
 end
 
-wire [7:0] ram_mask = MSXconf.ram_size == size64  ? 8'b11111100 :
-                      MSXconf.ram_size == size128 ? 8'b11111000 :
-                      MSXconf.ram_size == size256 ? 8'b11110000 :
+wire [7:0] ram_mask = MSXconf.ram_size == SIZE64  ? 8'b11111100 :
+                      MSXconf.ram_size == SIZE128 ? 8'b11111000 :
+                      MSXconf.ram_size == SIZE256 ? 8'b11110000 :
                                                     8'b11100000 ; //512kB
 //                                                  8'b11000000 ; //1024kB
 //VDP
