@@ -36,7 +36,7 @@ module msx_memory
    input      [26:0] ioctl_addr,
    input       [7:0] ioctl_dout,
    output            ioctl_wait,
-   input             image_detach,
+   input       [1:0] rom_eject,
    //ROM info 
    output reg  [3:0] cart_rom_offset[2],
    output reg [24:0] cart_rom_size[2],
@@ -84,7 +84,8 @@ assign {download,dw_dsk,dw_ext,dw_bios,dw_fw,dw_rom,slot} = ~ioctl_download     
                                                                                                                     7'b0000000 :
                                                                                        7'b0000000 ;
 always @(posedge clk) begin
-   if (image_detach)      mem_enabled       <= 2'b00; 
+   if (rom_eject[0])      mem_enabled[0]    <= 1'b0; 
+   if (rom_eject[1])      mem_enabled[1]    <= 1'b0; 
    if (cart_changed[0])   mem_enabled[0]    <= 1'b0;
    if (cart_changed[1])   mem_enabled[1]    <= 1'b0;
    if (dw_fw | dw_rom)    mem_enabled[slot] <= 1'b1;

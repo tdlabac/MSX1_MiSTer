@@ -374,7 +374,7 @@ msx_memory msx_memory
    .sram_load(status[39]),
    .sram_size(sram_size),
    //ROM
-   .image_detach(status[10]),
+   .rom_eject(rom_eject),
    .cart_rom_offset(cart_rom_offset),
    .cart_rom_size(cart_rom_size),
    .cart_rom_auto_mapper(cart_rom_auto_mapper),
@@ -391,7 +391,7 @@ msx_memory msx_memory
 
 /////////////////   CONFIG   /////////////////
 wire [2:0] cart_type[2], sram_size[2];
-wire [1:0] cart_changed;
+wire [1:0] cart_changed, rom_eject;
 wire [5:0] mapper_A, mapper_B;
 wire       sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
 
@@ -407,6 +407,7 @@ msx_config msx_config
    .sdram_size(sdram_size),
    .cart_type(cart_type),
    .cart_changed(cart_changed),
+   .rom_eject(rom_eject),
    .mapper_A(mapper_A),
    .mapper_B(mapper_B),
    .sram_size(sram_size),
