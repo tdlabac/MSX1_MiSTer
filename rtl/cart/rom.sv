@@ -7,27 +7,35 @@ module cart_rom
     input     [15:0] addr,
     input            wr,
     input            rd,
-    input            iorq,
-    input            mreq,
-    input            m1,
-    input	         SLTSL_n,
+    //input            iorq,
+    //input            mreq,
+    //input            m1,
+    //input	         SLTSL_n,
     input      [7:0] d_from_cpu,
     output     [7:0] d_to_cpu,
-    output    [14:0] sound,
+    //output    [14:0] sound,
     //ROM info
     input      [5:0] mapper,
-    input      [2:0] cart_type,
+    //input      [2:0] cart_type,
     input      [3:0] rom_offset,
     input     [24:0] rom_size,
+    //Memory
+    output    [24:0] mem_addr
+    /*
     input      [2:0] sram_size,
     //Memory
     output    [24:0] mem_addr[2],
     output     [7:0] mem_data[2],
     output     [1:0] mem_wren,
     output     [1:0] mem_rden,
-    input      [7:0] mem_q[2]    
+    input      [7:0] mem_q[2]  
+    */  
 );
-
+wire [24:0] mem_addr_konami, mem_addr_konami_scc, mem_addr_ascii8, mem_addr_ascii16, mem_addr_gamemaster2, mem_addr_linear, mem_addr_none, mem_addr_fmPAC;
+wire        en_konami, en_konami_scc, en_ascii8, en_ascii16, en_gm2, en_linear, en_fmPAC, en_scc, en_scc2, en_fdc, en_none;
+wire        mem_oe_konami, mem_oe_konami_scc, mem_oe_ascii8, mem_oe_ascii16, mem_oe_gamemaster2, mem_oe_linear, mem_oe_none, mem_oe_fmPAC;
+wire        subtype_r_type, subtype_koei, subtype_wizardy;
+/*
 //Unused signals
 assign mem_rden[1] = 'b0;
 
@@ -52,17 +60,18 @@ assign sound       = mapper == MAPPER_KONAMI_SCC   ? scc_sound         :
                                                      14'd0             ;
 
 assign mem_rden[0] = ~SLTSL_n & rd;
-assign mem_addr[0] = en_konami      ? mem_addr_konami           :
+*/
+assign mem_addr    = en_konami      ? mem_addr_konami           :
                      en_konami_scc  ? mem_addr_konami_scc       :
                      en_scc         ? mem_addr_konami_scc       :
                      en_scc2        ? mem_addr_konami_scc       :
                      en_ascii8      ? mem_addr_ascii8           :
                      en_ascii16     ? mem_addr_ascii16          :
-                     en_gm2         ? mem_addr_gamemaster2      :
+                     //en_gm2         ? mem_addr_gamemaster2      :
                      en_linear      ? mem_addr_linear           :
-                     en_fmPAC       ? mem_addr_fmPAC            :
+                     //en_fmPAC       ? mem_addr_fmPAC            :
                                       mem_addr_none             ;
-
+/*
 assign mem_wren[0] = en_scc         ? mem_wren_scc              :
                      en_scc2        ? mem_wren_scc              :
                                       1'b0                      ;
@@ -87,7 +96,7 @@ wire        sram_en   = ~|(mem_addr[1][14:9] & sram_mask);
 wire        sram_we   = sram_en & (sram_we_gamemaster2 | sram_we_ascii8 | sram_we_ascii16 | sram_we_fmPAc);
 wire        sram_oe   = sram_en & (sram_oe_gamemaster2 | sram_oe_ascii8 | sram_oe_ascii16 | sram_oe_fmPAc);
 wire        mem_oe    = mem_oe_konami | mem_oe_konami_scc | mem_oe_ascii8 | mem_oe_ascii16 | mem_oe_gamemaster2 | mem_oe_linear | mem_oe_none | mem_oe_fmPAC;
-
+*/
 /*
 0  0 0000 -
 1  1 0000 - 0400 0000 0100 - 0000 0011 & 0111 1100 - 
@@ -100,9 +109,11 @@ wire        mem_oe    = mem_oe_konami | mem_oe_konami_scc | mem_oe_ascii8 | mem_
 
 cart_mapper_decoder decoder
 (
-    .en(~SLTSL_n),
+    .en(1'b1),
+    .cart_typ(CART_TYP_ROM),
     .*
 );
+
 cart_konami konami
 (
     .clk(clk),
@@ -123,18 +134,18 @@ cart_konami_scc konami_scc
     .rom_size(rom_size),
     .addr(addr),
     .d_from_cpu(d_from_cpu),
-    .d_to_cpu(d_to_cpu_scc),
-    .cart_oe(scc_oe),
+    //.d_to_cpu(d_to_cpu_scc),
+    //.cart_oe(scc_oe),
     .wr(wr),
     .rd(rd),
     .cs(en_konami_scc | en_scc | en_scc2),
     .scc(en_scc),
     .scc2(en_scc2),
     .mem_addr(mem_addr_konami_scc),
-    .mem_wren(mem_wren_scc),
-    .mem_oe(mem_oe_konami_scc),
-    .scc_sound(scc_sound)
-);
+    //.mem_wren(mem_wren_scc),
+    .mem_oe(mem_oe_konami_scc)
+    //.scc_sound(scc_sound)
+); 
 cart_ascii8 ascii8
 (
     .clk(clk),
@@ -146,9 +157,9 @@ cart_ascii8 ascii8
     .cs(en_ascii8),
     .koei(subtype_koei),
     .wizardry(subtype_wizardy),
-    .sram_addr(sram_addr_ascii8),
-    .sram_we(sram_we_ascii8),
-    .sram_oe(sram_oe_ascii8), 
+    //.sram_addr(sram_addr_ascii8),
+    //.sram_we(sram_we_ascii8),
+    //.sram_oe(sram_oe_ascii8), 
     .mem_addr(mem_addr_ascii8),
     .mem_oe(mem_oe_ascii8)
 );
@@ -162,12 +173,12 @@ cart_ascii16 ascii16
     .wr(wr),
     .cs(en_ascii16),
     .r_type(subtype_r_type),
-    .sram_addr(sram_addr_ascii16),
-    .sram_we(sram_we_ascii16),
-    .sram_oe(sram_oe_ascii16),
+    //.sram_addr(sram_addr_ascii16),
+    //.sram_we(sram_we_ascii16),
+    //.sram_oe(sram_oe_ascii16),
     .mem_addr(mem_addr_ascii16),
     .mem_oe(mem_oe_ascii16)  
-);
+);/*
 cart_gamemaster2 gamemaster2
 (
     .clk(clk),
@@ -181,7 +192,7 @@ cart_gamemaster2 gamemaster2
     .sram_oe(sram_oe_gamemaster2),
     .mem_addr(mem_addr_gamemaster2),
     .mem_oe(mem_oe_gamemaster2)  
-);
+); */
 cart_linear linear
 (
     .cs(en_linear),
@@ -197,7 +208,7 @@ cart_none none
     .rom_offset(rom_offset),
     .mem_addr(mem_addr_none),
     .mem_oe(mem_oe_none)
-);
+);/*
 cart_fm_pac fmPAC
 (
     .clk(clk),
@@ -219,5 +230,5 @@ cart_fm_pac fmPAC
     .sram_we(sram_we_fmPAc),    
     .sram_addr(sram_addr_fmPac)    
 );
-
+*/
 endmodule

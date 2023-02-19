@@ -4,6 +4,7 @@ set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) T
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) cart/files.qip                        ]
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) sound/jtopl/target/quartus/jt2413.qip ]
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) sound/jt49/syn/quartus/jt49.qip       ]
+set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) download/files.qip                    ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) package.sv                            ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx.sv                                ]
 set_global_assignment -name VHDL_FILE          [file join $::quartus(qip_path) bram.vhd                              ]
@@ -18,3 +19,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) fdc.sv                                ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_memory.sv                         ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_config.sv                         ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_download.sv                       ]

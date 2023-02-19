@@ -32,17 +32,27 @@ module msx
    output        cart_m1_n,
    output        cart_wr_n,
    output        cart_rd_n,
-   output        cart_SLTSL1_n,
-   output        cart_SLTSL2_n,
+   //output        cart_SLTSL1_n,
+   //output        cart_SLTSL2_n,
    output        en_FDC,
    input  [14:0] cart_sound_A,
    input  [14:0] cart_sound_B,
    //MEMORY 0-BIOS 1-EXT 2-RAM
-   output [24:0] mem_addr[3],
-   output  [7:0] mem_data[3],
-   output  [2:0] mem_wren,
-   output  [2:0] mem_rden,
-   input   [7:0] mem_q[3],
+   //output [24:0] mem_addr[3],
+   //output  [7:0] mem_data[3],
+   //output  [2:0] mem_wren,
+   //output  [2:0] mem_rden,
+   //input   [7:0] mem_q[3],
+
+   output  [15:0] mem2_addr,
+   output   [7:0] mem2_din,
+   input    [7:0] mem2_dout,   
+   output         mem2_wren,
+   output         mem2_rden,
+   //input          mem2_is_mem,
+   output   [7:0] mem2_ram_bank,
+   //output   [3:0] SLTSL_n,
+   output   [1:0] slot,
    //Cassete
    output        cas_motor,
    input         cas_audio_in,
@@ -52,10 +62,10 @@ module msx
 );
 
 //UNUSED signals
-assign mem_data[0] = 'h00;
-assign mem_data[1] = 'h00;
-assign mem_wren[1:0] = 2'b00;
-assign mem_rden[1:0] = 2'b00;
+//assign mem_data[0] = 'h00;
+//assign mem_data[1] = 'h00;
+//assign mem_wren[1:0] = 2'b00;
+//assign mem_rden[1:0] = 2'b00;
 
 
 //  -----------------------------------------------------------------------------
@@ -68,8 +78,8 @@ assign cart_rd_n       = rd_n;
 assign cart_iorq_n     = iorq_n;
 assign cart_mreq_n     = mreq_n;
 assign cart_m1_n       = m1_n;
-assign cart_SLTSL1_n   = SLTSL_n[1];
-assign cart_SLTSL2_n   = SLTSL_n[2];
+//assign cart_SLTSL1_n   = SLTSL_n[1];
+//assign cart_SLTSL2_n   = SLTSL_n[2];
 
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
@@ -136,12 +146,20 @@ end
 //  -----------------------------------------------------------------------------
 //  -- RAM ROMs
 //  -----------------------------------------------------------------------------
+assign mem2_addr = a;
+assign mem2_din = d_from_cpu;
+assign mem2_wren = ~(wr_n | mreq_n);
+assign mem2_rden = ~(rd_n | mreq_n);
+assign mem2_ram_bank = ram_bank;
+
+/*
 assign mem_addr[MEM_BIOS] = a[14:0];
 assign mem_addr[MEM_EXT]  = a[13:0];
 assign mem_addr[MEM_RAM]  = {ram_bank[5:0],a[13:0]};
 assign mem_data[MEM_RAM]  = d_from_cpu;
 assign mem_wren[MEM_RAM]  = ~(wr_n | SLT3_n[2]);
 assign mem_rden[MEM_RAM]  = ~(rd_n | SLT3_n[2]);
+*/
 
 //  -----------------------------------------------------------------------------
 //  -- MSX1 / MSX2 handler
@@ -150,7 +168,8 @@ wire [7:0] d_from_msx, ram_bank;
 wire dataBusRQ_msx;
 wire vdp_int_n;
 wire CS0_n, CS1_n, CS01_n, CS12_n, CS2_n;
-wire [3:0] SLTSL_n, SLT3_n;
+//wire [3:0] SLTSL_n, SLT3_n;
+//wire [3:0] SLT3_n;
 
 reg map_valid = 0;
 wire ppi_en = ~ppi_n;
@@ -160,6 +179,13 @@ always @(posedge reset, posedge clk21m) begin
     else if (ppi_en)
         map_valid = 1;
 end
+
+assign slot =    ~map_valid         ? 2'b00         :
+                  a[15:14] == 2'b00 ? ppi_out_a[1:0] :
+                  a[15:14] == 2'b01 ? ppi_out_a[3:2] :
+                  a[15:14] == 2'b10 ? ppi_out_a[5:4] :
+                                      ppi_out_a[7:6] ;
+
 
 msx_select msx_select (
    .MSXconf(MSXconf),
@@ -189,17 +215,17 @@ msx_select msx_select (
    .hblank(hblank),
    .vblank(vblank),
    .rtc_time(rtc_time),
-   .ram_bank(ram_bank),
-   .addr_map(ppi_out_a),
-   .map_valid(map_valid),
-   .CS1_n(CS1_n),
-   .CS01_n(CS01_n),
-   .CS12_n(CS12_n),
-   .CS2_n(CS2_n),
-   .CS0_n(CS0_n),      
-   .SLTSL_n(SLTSL_n),
-   .SLT3_n(SLT3_n),
-   .en_FDC(en_FDC)
+   .ram_bank(ram_bank)
+   //.addr_map(ppi_out_a),
+   //.map_valid(map_valid)
+   //.CS1_n(CS1_n),
+   //.CS01_n(CS01_n),
+   //.CS12_n(CS12_n),
+   //.CS2_n(CS2_n),
+   //.CS0_n(CS0_n),      
+   //.SLTSL_n(SLTSL_n),
+   //.SLT3_n(SLT3_n),
+   //.en_FDC(en_FDC)
 );
 
 //  -----------------------------------------------------------------------------
@@ -238,17 +264,9 @@ jt8255 PPI
 //  -----------------------------------------------------------------------------
 assign d_to_cpu = rd_n                                      ? 8'hFF           :
                   dataBusRQ_msx                             ? d_from_msx      :
-                  ~(SLT3_n[2]                             ) ? mem_q[MEM_RAM] :
-                  ~(CS01_n    | SLTSL_n[0]                ) ? mem_q[MEM_BIOS] :
-                  ~(CS2_n     | SLTSL_n[0] | ~MSXconf.typ) ? mem_q[MEM_EXT]  :
-                  ~(CS0_n     | SLT3_n[0]  |  MSXconf.typ) ? mem_q[MEM_EXT]  :
                   ~(psg_n                                 ) ? d_from_psg      :
                   ~(ppi_n                                 ) ? d_from_8255     :
-                  ~(SLT3_n[3] | MSXconf.typ              ) ? cart_d_to_cpu_FDC :
-                  ~(SLTSL_n[1]                            ) ? cart_d_to_cpu_A :
-                  ~(SLTSL_n[2]                            ) ? cart_d_to_cpu_B :
-                                                              8'hFF;
-
+                                                              mem2_dout       ;
 //  -----------------------------------------------------------------------------
 //  -- Keyboard decoder
 //  -----------------------------------------------------------------------------

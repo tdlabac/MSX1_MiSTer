@@ -15,6 +15,10 @@ module msx_memory
    input       [7:0] mem_wren,
    input       [7:0] mem_rden,
    output      [7:0] mem_q[8],
+
+   input MSX::slot_t slot[4],
+   input MSX::block_t        block_config[16],
+   input MSX::fw_blocks_t     fw_blocks,
     // SD config
 	input       [2:0] img_mounted,  // signaling that new image has been mounted
 	input             img_readonly, // mounted as read only. valid only for active bit in img_mounted
@@ -54,9 +58,68 @@ module msx_memory
    output            SDRAM_nCS,
    output            SDRAM_nCAS,
    output            SDRAM_nRAS,
-   output            SDRAM_nWE
+   output            SDRAM_nWE,
+
+   input               [24:0] sdram_addr,
+   input                [7:0] sdram_din,
+   input                      sdram_we,
+   input                      sdram_download,
+   output                     sdram_ready
 );
 
+
+wire        is_ram_msx1 = 1'b1;
+
+//wire  [1:0] sub_slot    = is_ram_msx1 ? 2'd0 : mem2_addr[15:14];
+
+//MSX::block_t block;
+//MSX::block_t root_block;
+//assign block = block_config[slot[mem2_slot].subslot[sub_slot].block_id];
+//assign root_block = block_config[slot[mem2_slot].subslot[0].block_id];
+
+/*
+assign     mem2_is_mem = block.typ      == BLOCK_TYP_ROM                               ? 1'b1 :
+                         root_block.typ == BLOCK_TYP_RAM  ? 1'b1 : 
+                         //& block_count >= mem2_addr[15:14]                             ? 1'b1 : 
+                                                                                         1'b0 ;
+*/
+
+//assign     sdram_addr = block.mem_offset + mem2_addr; 
+
+/*
+assign     sdram_rd   = mem2_is_mem & mem2_rden;
+assign     sdram_we   = mem2_is_mem & mem2_wren;
+assign     sdram_din  = mem2_din;
+assign     mem2_dout  = sdram_dout;
+*/
+
+//wire  [7:0] sdram_dout;
+//wire  [7:0] sdram_din;
+//wire [24:0] sdram_addr;
+//wire        sdram_we;
+//wire        sdram_rd;
+//wire        sdram_ready;
+
+
+
+
+   //input   [15:0] mem2_addr,
+   //input    [1:0] mem2_block,
+   //input    [1:0] mem2_slot,
+   //input    [1:0] mem2_sub_slot,
+   //input    [7:0] mem2_din,
+   //output   [7:0] mem2_dout,   
+   //input          mem2_wren,
+   //input          mem2_rden,
+   //output         mem2_is_mem,
+   //input          memory_layout
+
+
+
+
+
+
+/*
 
 reg        image_mounted[3];
 reg [14:0] image_size[3];
@@ -176,7 +239,39 @@ end else begin                                                                //
 end 
 
 assign sd_lba = lba;
+*/
+/*
+M
+S
+X
+Machine type 0 - Not specific, 1 - MSX1,  2 - MSX2
+Block Size block = 15kB
+Type
+slot
+subslot
+page start
+reserva 8
 
+Type 
+00 RAM
+01 BIOS to SLOT 
+02 FW FM_PAC
+03 FW GAMEMASTER2
+04 FW FDC
+
+#/bin/bash
+printf "MSX\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" > vg8240.msx
+printf "MSX\x00\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" >> vg8240.msx
+cat msx2_bios.rom >> vg8240.msx
+printf "MSX\x00\x01\x01\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00" >> vg8240.msx
+cat msx2_ext.rom >> vg8240.msx
+printf "MSX\x00\x01\x01\x03\x03\x01\x00\x00\x00\x00\x00\x00\x00" >> vg8240.msx
+cat msx2_disk.rom >> vg8240.msx
+printf "MSX\x00\x04\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" >> vg8240.msx
+cat FMPAC.ROM >> vg8240.msx
+printf "MSX\x00\x08\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" >> vg8240.msx
+cat KONAMIGM2.rom >> vg8240.msx
+*/
 
 /*
                    0      1      2     3
@@ -191,7 +286,7 @@ BRAM   RAM        64kB  -----  -----  -----
 BRAM   SRAM_A      8kB   32kB   32kB   32kB  
 BRAM   SRAM_B      8kB    8kB    8kB    8kB
 */
-
+/*
 wire [5:0] maskRAM, maskROMA, maskROMB;
 wire [7:0] bankRAM, bankROMA, bankROMB;
 wire       overflow;
@@ -364,14 +459,14 @@ dpram #(.addr_width(SRAMB_WIDTH)) SRAMB
    .data_b(mem_data[MEM_SRAMB]),
    .wren_b(mem_wren[MEM_SRAMB])
 );
-
+*/
 /////////////////  SDRAM  /////////////////////////
 wire  [7:0] sdram_dout;
-wire  [7:0] sdram_din;
-wire [24:0] sdram_addr;
-wire        sdram_we;
+//wire  [7:0] sdram_din;
+//wire [24:0] sdram_addr;
+//wire        sdram_we;
 wire        sdram_rd;
-wire        sdram_ready;
+//wire        sdram_ready;
 
 sdram sdram
 (

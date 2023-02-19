@@ -35,7 +35,7 @@ reg [7:0] a0,a1,a2;
         a2    <= 0;
     end
     if (ioctl_wr) begin
-        rom_size <= ioctl_addr[24:0] + 1'd1 ;
+        rom_size <= ioctl_addr[24:0];
         if (ioctl_addr[26:7] == 0) begin
             if (ioctl_addr[5:3] == 0) begin
                 if (ioctl_addr[6] == 0) begin

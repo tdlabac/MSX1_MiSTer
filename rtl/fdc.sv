@@ -4,17 +4,16 @@ module fdc
    input          reset,
    input          clk_en,
    input          cs,
-   input          mirror_rom,
-   input   [15:0] addr,
+   input   [13:0] addr,
    input    [7:0] d_from_cpu,
    output   [7:0] d_to_cpu,
-   input          mreq,
+   output         output_en,
    input          rd,
    input          wr,
-   input    [7:0] d_from_fdc_rom,
+   //input    [7:0] d_from_fdc_rom,
    input          img_mounted,
    input   [31:0] img_size,
-   input          img_wp,
+   input          img_readonly,
    output  [31:0] sd_lba,
    output         sd_rd,
    output         sd_wr,
@@ -37,15 +36,14 @@ end
 reg side_select, m_on;
 //reg in_use = 1'b0;
 reg [1:0] ds = 2'b0;
-wire io_en    = cs & mreq & (addr[15:12] == 4'b0111 | addr[15:14] == 4'b1011);
-wire rom_en   = mirror_rom ? addr[15:14] == 2'b01 | addr[15:14] == 2'b10 : addr[15:14] == 2'b01;
+wire io_en    = cs & (addr[13:12] == 2'b11);
+//wire rom_en   = addr[15:14] == 2'b01;
 
 wire wdcs     = io_en & addr[11:2] == 10'b1111111110; 
 wire ck1      = io_en & addr[11:0] == 12'hffc; 
 wire ck2      = io_en & addr[11:0] == 12'hffd; 
-
 wire status   = io_en & addr[11:0] == 12'hfff; 
-wire wd_romce = rom_en & mreq & cs ; 
+//wire wd_romce = rom_en & mreq & cs ; 
 
 always @(posedge reset, posedge clk) begin
    if (reset)
@@ -75,12 +73,11 @@ wire ds0 = ds == 2'b00;
 
 wire fdd_ready = image_mounted & m_on & ds0;
 
-assign d_to_cpu = status   ? {~drq, ~intrq, 6'b111111}  :
-                  ck1      ? {7'b1111111, ~side_select} :
-                  ck2      ? {m_on,5'b11110,~ds}        :
-                  wdcs     ? d_from_wd17                :
-                  wd_romce ? d_from_fdc_rom             :
-                             8'hFF;
+assign {output_en, d_to_cpu } = status   ? {1'b1, ~drq, ~intrq, 6'b111111}  :
+                                ck1      ? {1'b1, 7'b1111111, ~side_select} :
+                                ck2      ? {1'b1, m_on,5'b11110,~ds}        :
+                                wdcs     ? {1'b1, d_from_wd17}              :
+                                           9'h0FF;
 wire [7:0] d_from_wd17;
 wire drq, intrq;
 wd1793 #(.RWMODE(1), .EDSK(0)) fdc1
@@ -101,7 +98,7 @@ wd1793 #(.RWMODE(1), .EDSK(0)) fdc1
    .size_code(3'h2),
    .side(side_select),
    .img_mounted(img_mounted),
-   .wp(img_wp),
+   .wp(img_readonly),
    .img_size(img_size[19:0]),
    .sd_lba(sd_lba),
    .sd_rd(sd_rd),
