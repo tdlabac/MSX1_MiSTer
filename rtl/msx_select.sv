@@ -28,20 +28,7 @@ module msx_select
    output         DE,
    output         vdp_int_n,
    output         hblank,
-   output         vblank,   
-   //RAM MAPPER
-   output   [7:0] ram_bank
-   //MAPPER
-   //input    [7:0] addr_map,
-   //input          map_valid
-   //output         CS0_n,
-   //output         CS1_n,
-   //output         CS2_n,
-   //output         CS01_n,
-   //output         CS12_n,
-   //output   [3:0] SLTSL_n,
-   //output   [3:0] SLT3_n,
-   //output         en_FDC
+   output         vblank   
 );
 
 assign d_to_cpu  =  MSXconf.typ == MSX1 ? d_to_cpu_msx1  : d_to_cpu_msx2;
@@ -55,29 +42,17 @@ assign DE        =  MSXconf.typ == MSX1 ? DE_msx1        : DE_msx2;
 assign vdp_int_n =  MSXconf.typ == MSX1 ? vdp_int_n_msx1 : vdp_int_n_msx2;
 assign hblank    =  MSXconf.typ == MSX1 ? hblank_msx1    : hblank_msx2;
 assign vblank    =  MSXconf.typ == MSX1 ? vblank_msx1    : vblank_msx2;
-assign ram_bank  =  MSXconf.typ == MSX1 ? ram_bank_msx1  : ram_bank_msx2;
-
-//assign CS0_n     =  MSXconf.typ == MSX1 ? CS0_n_msx1     : CS0_n_msx2;
-//assign CS1_n     =  MSXconf.typ == MSX1 ? CS1_n_msx1     : CS1_n_msx2;
-//assign CS2_n     =  MSXconf.typ == MSX1 ? CS2_n_msx1     : CS2_n_msx2;
-//assign CS01_n    =  MSXconf.typ == MSX1 ? CS01_n_msx1    : CS01_n_msx2;
-//assign CS12_n    =  MSXconf.typ == MSX1 ? CS12_n_msx1    : CS12_n_msx2;
-//assign SLTSL_n   =  MSXconf.typ == MSX1 ? SLTSL_n_msx1   : SLTSL_n_msx2;
-//assign SLT3_n    =  MSXconf.typ == MSX1 ? SLT3_n_msx1    : SLT3_n_msx2;
 
 assign VRAM_address = MSXconf.typ == MSX1 ? VRAM_address_msx1 : VRAM_address_msx2;
 assign VRAM_we_lo   = MSXconf.typ == MSX1 ? VRAM_we_msx1      : VRAM_we_lo_msx2;
 assign VRAM_we_hi   = MSXconf.typ == MSX1 ? 1'b0              : VRAM_we_hi_msx2;
 assign VRAM_do      = MSXconf.typ == MSX1 ? VRAM_do_msx1      : VRAM_do_msx2;
-//assign en_FDC       = MSXconf.typ == MSX1 ? 1'b0              : ~SLT3_n[3];
+
 
 wire [7:0] d_to_cpu_msx1;
 wire       dataBusRQ_msx1;
 wire [7:0] R_msx1, G_msx1, B_msx1;
 wire       HS_msx1, VS_msx1, DE_msx1, CE_PIXEL_msx1, vdp_int_n_msx1, hblank_msx1, vblank_msx1;
-wire [7:0] ram_bank_msx1;
-//wire [3:0] SLTSL_n_msx1, SLT3_n_msx1;
-//wire       CS0_n_msx1, CS1_n_msx1, CS2_n_msx1, CS01_n_msx1, CS12_n_msx1;
 
 wire [15:0] VRAM_address, VRAM_address_msx1, VRAM_address_msx2;
 wire  [7:0] VRAM_do, VRAM_do_msx1, VRAM_do_msx2;
@@ -111,16 +86,6 @@ msx1 msx1 (
    .hblank(hblank_msx1),
    .vblank(vblank_msx1),
    .rtc_time(rtc_time),
-   .ram_bank(ram_bank_msx1),
-   //.addr_map(addr_map),
-   //.map_valid(map_valid),
-   //.CS0_n(CS0_n_msx1),
-   //.CS1_n(CS1_n_msx1),
-   //.CS2_n(CS2_n_msx1),
-   //.CS01_n(CS01_n_msx1),
-   //.CS12_n(CS12_n_msx1),
-   //.SLTSL_n(SLTSL_n_msx1),
-   //.SLT3_n(SLT3_n_msx1),
    .VRAM_address(VRAM_address_msx1),
    .VRAM_do(VRAM_do_msx1),
    .VRAM_di(VRAM_di_lo),
@@ -132,9 +97,7 @@ wire [7:0] d_to_cpu_msx2;
 wire       dataBusRQ_msx2;
 wire [7:0] R_msx2, G_msx2, B_msx2;
 wire       HS_msx2, VS_msx2, DE_msx2, CE_PIXEL_msx2, vdp_int_n_msx2, hblank_msx2, vblank_msx2;
-wire [7:0] ram_bank_msx2;
-//wire [3:0] SLTSL_n_msx2, SLT3_n_msx2;
-//wire       CS0_n_msx2, CS1_n_msx2, CS2_n_msx2, CS01_n_msx2, CS12_n_msx2;
+
 msx2 msx2 (
    .clk21m(clk21m),
    .ce_10m7_p(ce_10m7_p),
@@ -163,16 +126,6 @@ msx2 msx2 (
    .hblank(hblank_msx2),
    .vblank(vblank_msx2),   
    .rtc_time(rtc_time),
-   .ram_bank(ram_bank_msx2),
-//   .addr_map(addr_map),
-//   .map_valid(map_valid),
-//   .CS0_n(CS0_n_msx2),
-//   .CS1_n(CS1_n_msx2),
-//   .CS2_n(CS2_n_msx2),
-//   .CS01_n(CS01_n_msx2),
-//   .CS12_n(CS12_n_msx2),
-//   .SLTSL_n(SLTSL_n_msx2),
-//   .SLT3_n(SLT3_n_msx2),
    .VRAM_address(VRAM_address_msx2),
    .VRAM_do(VRAM_do_msx2),
    .VRAM_di_lo(VRAM_di_lo),

@@ -192,11 +192,6 @@ assign LED_POWER = 0;
 assign LED_USER = 0;
 assign BUTTONS = 0;
 
-//UNUSED signal 
-//assign mem_data[3]    = 'h00;
-//assign mem_wren[3]    = 'b0;
-//assign mem_rden[3]    = 'b0;
-
 localparam VDNUM = 4;
 
 MSX::config_t    MSXconf;
@@ -342,78 +337,11 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .RTC(rtc)
 );
 
-//wire [24:0] mem_addr[8];
-//wire  [7:0] mem_data[8], mem_q[8];
-//wire  [7:0] mem_wren,mem_rden;
-wire  [3:0] cart_rom_offset[2];
-wire [24:0] cart_rom_size[2];
-wire  [5:0] cart_rom_auto_mapper[2];
-wire  [2:0] cart_sram_size[2];
-wire        ioctl_waitROM, img_reset;
 wire  [1:0] sdram_size = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
 
 
-/*
-msx_memory msx_memory
-(
-   .clk(clk21m),
-   .clk_sdram(clk_sdram),
-   .locked_sdram(locked_sdram),
-   .reset(reset),
-   .reset_req(img_reset),
-   .sdram_size(sdram_size),
-   .cart_changed(cart_changed),
-   //FW ROM/SRAM
-   .img_mounted(hps_img_mounted[2:0]),
-   .img_readonly(hps_img_readonly),
-   .img_size(hps_img_size),
-   .sd_lba(sd_lba[0:2]),
-   .sd_rd(sd_rd[2:0]),
-   .sd_wr(sd_wr[2:0]),
-   .sd_ack(sd_ack[2:0]),
-   .sd_buff_addr(sd_buff_addr),
-   .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[0:2]),
-   .sd_buff_wr(sd_buff_wr),
-   .sram_write(status[38]),
-   .sram_load(status[39]),
-   .sram_size(sram_size),
-   //ROM
-   .rom_eject(rom_eject),
-   .cart_rom_offset(cart_rom_offset),
-   .cart_rom_size(cart_rom_size),
-   .cart_rom_auto_mapper(cart_rom_auto_mapper),
-   .cart_sram_size(cart_sram_size),
-   .ioctl_wait(ioctl_waitROM),
-   //Memory
-   .mem_addr(mem_addr),
-   .mem_data(mem_data),
-   .mem_wren(mem_wren),
-   .mem_rden(mem_rden),
-   .mem_q(mem_q),
-   //Memory 2
-   .mem2_addr(mem2_addr),
-   .mem2_block(mem2_block),
-   .mem2_slot(mem2_slot),
-   .mem2_sub_slot(mem2_sub_slot),
-   .mem2_din(mem2_din),
-   .mem2_dout(mem2_dout),   
-   .mem2_wren(mem2_wren),
-   .mem2_rden(mem2_rden),
-   .mem2_is_mem(mem2_is_mem),
-   .slot(slot),
-   .fw_blocks(fw_blocks),
-   .block_config(block_config),
-   .sdram_addr(sdram_addr),
-   .sdram_din(sdram_din),
-   .sdram_we(sdram_we),
-   .sdram_download(sdram_download),
-   .sdram_ready(sdram_ready),
-   .*
-);*/
-
 /////////////////   CONFIG   /////////////////
-wire [2:0] cart_type[2], sram_size[2];
+//wire [2:0] cart_type[2], sram_size[2];
 wire [1:0] cart_changed, rom_eject;
 wire [5:0] mapper_A, mapper_B;
 wire       sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
@@ -426,8 +354,8 @@ msx_config msx_config
    .msx_type(msx_type),
    .HPS_status(status),
    .scandoubler(scandoubler),
-   .mapper_detected(cart_rom_auto_mapper),
-   .sram_size_detected(cart_sram_size),
+   //.mapper_detected(cart_rom_auto_mapper),
+   //.sram_size_detected(cart_sram_size),
    .sdram_size(sdram_size),
    //.cart_type(cart_type),
    .cart_changed(cart_changed),
@@ -435,7 +363,7 @@ msx_config msx_config
    //.mapper_A(mapper_A),
    //.mapper_B(mapper_B),
    .cart_conf(cart_conf),
-   .sram_size(sram_size),
+   //.sram_size(sram_size),
    .sram_A_select_hide(sram_A_select_hide),
    .sram_loadsave_hide(sram_loadsave_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
@@ -444,99 +372,8 @@ msx_config msx_config
    .MSXconf(MSXconf)
 );
 
-/////////////////   CARTIGE   /////////////////
-//assign mem_addr[MEM_DSK]  = cart_addr[13:0];
-
-wire [7:0] cart_d_to_cpu_A; // = cart_conf[0].typ == CART_TYP_FDC ? cart_d_to_cpu_FDC : cart_d_to_cpu_A_tmp;
-wire [7:0] cart_d_to_cpu_FDC;
-/*
-fdc fdc
-(
-   .clk(clk21m),
-   .reset(reset),
-   .clk_en(ce_3m58_p),
-   .cs(fdc_enabled | en_FDC),
-   .mirror_rom(0),
-   .addr(cart_addr),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_FDC),
-   .mreq(~cart_mreq_n),
-   .rd(~cart_rd_n),
-   .wr(~cart_wr_n),
-   .d_from_fdc_rom(mem_q[MEM_DSK]),
-   .img_mounted(hps_img_mounted[3]),
-   .img_size(hps_img_size),
-   .img_wp(hps_img_readonly),
-   .sd_lba(sd_lba[3]),
-   .sd_rd(sd_rd[3]),
-   .sd_wr(sd_wr[3]),
-   .sd_ack(sd_ack[3]),
-   .sd_buff_addr(sd_buff_addr),
-   .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[3]),
-   .sd_buff_wr(sd_buff_wr)
-); 
-*/
-wire  [7:0] cart_d_to_cpu_A_tmp;
 wire [14:0] cart_sound_A;
-/*
-cart_rom ROM_slot_A
-(
-   .clk(clk21m),
-   .clk_en(ce_3m58_p),
-   .reset(reset),
-   .addr(cart_addr),
-   .wr(~cart_wr_n),
-   .rd(~cart_rd_n),
-   .iorq(~cart_iorq_n),
-   .m1(~cart_m1_n),
-   .SLTSL_n(cart_SLTSL1_n),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_A_tmp),
-   .sound(cart_sound_A),
-   .mapper(mapper_A),
-   .cart_type(cart_type[0]),
-   .sram_size(sram_size[0]),
-   .rom_offset(cart_rom_offset[0]),
-   .rom_size(cart_rom_size[0]),
-   //MEMORY
-   .mem_addr(mem_addr[4:5]),
-   .mem_data(mem_data[4:5]),
-   .mem_wren(mem_wren[5:4]),
-   .mem_rden(mem_rden[5:4]),
-   .mem_q(mem_q[4:5])
-); */
-
-wire  [7:0] cart_d_to_cpu_B;
 wire [14:0] cart_sound_B;
-/*
-cart_rom ROM_slot_B
-(
-   .clk(clk21m),
-   .clk_en(ce_3m58_p),
-   .reset(reset),
-   .addr(cart_addr),
-   .wr(~cart_wr_n),
-   .rd(~cart_rd_n),
-   .iorq(~cart_iorq_n),
-   .mreq(~cart_mreq_n),
-   .m1(~cart_m1_n),
-   .SLTSL_n(cart_SLTSL2_n),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_B),
-   .sound(cart_sound_B),
-   .mapper(mapper_B),
-   .cart_type(cart_type[1]),
-   .sram_size(sram_size[1]),
-   .rom_offset(cart_rom_offset[1]),
-   .rom_size(cart_rom_size[1]),
-   //MEMORY
-   .mem_addr(mem_addr[6:7]),
-   .mem_data(mem_data[6:7]),
-   .mem_wren(mem_wren[7:6]),
-   .mem_rden(mem_rden[7:6]),
-   .mem_q(mem_q[6:7])
-); */
 
 /////////////////   CLOCKS   /////////////////
 wire clk21m, clk_sdram, locked_sdram;
@@ -556,23 +393,18 @@ clock clock
 );
 
 /////////////////    RESET   /////////////////
-wire reset = RESET | status[0] | status[10] | img_reset | need_reset | config_reset;
+wire reset = RESET | status[0] | status[10] | need_reset | config_reset;
 
 ///////////////// Computer /////////////////
 
 wire [7:0] R,G,B;
 wire hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire [15:0] audio;
-wire [15:0] cart_addr;
-wire  [7:0] cart_d_from_cpu;
-wire        cart_wr_n, cart_rd_n, /*cart_SLTSL1_n, cart_SLTSL2_n,*/ cart_iorq_n, cart_m1_n, cart_mreq_n /*, en_FDC*/; 
 
-wire [15:0] mem2_addr;
-wire [1:0]  mem2_block,mem2_slot,mem2_sub_slot;
-wire [7:0]  mem2_din, mem2_dout, mem2_ram_bank;
-wire        mem2_wren, mem2_rden, mem2_is_mem;
-//wire [3:0] SLTSL_n;
-wire [1:0] slot;
+wire [15:0] cpu_addr;
+wire  [7:0] cpu_din, cpu_dout;
+wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
+wire [1:0]  slot;
 
 msx MSX
 (
@@ -582,6 +414,14 @@ msx MSX
    .ce_3m58_n(ce_3m58_n),
    .ce_10hz(ce_10hz),
    .reset(reset),
+   .cpu_addr(cpu_addr),
+   .cpu_din(cpu_din),
+   .cpu_dout(cpu_dout),
+   .cpu_wr(cpu_wr),
+   .cpu_rd(cpu_rd),
+   .cpu_mreq(cpu_mreq),
+   .cpu_iorq(cpu_iorq),
+   .cpu_m1(cpu_m1),
    .R(R),
    .G(G),
    .B(B),
@@ -594,41 +434,10 @@ msx MSX
    .ps2_key(ps2_key),
    .joy0(joy0),
    .joy1(joy1),
-   //CART SLOT interface
-   .cart_addr(cart_addr),
-   .cart_d_from_cpu(cart_d_from_cpu),
-   .cart_d_to_cpu_A(cart_d_to_cpu_A),
-   .cart_d_to_cpu_B(cart_d_to_cpu_B),
-   .cart_d_to_cpu_FDC(cart_d_to_cpu_FDC),
-   .cart_wr_n(cart_wr_n),
-   .cart_rd_n(cart_rd_n),
-   .cart_iorq_n(cart_iorq_n),
-   .cart_mreq_n(cart_mreq_n),
-   .cart_m1_n(cart_m1_n),
-   //.cart_SLTSL1_n(cart_SLTSL1_n),
-   //.cart_SLTSL2_n(cart_SLTSL2_n),
-   .cart_sound_A(cart_sound_A),
-   .cart_sound_B(cart_sound_B),
-   //.en_FDC(en_FDC),
-   //MEMORY
-   //.mem_addr(mem_addr[0:2]),
-   //.mem_data(mem_data[0:2]),
-   //.mem_wren(mem_wren[2:0]),
-   //.mem_rden(mem_rden[2:0]),
-   //.mem_q(mem_q[0:2]),
    .cas_motor(motor),
    .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
    .MSXconf(MSXconf),
-   //MEMORY 2
-   .mem2_addr(mem2_addr),
-   .mem2_din(mem2_din),
-   .mem2_dout(mem2_dout),   
-   .mem2_wren(mem2_wren),
-   .mem2_rden(mem2_rden),
-   //.mem2_is_mem(mem2_is_mem),
-   .mem2_ram_bank(mem2_ram_bank),
-   //.SLTSL_n(SLTSL_n),
    .slot(slot)
 );
 
@@ -728,6 +537,16 @@ msx_download msx_download
    .clk(clk21m),
    .clk_en(ce_3m58_p),
    .reset(reset),
+  
+   .cpu_addr(cpu_addr),
+   .cpu_din(cpu_din),
+   .cpu_dout(cpu_dout),
+   .cpu_iorq(cpu_iorq),
+   .cpu_m1(cpu_m1),
+   .cpu_mreq(cpu_mreq),
+   .cpu_rd(cpu_rd),
+   .cpu_wr(cpu_wr),
+
    .rom_eject(status[10]),
    .need_reset(need_reset),
    .msx_type(msx_type),
@@ -750,6 +569,7 @@ msx_download msx_download
    .sdram_ready(sdram_ready),
    .sdram_dout(sdram_dout),
    .sdram_rd(sdram_rd),
+   .sdram_size(sdram_size),
 
    .img_mounted(hps_img_mounted[3]),
    .img_size(hps_img_size),
@@ -763,15 +583,7 @@ msx_download msx_download
    .fdc_sd_buff_din(sd_buff_din[3]),
    .fdc_sd_buff_wr(sd_buff_wr),
 
-   .active_slot(slot),
-   //.SLTSL_n(SLTSL_n),
-   .mem2_addr(mem2_addr),
-   .mem2_din(mem2_din),
-   .mem2_dout(mem2_dout),   
-   .mem2_wren(mem2_wren),
-   .mem2_rden(mem2_rden),
-   //.mem2_is_mem(mem2_is_mem),
-   .mem2_ram_bank(mem2_ram_bank)
+   .active_slot(slot)
 );
 
 ddram buffer
@@ -789,7 +601,7 @@ ddram buffer
 ///////////////// CAS EMULATE /////////////////
 assign DDRAM_CLK    = clk21m;
 wire   ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd8);
-assign ioctl_wait   = (ioctl_isCAS & ~buff_mem_ready) | ioctl_waitROM;
+assign ioctl_wait   = (ioctl_isCAS & ~buff_mem_ready) ;
 wire buff_mem_ready;
 /*
 ddram buffer

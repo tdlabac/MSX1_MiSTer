@@ -7,17 +7,19 @@ module cart_fm_pac
    input      [7:0] d_from_cpu,
    output     [7:0] d_to_cpu,  
    input            cs,
+   input            slot,
    input            wr,
    input            rd,
    input            iorq,
+   input            mreq,
    input            m1,
-   output signed [15:0] sound,
+   output signed [15:0] sound[2],
    output           cart_oe,  //Output data
    output           sram_we,
    output           sram_oe,  //Output sram
-   output    [14:0] sram_addr,
-   output    [24:0] mem_addr,
-   output           mem_oe
+   //output    [14:0] sram_addr,
+   output    [24:0] mem_addr
+   //output           mem_oe
 );
 
 logic [7:0] enable     = 8'h00;
@@ -44,7 +46,7 @@ always @(posedge reset, posedge clk) begin
       magicHi <= 8'h00;
    end else begin
       opll_wr <= 1'b0;
-      if (cs & wr) begin
+      if (cs & wr & mreq) begin
          case (addr[13:0]) 
             14'h1FFE:
                if (~enable[4]) 
@@ -72,10 +74,13 @@ always @(posedge reset, posedge clk) begin
 end
 
 assign sram_oe    = cs & sramEnable & ~addr[13];
-assign sram_we    = sram_oe & wr;
-assign sram_addr  = {2'b00,addr[12:0]};
-assign mem_addr   = {bank, addr[13:0]};
-assign mem_oe     = cs; //addr[15:14] == 2'b01;
+assign sram_we    = sram_oe & wr & mreq;
+//assign sram_addr  = {2'b00,addr[12:0]};
+//assign mem_addr   = {bank, addr[13:0]};
+//assign mem_oe     = cs; //addr[15:14] == 2'b01;
+
+assign mem_addr   = sram_oe ? addr[12:0] : {bank[slot], addr[13:0]};
+
 
 jt2413 opll
 (

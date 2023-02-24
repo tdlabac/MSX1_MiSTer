@@ -17,17 +17,24 @@ module download
    input                 [7:0] ddr3_dout,
    input                       ddr3_ready,
    output                      ddr3_request,
+   output               [24:0] bram_addr, 
+   output                [7:0] bram_din,
+   output                      bram_we,
+   output                      bram_request,
 
    input                       sdram_ready,  
    output                      sdram_request,
    output               [24:0] sdram_addr,
    output                [7:0] sdram_din,
    output                      sdram_we,
+   input                 [1:0] sdram_size,
 
    output MSX::block_t         memory_block[MAX_MEM_BLOCK],
    output MSX::slot_t          msx_slot[4],
-   output MSX::rom_info_t      rom_info[2], 
-   output                      msx_type
+   output MSX::rom_info_t      rom_info[2],
+   output MSX::sram_block_t    sram_block[2],
+   output                      msx_type,
+   output                [7:0] ram_block_count
 );
 
 localparam MAX_CONFIG = 16;
@@ -38,7 +45,7 @@ assign ddr3_addr = ddr3_upload_debug   ? ddr3_addr_debug  :
                    config_ddr3_request ? config_ddr3_addr : 
                    fw_ddr3_request     ? fw_ddr3_addr     : 
                    init_ddr3_request   ? init_ddr3_addr   : 
-                                         0;
+                                         28'd0;
 assign ddr3_rd   = config_ddr3_request ? config_ddr3_rd : 
                    fw_ddr3_request     ? fw_ddr3_rd     : 
                    init_ddr3_request   ? init_ddr3_rd   : 
@@ -54,6 +61,7 @@ assign sdram_addr    = init_sdram_addr;
 assign sdram_request = init_sdram_request;
 
 assign update_request = config_update_request | rom_update_request | fw_update_request;
+assign ddr3_request   = ddr3_upload_debug | config_ddr3_request | fw_ddr3_request | init_ddr3_request;
 
 wire rom_update_request;
 MSX::ioctl_rom_t ioctl_rom[2];
@@ -82,6 +90,10 @@ download_msx download_msx
    .sdram_din(init_sdram_din),
    .sdram_we(init_sdram_we),
    .sdram_request(init_sdram_request),
+   .bram_addr(bram_addr),
+   .bram_din(bram_din),
+   .bram_we(bram_we),
+   .bram_request(bram_request),
    .update_request(update_request),
    .update_ack(update_ack),
    .msx_config(msx_config),
@@ -106,6 +118,7 @@ download_config download_config
    .update_request(config_update_request),
    .msx_type(MSXtype),
    .msx_config(msx_config),
+   .ram_block_count(ram_block_count),
    .*
 );
 

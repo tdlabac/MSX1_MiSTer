@@ -7,6 +7,15 @@ module msx
    input         ce_3m58_p,
    input         ce_3m58_n,
    input         ce_10hz,
+   //CPU bus
+   output [15:0] cpu_addr,
+   output  [7:0] cpu_dout,
+   input   [7:0] cpu_din,
+   output        cpu_wr,
+   output        cpu_rd,
+   output        cpu_mreq,
+   output        cpu_iorq,
+   output        cpu_m1,
    //Video
    output  [7:0] R,
    output  [7:0] G,
@@ -21,37 +30,9 @@ module msx
    input  [10:0] ps2_key,
    input   [5:0] joy0,
    input   [5:0] joy1,
-   //CART SLOT interface
-   output [15:0] cart_addr,
-   output  [7:0] cart_d_from_cpu,
-   input   [7:0] cart_d_to_cpu_A,
-   input   [7:0] cart_d_to_cpu_B,
-   input   [7:0] cart_d_to_cpu_FDC,
-   output        cart_iorq_n,
-   output        cart_mreq_n,
-   output        cart_m1_n,
-   output        cart_wr_n,
-   output        cart_rd_n,
-   //output        cart_SLTSL1_n,
-   //output        cart_SLTSL2_n,
-   output        en_FDC,
    input  [14:0] cart_sound_A,
    input  [14:0] cart_sound_B,
-   //MEMORY 0-BIOS 1-EXT 2-RAM
-   //output [24:0] mem_addr[3],
-   //output  [7:0] mem_data[3],
-   //output  [2:0] mem_wren,
-   //output  [2:0] mem_rden,
-   //input   [7:0] mem_q[3],
 
-   output  [15:0] mem2_addr,
-   output   [7:0] mem2_din,
-   input    [7:0] mem2_dout,   
-   output         mem2_wren,
-   output         mem2_rden,
-   //input          mem2_is_mem,
-   output   [7:0] mem2_ram_bank,
-   //output   [3:0] SLTSL_n,
    output   [1:0] slot,
    //Cassete
    output        cas_motor,
@@ -61,25 +42,14 @@ module msx
    input MSX::config_t MSXconf
 );
 
-//UNUSED signals
-//assign mem_data[0] = 'h00;
-//assign mem_data[1] = 'h00;
-//assign mem_wren[1:0] = 2'b00;
-//assign mem_rden[1:0] = 2'b00;
+assign cpu_addr = a;
+assign cpu_dout = d_from_cpu;
+assign cpu_wr   = ~wr_n;
+assign cpu_rd   = ~rd_n;
+assign cpu_mreq = ~mreq_n;
+assign cpu_iorq = ~iorq_n;
+assign cpu_m1   = ~m1_n;
 
-
-//  -----------------------------------------------------------------------------
-//  -- Cartrige interface
-//  -----------------------------------------------------------------------------
-assign cart_addr       = a;
-assign cart_d_from_cpu = d_from_cpu;
-assign cart_wr_n       = wr_n;
-assign cart_rd_n       = rd_n;
-assign cart_iorq_n     = iorq_n;
-assign cart_mreq_n     = mreq_n;
-assign cart_m1_n       = m1_n;
-//assign cart_SLTSL1_n   = SLTSL_n[1];
-//assign cart_SLTSL2_n   = SLTSL_n[2];
 
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
@@ -144,32 +114,11 @@ always @(posedge clk21m, negedge exwait_n) begin
 end
 
 //  -----------------------------------------------------------------------------
-//  -- RAM ROMs
-//  -----------------------------------------------------------------------------
-assign mem2_addr = a;
-assign mem2_din = d_from_cpu;
-assign mem2_wren = ~(wr_n | mreq_n);
-assign mem2_rden = ~(rd_n | mreq_n);
-assign mem2_ram_bank = ram_bank;
-
-/*
-assign mem_addr[MEM_BIOS] = a[14:0];
-assign mem_addr[MEM_EXT]  = a[13:0];
-assign mem_addr[MEM_RAM]  = {ram_bank[5:0],a[13:0]};
-assign mem_data[MEM_RAM]  = d_from_cpu;
-assign mem_wren[MEM_RAM]  = ~(wr_n | SLT3_n[2]);
-assign mem_rden[MEM_RAM]  = ~(rd_n | SLT3_n[2]);
-*/
-
-//  -----------------------------------------------------------------------------
 //  -- MSX1 / MSX2 handler
 //  -----------------------------------------------------------------------------
-wire [7:0] d_from_msx, ram_bank;
+wire [7:0] d_from_msx;
 wire dataBusRQ_msx;
 wire vdp_int_n;
-wire CS0_n, CS1_n, CS01_n, CS12_n, CS2_n;
-//wire [3:0] SLTSL_n, SLT3_n;
-//wire [3:0] SLT3_n;
 
 reg map_valid = 0;
 wire ppi_en = ~ppi_n;
@@ -214,18 +163,7 @@ msx_select msx_select (
    .vdp_int_n(vdp_int_n),
    .hblank(hblank),
    .vblank(vblank),
-   .rtc_time(rtc_time),
-   .ram_bank(ram_bank)
-   //.addr_map(ppi_out_a),
-   //.map_valid(map_valid)
-   //.CS1_n(CS1_n),
-   //.CS01_n(CS01_n),
-   //.CS12_n(CS12_n),
-   //.CS2_n(CS2_n),
-   //.CS0_n(CS0_n),      
-   //.SLTSL_n(SLTSL_n),
-   //.SLT3_n(SLT3_n),
-   //.en_FDC(en_FDC)
+   .rtc_time(rtc_time)
 );
 
 //  -----------------------------------------------------------------------------
@@ -266,7 +204,7 @@ assign d_to_cpu = rd_n                                      ? 8'hFF           :
                   dataBusRQ_msx                             ? d_from_msx      :
                   ~(psg_n                                 ) ? d_from_psg      :
                   ~(ppi_n                                 ) ? d_from_8255     :
-                                                              mem2_dout       ;
+                                                              cpu_din         ;
 //  -----------------------------------------------------------------------------
 //  -- Keyboard decoder
 //  -----------------------------------------------------------------------------

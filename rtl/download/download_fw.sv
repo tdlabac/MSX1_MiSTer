@@ -76,9 +76,10 @@ module download_fw #(parameter MAX_FW_ROM = 8)
                      4'h6 : fw_store[fw_store_id].block_count <= ddr3_dout;
                      4'h7 : 
                         begin
-                           fw_store[fw_store_id].store_address <= start_addr + addr + 5'h10;
-                           addr                                <= addr + 5'h10 + (fw_store[fw_store_id].block_count << 14);
-                           state                               <= STATE_PARSE;
+                           fw_store[fw_store_id].sram_block_count <= ddr3_dout;
+                           fw_store[fw_store_id].store_address    <= start_addr + addr + 5'h10;
+                           addr                                   <= addr + 5'h10 + (fw_store[fw_store_id].block_count << 14);
+                           state                                  <= STATE_PARSE;
                         end
                   endcase
                end

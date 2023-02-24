@@ -18,7 +18,7 @@ module msx_memory
 
    input MSX::slot_t slot[4],
    input MSX::block_t        block_config[16],
-   input MSX::fw_blocks_t     fw_blocks,
+   //input MSX::fw_blocks_t     fw_blocks,
     // SD config
 	input       [2:0] img_mounted,  // signaling that new image has been mounted
 	input             img_readonly, // mounted as read only. valid only for active bit in img_mounted

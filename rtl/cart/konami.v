@@ -7,6 +7,7 @@ module cart_konami
     input      [7:0] d_from_cpu,
     input            wr,
     input            cs,
+    input            slot,
     output    [24:0] mem_addr,
     output           mem_oe
 );

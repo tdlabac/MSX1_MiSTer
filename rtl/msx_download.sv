@@ -7,6 +7,15 @@ module msx_download
    output                      need_reset,
    output                      msx_type,
    input MSX::config_cart_t    cart_conf[2],
+   //CPU                
+   input                [15:0] cpu_addr,
+   input                 [7:0] cpu_dout,
+   output                [7:0] cpu_din,
+   input                       cpu_wr,
+   input                       cpu_rd,
+   input                       cpu_mreq,
+   input                       cpu_iorq,
+   input                       cpu_m1,
    //IOCTL
    input                       ioctl_download,
    input                [15:0] ioctl_index,
@@ -26,6 +35,7 @@ module msx_download
    output                      sdram_rd,
    input                       sdram_ready,
    input                 [7:0] sdram_dout,
+   input                 [1:0] sdram_size,
    //SD FDC
    input                       img_mounted,
    input                [31:0] img_size,
@@ -38,16 +48,8 @@ module msx_download
    input                 [7:0] fdc_sd_buff_dout,
    output                [7:0] fdc_sd_buff_din,
    input                       fdc_sd_buff_wr,
-      
-   //Memory 2
-   input                [15:0] mem2_addr,
-   input                 [7:0] mem2_din,
-   output                [7:0] mem2_dout,   
-   input                       mem2_wren,
-   input                       mem2_rden,
-   input                 [7:0] mem2_ram_bank,
+
    input                 [1:0] active_slot,
-//   input                 [3:0] SLTSL_n,
 
    output                [3:0] debug_block_id,
    output                [1:0] debug_block_offset,
@@ -56,34 +58,45 @@ module msx_download
    output                [1:0] debug_active_subslot,
    output                [1:0] debug_active_block,
    output                      debug_block_init,
-   output           slot_typ_t debug_slot_typ,
-   output                      debug_missmas
+   output                      debug_cpuWE_typ,
+   output                      debug_cpuWE2,
+   output           slot_typ_t debug_slot_typ
 );
 
 
 localparam MAX_MEM_BLOCK = 16;
 MSX::block_t memory_block[MAX_MEM_BLOCK];
+MSX::sram_block_t sram_block[2];
 MSX::slot_t msx_slot[4];
 MSX::rom_info_t rom_info[2];
+
 
 wire        dw_sdram_upload;
 wire        dw_sdram_we;
 wire [24:0] dw_sdram_addr;
 wire  [7:0] dw_sdram_din;
-
+wire  [7:0] ram_block_count;
+wire [24:0] dw_bram_addr;
+wire  [7:0] dw_bram_din;
+wire        dw_bram_we;
+wire        dw_bram_upload;
 download download
 (
    .sdram_addr(dw_sdram_addr),
    .sdram_din(dw_sdram_din),
    .sdram_we(dw_sdram_we),
    .sdram_request(dw_sdram_upload),
+   .bram_addr(dw_bram_addr),
+   .bram_din(dw_bram_din),
+   .bram_we(dw_bram_we),
+   .bram_request(dw_bram_upload),
    .*
 );
 
 logic [7:0] mapper_slot[4];
 logic mapper_en;
 
-assign mapper_en = (mem2_addr == 16'hFFFF & msx_slot[active_slot].typ == SLOT_TYP_MAPPER);
+assign mapper_en = (cpu_addr == 16'hFFFF & msx_slot[active_slot].typ == SLOT_TYP_MAPPER);
 
 always @(posedge reset, posedge clk) begin
    if (reset) begin
@@ -92,34 +105,37 @@ always @(posedge reset, posedge clk) begin
       mapper_slot[2] <= 8'h00;
       mapper_slot[3] <= 8'h00;
    end else begin
-      if (mapper_en & mem2_wren)
-         mapper_slot[active_slot] <= mem2_din;
+      if (mapper_en & cpu_wr & cpu_mreq)
+         mapper_slot[active_slot] <= cpu_dout;
    end
 end
 
 //Memory mapping
 wire  [1:0] active_subslot, active_block;
+slot_typ_t  slot_typ;
 
 assign {active_subslot, active_block}  = msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 4'd0                                                  :
                                          msx_slot[active_slot].typ == SLOT_TYP_CART_B ? 4'd0                                                  :
-                                         msx_slot[active_slot].typ != SLOT_TYP_MAPPER     ? {2'd0, mem2_addr[15:14]}                          :
-                                         mem2_addr[15:14] == 2'b00                        ? {mapper_slot[active_slot][1:0], mem2_addr[15:14]} :
-                                         mem2_addr[15:14] == 2'b01                        ? {mapper_slot[active_slot][3:2], mem2_addr[15:14]} :
-                                         mem2_addr[15:14] == 2'b10                        ? {mapper_slot[active_slot][5:4], mem2_addr[15:14]} :
-                                                                                            {mapper_slot[active_slot][7:6], mem2_addr[15:14]} ;
+                                         msx_slot[active_slot].typ != SLOT_TYP_MAPPER     ? {2'd0, cpu_addr[15:14]}                          :
+                                         cpu_addr[15:14] == 2'b00                         ? {mapper_slot[active_slot][1:0], cpu_addr[15:14]} :
+                                         cpu_addr[15:14] == 2'b01                         ? {mapper_slot[active_slot][3:2], cpu_addr[15:14]} :
+                                         cpu_addr[15:14] == 2'b10                         ? {mapper_slot[active_slot][5:4], cpu_addr[15:14]} :
+                                                                                            {mapper_slot[active_slot][7:6], cpu_addr[15:14]} ;
+
+assign slot_typ  = msx_slot[active_slot].typ != SLOT_TYP_MAPPER ? msx_slot[active_slot].typ : msx_slot[active_slot].subslot[active_subslot].typ;
 
 wire  [3:0] block_id       = msx_slot[active_slot].subslot[active_subslot].block[active_block].block_id;
 wire  [1:0] block_offset   = msx_slot[active_slot].subslot[active_subslot].block[active_block].offset;
 wire        block_init     = msx_slot[active_slot].subslot[active_subslot].block[active_block].init;
 wire [24:0] offset         = memory_block[block_id].mem_offset;
-wire        cpu_we         = memory_block[block_id].typ == BLOCK_TYP_RAM & mem2_wren & block_init;
-wire [24:0] cpu_addr       = offset + (memory_block[block_id].typ == BLOCK_TYP_RAM & ~msx_type    ? {mem2_ram_bank, mem2_addr[13:0]} : 
-                                       msx_slot[active_slot].typ == SLOT_TYP_CART_A               ? mem_cart_rom                     :                                 
-                                       msx_slot[active_slot].typ == SLOT_TYP_CART_B               ? mem_cart_rom                     :                                
-                                                                                                    {block_offset, mem2_addr[13:0]}) ;
+wire        cpu_we         = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
 
-
-
+wire [24:0] mem_addr       = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, cpu_addr[13:0]}  : 
+                                       slot_typ == SLOT_TYP_MSX2_RAM ? {ram_bank, cpu_addr[13:0]}      :
+                                       slot_typ == SLOT_TYP_CART_A   ? mem_cart_rom                    :
+                                       slot_typ == SLOT_TYP_CART_B   ? mem_cart_rom                    :
+                                                                       {block_offset, cpu_addr[13:0]}) ;
+                                                                                                    
 assign debug_block_id = block_id;
 assign debug_block_offset = block_offset;
 assign debug_offset = offset;
@@ -127,30 +143,39 @@ assign debug_typ = memory_block[block_id].typ;
 assign debug_active_subslot = active_subslot;
 assign debug_active_block = active_block;
 assign debug_block_init = block_init;
-assign debug_slot_typ = msx_slot[active_slot].typ;
+assign debug_slot_typ = slot_typ;
+assign debug_cpuWE_typ = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM);
+assign debug_cpuWE2 = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
 
-assign ram_addr   = dw_sdram_upload ? dw_sdram_addr[16:0] : cpu_addr[16:0];
-assign sdram_addr = dw_sdram_upload ? dw_sdram_addr       : cpu_addr;
-assign sdram_din  = dw_sdram_upload ? dw_sdram_din        : mem2_din;
-assign sdram_we   = dw_sdram_upload ? dw_sdram_we         : cpu_we & ~ mapper_en;
-assign sdram_rd   = dw_sdram_upload ? 1'b0                : mem2_rden;
-assign mem2_dout  = FDC_output_en   ? d_to_cpu_FDC              :
-                    mapper_en       ? ~mapper_slot[active_slot] :
-                    //block_init    ? ram_dout     :
-                    block_init    ? sdram_dout                  :
-                                    8'hFF                       ;
+//assign ram_addr   = dw_sdram_upload ? dw_sdram_addr[16:0] : mem_addr[16:0];
+assign sdram_addr = dw_sdram_upload ? dw_sdram_addr       : mem_addr;
+assign sdram_din  = dw_sdram_upload ? dw_sdram_din        : cpu_dout;
+assign sdram_we   = dw_sdram_upload ? dw_sdram_we         : cpu_we & ~mapper_en & ~sram_oe;
+assign sdram_rd   = dw_sdram_upload ? 1'b0                : cpu_rd & cpu_mreq;
+assign cpu_din    = FDC_output_en   ? d_to_cpu_FDC                              :
+                    mpr_en          ? mem_seg[cpu_addr[1:0]] | ~(ram_block_count-1) :
+                    mapper_en       ? ~mapper_slot[active_slot]                 :
+                    sram_oe         ? bram_dout                                 :
+                    //block_init    ? bram_dout                                 :
+                    block_init    ? sdram_dout                                  :
+                                    8'hFF                                       ;
 
-assign debug_missmas = ram_addr[16:0] < 17'h18000 & mem2_rden & sdram_ready & ram_dout != sdram_dout & ~dw_sdram_upload;
+assign      bram_addr = sram_block[0].mem_offset + mem_addr[16:0]; //TODO SLOT
+assign      bram_we   = sram_we;
+wire [16:0] bram_addr;
+wire  [7:0] bram_dout;
+wire        bram_we;
 
-wire [16:0] ram_addr;
-wire [7:0] ram_dout;
-spram #(.addr_width(17), .mem_name("TEST")) BIOS
+spram #(.addr_width(18), .mem_name("SRAM")) SRAM
 (
    .clock(clk),
-   .address(ram_addr),
-   .q(ram_dout),
-   .data(dw_sdram_upload ? dw_sdram_din : mem2_din), 
-   .wren(dw_sdram_upload ? dw_sdram_we  : sdram_we)            
+   .address(dw_bram_upload ? dw_bram_addr[16:0] : bram_addr),
+   //.address(dw_bram_upload ? dw_sdram_addr[17:0] : sdram_addr[17:0]),
+   .q(bram_dout),
+   .data(dw_bram_upload ? dw_bram_din : cpu_dout), 
+   //.data(dw_bram_upload ? dw_sdram_din : cpu_dout), 
+   .wren(dw_bram_upload ? dw_bram_we  : bram_we)            
+   //.wren(dw_bram_upload ? dw_sdram_we  : sdram_we)            
 );
 
 wire FDC_output_en;
@@ -161,12 +186,12 @@ fdc fdc
    .reset(reset),
    .clk_en(clk_en),
    .cs(memory_block[block_id].typ == BLOCK_TYP_FDC),
-   .addr(mem2_addr[13:0]),
-   .d_from_cpu(mem2_din),
+   .addr(cpu_addr[13:0]),
+   .d_from_cpu(cpu_dout),
    .d_to_cpu(d_to_cpu_FDC),
    .output_en(FDC_output_en),
-   .rd(mem2_rden),
-   .wr(mem2_wren),
+   .rd(cpu_rd & cpu_mreq),
+   .wr(cpu_wr & cpu_mreq),
    .img_mounted(img_mounted),
    .img_size(img_size),
    .img_readonly(img_readonly),
@@ -183,21 +208,44 @@ fdc fdc
 wire CARTROM_output_en;
 wire  [7:0] d_to_cpu_CARTROM;
 wire [24:0] mem_cart_rom;
+wire        sram_oe, sram_we;
 cart_rom cart_rom
 (
    .clk(clk),
    .clk_en(clk_en),
    .reset(reset),
-   .addr(mem2_addr),
-   .d_from_cpu(mem2_din),
+   .addr(cpu_addr),
+   .d_from_cpu(cpu_dout),
    .d_to_cpu(d_to_cpu_CARTROM),
-   .rd(mem2_rden),
-   .wr(mem2_wren),
+   .rd(cpu_rd),
+   .wr(cpu_wr),
+   .iorq(cpu_iorq),
+   .mreq(cpu_mreq),
+   .m1(cpu_m1),
+   .en(slot_typ == SLOT_TYP_CART_A  | slot_typ == SLOT_TYP_CART_B),
+   .slot(slot_typ == SLOT_TYP_CART_B),
    //.output_en(CARTROM_output_en),
    .mapper(rom_info[msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 0 : 1].mapper),
    .rom_offset(rom_info[msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 0 : 1].offset),
    .rom_size(rom_info[msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 0 : 1].size),
-   .mem_addr(mem_cart_rom)
+   .mem_addr(mem_cart_rom),
+   .sram_oe(sram_oe),
+   .sram_we(sram_we)
 );
+
+//Mapper MSX2 RAM
+wire mpr_en = (cpu_addr[7:2] == 6'b111111)   & cpu_iorq & ~cpu_m1;
+wire mpr_wr = mpr_en & cpu_wr;
+wire [7:0] ram_bank = mem_seg[cpu_addr[15:14]];
+reg [7:0] mem_seg [0:3];
+always @( posedge reset, posedge clk ) begin
+   if (reset) begin
+      mem_seg[0] <= 3;
+      mem_seg[1] <= 2;
+      mem_seg[2] <= 1;
+      mem_seg[3] <= 0;
+   end else if (mpr_wr)
+      mem_seg[cpu_addr[1:0]] <= cpu_dout & (ram_block_count-1'b1);
+end
 
 endmodule

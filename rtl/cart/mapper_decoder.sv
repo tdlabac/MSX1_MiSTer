@@ -7,9 +7,9 @@ module cart_mapper_decoder
    output           en_konami_scc,
    output           en_ascii8,
    output           en_ascii16,
-   //output           en_gm2,
+   output           en_gm2,
    output           en_linear,
-   //output           en_fmPAC,
+   output           en_fmPAC,
    output           en_scc,
    output           en_scc2,
    output           en_none,
@@ -26,9 +26,8 @@ assign en_konami_scc   = en & cart_typ == CART_TYP_ROM & (mapper == MAPPER_KONAM
 assign en_ascii8       = en & cart_typ == CART_TYP_ROM & (mapper == MAPPER_ASCII8  | subtype_koei | subtype_wizardy);
 assign en_ascii16      = en & cart_typ == CART_TYP_ROM & (mapper == MAPPER_ASCII16 | subtype_r_type); 
 assign en_linear       = en & cart_typ == CART_TYP_ROM & (mapper == MAPPER_LINEAR);
-/*
-assign en_fmPAC        = en & cart_typ == CART_TYPE_FM_PAC;
-assign en_gm2          = en & cart_typ == CART_TYPE_GM2; */
+assign en_fmPAC        = en & cart_typ == CART_TYP_FM_PAC;
+assign en_gm2          = en & cart_typ == CART_TYP_GM2;
 assign en_scc          = en & cart_typ == CART_TYP_SCC;
 assign en_scc2         = en & cart_typ == CART_TYP_SCC2;
 assign en_none         = en & cart_typ == MAPPER_NO_UNKNOWN;

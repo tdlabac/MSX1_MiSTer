@@ -32,23 +32,8 @@ module msx1
    output    [7:0] VRAM_do,
    input     [7:0] VRAM_di,
    output          VRAM_we,
-   //RAM MAPPER
-   output   [7:0] ram_bank,
-   //MAPPER
-   //input    [7:0] addr_map,
-   //input          map_valid,
-   //output         CS0_n,
-   //output         CS1_n,
-   //output         CS2_n,
-   //output         CS01_n,
-   //output         CS12_n,
-   //output   [3:0] SLTSL_n,
-   //output   [3:0] SLT3_n,
    input MSX::config_t MSXconf
 );
-
-assign ram_bank = {6'h00, addr[15:14]};
-//assign SLT3_n   = SLTSL_n[3] ? 4'b1111 : 4'b0000;
 
 //IO PORTS
 wire vdp_n = ~((addr[7:3] == 5'b10011)    & ~iorq_n & m1_n);
@@ -59,24 +44,6 @@ assign d_to_cpu = rd_n   ? 8'hFF      :
                            8'hFF;
 
 assign dataBusRQ = ~rd_n & ~vdp_n;
-
-//MAPPER
-//assign CS0_n  = ~(addr[15:14] == 2'b00); //0000-3fff
-//assign CS1_n  = ~(addr[15:14] == 2'b01); //4000-7fff
-//assign CS2_n  = ~(addr[15:14] == 2'b10); //8000-BFFF
-//assign CS01_n = CS0_n & CS1_n;
-//assign CS12_n = CS1_n & CS2_n;
-
-//wire [1:0] map = ~map_valid            ? 2'b00         :
-//                  addr[15:14] == 2'b00 ? addr_map[1:0] :
-//                  addr[15:14] == 2'b01 ? addr_map[3:2] :
-//                  addr[15:14] == 2'b10 ? addr_map[5:4] :
-//                                         addr_map[7:6] ;
-
-//assign SLTSL_n[0] = ~(map == 2'b00 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[1] = ~(map == 2'b01 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[2] = ~(map == 2'b10 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[3] = ~(map == 2'b11 & ~mreq_n & rfrsh_n);
 
 //VDP
 assign HS       = ~hsync_n;

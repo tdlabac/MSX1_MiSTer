@@ -34,20 +34,6 @@ module msx2
    input     [7:0] VRAM_di_hi,
    output          VRAM_we_lo,
    output          VRAM_we_hi,
-   //RAM MAPPER
-   output   [7:0] ram_bank,   
-   //ROM MAPPER
-   //input    [7:0] addr_map,
-   //input          map_valid,
-   //output         CS0_n,
-   //output         CS1_n,
-   //output         CS2_n,
-   //output         CS01_n,
-   //output         CS12_n,
-   //output   [3:0] SLTSL_n,
-   //output   [3:0] SLT3_n,
-   //output   [1:0] slot,
-   //output   [1:0] sub_slot,
    input MSX::config_t MSXconf
 );
 
@@ -58,81 +44,15 @@ assign vblank = 1'b0;
 //IO PORTS
 wire vdp_en = (addr[7:3] == 5'b10011)    & ~iorq_n & m1_n;
 wire rtc_en = (addr[7:1] == 7'b1011010)  & ~iorq_n & m1_n;
-wire mpr_en = (addr[7:2] == 6'b111111)   & ~iorq_n & m1_n;
-wire mpr_wr = mpr_en & ~wr_n;
 
 //Data Bus
-//wire slt3_en    = (addr == 16'hFFFF & ~SLTSL_n[3]);
 assign d_to_cpu = rd_n                             ? 8'hFF                         :
                   vdp_en                           ? d_from_vdp                    :
                   rtc_en                           ? d_from_rtc                    :
-                  mpr_en                           ? mem_seg[addr[1:0]] | ram_mask :
-                  //slt3_en                        	? ~sl3                          :
                                                      8'hFF;
 
-assign dataBusRQ = ~rd_n & (vdp_en | rtc_en | mpr_en );
+assign dataBusRQ = ~rd_n & (vdp_en | rtc_en );
 
-//MAPPER
-//assign CS0_n  = ~(addr[15:14] == 2'b00); //0000-3fff
-//assign CS1_n  = ~(addr[15:14] == 2'b01); //4000-7fff
-//assign CS2_n  = ~(addr[15:14] == 2'b10); //8000-BFFF
-//assign CS01_n = CS0_n & CS1_n;
-//assign CS12_n = CS1_n & CS2_n;
-
-//wire [1:0] map = ~map_valid            ? 2'b00         :
-//                  addr[15:14] == 2'b00 ? addr_map[1:0] :
-//                  addr[15:14] == 2'b01 ? addr_map[3:2] :
-//                  addr[15:14] == 2'b10 ? addr_map[5:4] :
-//                                         addr_map[7:6] ;
-
-//assign SLTSL_n[0] = ~(map == 2'b00 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[1] = ~(map == 2'b01 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[2] = ~(map == 2'b10 & ~mreq_n & rfrsh_n);
-//assign SLTSL_n[3] = ~(map == 2'b11 & ~mreq_n & rfrsh_n);
-
-//assign slot =  map;
-
-
-//MAPPER SLOT 3
-/*
-reg [7:0] sl3 = 0;
-wire wr = ~wr_n;
-always @(posedge reset, posedge clk21m) begin
-   if (reset)
-      sl3 <= 0;
-   else 
-      if (slt3_en & wr)
-         sl3 <= d_from_cpu;
-end
-
-wire [1:0]  SL3CS = addr[15:14] == 2'b00 ? sl3[1:0] :
-                    addr[15:14] == 2'b01 ? sl3[3:2] :
-                    addr[15:14] == 2'b10 ? sl3[5:4] :
-                                           sl3[7:6] ;
-
-assign SLT3_n[0] = ~(SL3CS == 2'b00) | SLTSL_n[3];
-assign SLT3_n[1] = ~(SL3CS == 2'b01) | SLTSL_n[3];
-assign SLT3_n[2] = ~(SL3CS == 2'b10) | SLTSL_n[3];
-assign SLT3_n[3] = ~(SL3CS == 2'b11) | SLTSL_n[3];
-*/
-//RAM Mapper
-assign ram_bank = mem_seg[addr[15:14]];
-reg [7:0] mem_seg [0:3];
-always @( posedge reset, posedge clk21m ) begin
-   if (reset) begin
-      mem_seg[0] <= 3;
-      mem_seg[1] <= 2;
-      mem_seg[2] <= 1;
-      mem_seg[3] <= 0;
-   end else if (mpr_wr)
-      mem_seg[addr[1:0]] <= d_from_cpu & ~ram_mask;
-end
-
-wire [7:0] ram_mask = MSXconf.ram_size == SIZE64  ? 8'b11111100 :
-                      MSXconf.ram_size == SIZE128 ? 8'b11111000 :
-                      MSXconf.ram_size == SIZE256 ? 8'b11110000 :
-                                                    8'b11100000 ; //512kB
-//                                                  8'b11000000 ; //1024kB
 //VDP
 assign R  = {VideoR,VideoR[5:4]};
 assign G  = {VideoG,VideoG[5:4]};

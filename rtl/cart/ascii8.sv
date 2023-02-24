@@ -14,6 +14,7 @@ module cart_ascii8
     input      [7:0] d_from_cpu,
     input            wr,
     input            cs,
+    input            slot,
     input            koei,
     input            wizardry,
     input     [1:0]  sramSize,  // 00-0x800 01-0x2000 02-0x8000
