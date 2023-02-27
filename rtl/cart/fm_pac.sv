@@ -1,25 +1,83 @@
 module cart_fm_pac
 (
-   input            clk,
-   input            clk_en,
-   input            reset,
-   input     [15:0] addr,
-   input      [7:0] d_from_cpu,
-   output     [7:0] d_to_cpu,  
-   input            cs,
-   input            slot,
-   input            wr,
-   input            rd,
-   input            iorq,
-   input            mreq,
-   input            m1,
+   input                clk,
+   input                clk_en,
+   input                reset,
+   input         [15:0] addr,
+   input          [7:0] d_from_cpu,
+   output         [7:0] d_to_cpu,  
+   input                cs,
+   input                slot,
+   input                wr,
+   input                rd,
+   input                iorq,
+   input                mreq,
+   input                m1,
    output signed [15:0] sound[2],
-   output           cart_oe,  //Output data
-   output           sram_we,
-   output           sram_oe,  //Output sram
-   //output    [14:0] sram_addr,
-   output    [24:0] mem_addr
-   //output           mem_oe
+   output               cart_oe,  //Output data
+   output               sram_we,
+   output               sram_oe,  //Output sram
+   output        [24:0] mem_addr
+);
+
+    wire [24:0] mem_addr_A, mem_addr_B;
+    wire  [7:0] d_to_cpu_A, d_to_cpu_B;
+    wire        sram_we_A, sram_we_B;
+    wire        sram_oe_A, sram_oe_B;
+    wire        cart_oe_A, cart_oe_B;
+
+    assign d_to_cpu = slot ? d_to_cpu_B : d_to_cpu_A;
+    assign mem_addr = slot ? mem_addr_B : mem_addr_A;
+    assign sram_we  = slot ? sram_we_B  : sram_we_A;
+    assign sram_oe  = slot ? sram_oe_B  : sram_oe_A;  
+    assign cart_oe  = slot ? cart_oe_B  : cart_oe_A;
+
+    fm_pac fm_pac_A
+    (
+        .d_to_cpu(d_to_cpu_A),
+		  .cart_oe(cart_oe_A),
+        .mem_addr(mem_addr_A),
+        .sram_we(sram_we_A),
+        .sram_oe(sram_oe_A),
+        .sound(sound[0]),
+        .cs(cs & ~slot),
+        .*
+    );
+
+    fm_pac fm_pac_B
+    (
+        .d_to_cpu(d_to_cpu_B),
+		  .cart_oe(cart_oe_B),
+        .mem_addr(mem_addr_B),
+        .sram_we(sram_we_B),
+        .sram_oe(sram_oe_B),
+        .sound(sound[1]),
+        .cs(cs & slot),
+        .*
+    );
+
+endmodule
+
+
+module fm_pac
+(
+   input                clk,
+   input                clk_en,
+   input                reset,
+   input         [15:0] addr,
+   input          [7:0] d_from_cpu,
+   output         [7:0] d_to_cpu,  
+   input                cs,
+   input                wr,
+   input                rd,
+   input                iorq,
+   input                mreq,
+   input                m1,
+   output signed [15:0] sound,
+   output               cart_oe,  //Output data
+   output               sram_we,
+   output               sram_oe,  //Output sram
+   output        [24:0] mem_addr
 );
 
 logic [7:0] enable     = 8'h00;
@@ -36,7 +94,7 @@ assign {cart_oe, d_to_cpu} = addr[13:0] == 14'h3FF6              ? {cs, enable} 
                              addr[13:0] == 14'h1FFF & sramEnable ? {cs, magicHi}           :
                                                                    {1'b0, 8'hFF}           ;
 reg opll_wr = 0;
-wire io_wr  = wr & addr[7:1] == 7'b0111110 & iorq & ~m1;
+wire io  = addr[7:1] == 7'b0111110 & iorq & ~m1;
 
 always @(posedge reset, posedge clk) begin
    if (reset) begin
@@ -79,7 +137,7 @@ assign sram_we    = sram_oe & wr & mreq;
 //assign mem_addr   = {bank, addr[13:0]};
 //assign mem_oe     = cs; //addr[15:14] == 2'b01;
 
-assign mem_addr   = sram_oe ? addr[12:0] : {bank[slot], addr[13:0]};
+assign mem_addr   = sram_oe ? addr[12:0] : {bank, addr[13:0]};
 
 
 jt2413 opll
@@ -89,8 +147,8 @@ jt2413 opll
    .cen(clk_en),
    .din(d_from_cpu),
    .addr(addr[0]),
-   .cs_n(1'b0),
-   .wr_n(~(io_wr | opll_wr)),
+   .cs_n(~(cs | io)),
+   .wr_n(~((io & wr) | opll_wr)),
    .snd(sound)
 );
 

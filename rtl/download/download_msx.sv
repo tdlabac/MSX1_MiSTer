@@ -161,38 +161,44 @@ module download_msx #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM 
                         begin                          
                            state <= STATE_FILL_NEXT;   
                            case(cart_conf[act_config_typ == CONFIG_CART_B].typ)
-                              CART_TYP_EMPTY:
-                                 begin 
-                                    //None
+                              CART_TYP_EMPTY: begin 
+                                 //None
+                              end
+                              CART_TYP_ROM: begin
+                                 if (ioctl_rom[act_config_typ == CONFIG_CART_B].loaded) begin
+                                    msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
+                                    msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
+                                    msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
+                                    msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
+                                    start_addr  <= act_config_typ == CONFIG_CART_A ? 28'hA00000 : 28'hF00000;
+                                    memory_block[act_block_id].block_count <= ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14;
+                                    memory_block[act_block_id].mem_offset <= sdram_addr;
+                                    memory_block[act_block_id].typ <= BLOCK_TYP_ROM;
+                                    ddr3_rd <= 1'b1;                     
+                                    addr <= 24'd0;
+                                    state <= STATE_UPLOAD_RAM;
                                  end
-                              CART_TYP_ROM:
-                                 begin
-                                    if (ioctl_rom[act_config_typ == CONFIG_CART_B].loaded)
-                                    begin
-                                       msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
-                                       msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
-                                       msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
-                                       msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
-                                       start_addr  <= act_config_typ == CONFIG_CART_A ? 28'hA00000 : 28'hF00000;
-                                       memory_block[act_block_id].block_count <= ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14;
-                                       memory_block[act_block_id].mem_offset <= sdram_addr;
-                                       memory_block[act_block_id].typ <= BLOCK_TYP_ROM;
-                                       ddr3_rd <= 1'b1;                     
-                                       addr <= 24'd0;
-                                       state <= STATE_UPLOAD_RAM;
-                                    end
-                                 end
+                              end
+                              CART_TYP_SCC2: begin
+                                 sram_block[act_config_typ == CONFIG_CART_B].mem_offset  <= bram_addr;
+                                 sram_block[act_config_typ == CONFIG_CART_B].block_count <= 8'd8;
+                                 state <= STATE_INIT_SRAM;
+                                 next_state <= STATE_FILL_NEXT;
+                                 bram_din <= 8'hFF;
+                                 addr <= 24'd0;
+                              end
+
                               default:
                                           //Nasli jsme cart a vime kam mapovat.
                                           //Rozhodnout se co se nahraje do RAM
                                           //Nastavit slot na spravne chovani
                                           //Doresit SRAM jak pro ROM tak i pro FW
                                  begin
+                                    next_state <= STATE_FILL_NEXT;
                                     if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count > 8'd0) begin
                                        if (cart_conf[act_config_typ == CONFIG_CART_A] == cart_conf[act_config_typ == CONFIG_CART_B] & share_fw_id > 0) begin //Shodne a inicializovane
                                           msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= share_fw_id;
                                           state <= STATE_FILL_NEXT;
-                                          next_state <= STATE_FILL_NEXT;
                                        end else begin                                          
                                           msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
                                           msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
@@ -210,14 +216,14 @@ module download_msx #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM 
                                        msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                                        msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
                                        msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
-
-                                       if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count > 8'd0) begin // Je potreba SRAM
-                                          sram_block[act_config_typ == CONFIG_CART_B].mem_offset  <= bram_addr;
-                                          sram_block[act_config_typ == CONFIG_CART_B].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count;
-                                          state <= STATE_INIT_SRAM;
-                                          bram_din <= 8'hFF;
-                                          addr <= 24'd0;
-                                       end
+                                    end
+                                    
+                                    if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count > 8'd0) begin // Je potreba SRAM
+                                       sram_block[act_config_typ == CONFIG_CART_B].mem_offset  <= bram_addr;
+                                       sram_block[act_config_typ == CONFIG_CART_B].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count;
+                                       state <= STATE_INIT_SRAM;
+                                       bram_din <= 8'hFF;
+                                       addr <= 24'd0;
                                     end
                                  end
                            endcase

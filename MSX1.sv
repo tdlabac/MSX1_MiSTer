@@ -192,7 +192,7 @@ assign LED_POWER = 0;
 assign LED_USER = 0;
 assign BUTTONS = 0;
 
-localparam VDNUM = 4;
+localparam VDNUM = 6;
 
 MSX::config_t    MSXconf;
 MSX::config_cart_t cart_conf[2];
@@ -209,13 +209,13 @@ wire             ioctl_wr;
 wire             ioctl_wait;
 wire      [26:0] ioctl_addr;
 wire       [7:0] ioctl_dout;
-wire      [31:0] sd_lba[VDNUM];
+wire      [31:0] sd_lba[0:VDNUM-1];
 wire [VDNUM-1:0] sd_rd;
 wire [VDNUM-1:0] sd_wr;
 wire [VDNUM-1:0] sd_ack;
-wire       [8:0] sd_buff_addr;
+wire      [13:0] sd_buff_addr;
 wire       [7:0] sd_buff_dout;
-wire       [7:0] sd_buff_din[VDNUM];
+wire       [7:0] sd_buff_din[0:VDNUM-1];
 wire             sd_buff_wr;
 wire [VDNUM-1:0] hps_img_mounted;
 wire      [31:0] hps_img_size;
@@ -247,22 +247,22 @@ wire      [64:0] rtc;
 localparam CONF_STR = {
    "MSX1;",
    "-;",
-   "FC1,MSX,Load ROM PACK,30000000;",
-   "FC2,MSX,Load FW  PACK,30500000;",
-   "O[11],MSX type,MSX2,MSX1;",
+   "FSC1,MSX,Load ROM PACK,30000000;",
+   "FSC2,MSX,Load FW  PACK,30500000;",
+   //"O[11],MSX type,MSX2,MSX1;",
    CONF_STR_SLOT_A,
-   "H3F3,ROM,Load,30A00000;",
+   "H3FS3,ROM,Load,30A00000;",
    CONF_STR_MAPPER_A,
    CONF_STR_SRAM_SIZE_A,
    "-;",
    CONF_STR_SLOT_B,
-   "H4F4,ROM,Load,30F00000;",
+   "H4FS4,ROM,Load,30F00000;",
    CONF_STR_MAPPER_B,
    "H6-;",
    "H6R[38],SRAM Save;",
    "H6R[39],SRAM Load;",
    "h1-;",
-   "h1S3,DSK,Mount Drive A:;",
+   "h1S5,DSK,Mount Drive A:;",
    "-;",
    "O[8],Tape Input,File,ADC;",
    "H0F5,CAS,Cas File,31400000;",
@@ -276,7 +276,7 @@ localparam CONF_STR = {
    "P1O[6:5],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
    "P1O[7],Vertical Crop,No,Yes;",
    //"h2P1O[38],Border,No,Yes;",   //TODO
-   "P2,Advanced settings;",
+   //"P2,Advanced settings;",
    //"h2P2F1,ROM,Load MAIN;",
    //"h2P2F2,ROM,Load HANGUL;",	
    //"H2P2F1,ROM,Load MAIN;",
@@ -284,7 +284,7 @@ localparam CONF_STR = {
    //"H2P2F3,ROM,Load DISK;",
    //"P2F8,ROM,Load FW A;",
    //"P2F9,ROM,Load FW B;",
-   CONF_STR_RAM_SIZE,
+   //CONF_STR_RAM_SIZE,
    "-;",
    "T[0],Reset;",
    "R[10],Reset & Detach ROM Cartridge;",					
@@ -342,7 +342,7 @@ wire  [1:0] sdram_size = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
 
 /////////////////   CONFIG   /////////////////
 //wire [2:0] cart_type[2], sram_size[2];
-wire [1:0] cart_changed, rom_eject;
+wire       cart_changed; 
 wire [5:0] mapper_A, mapper_B;
 wire       sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
 
@@ -359,7 +359,7 @@ msx_config msx_config
    .sdram_size(sdram_size),
    //.cart_type(cart_type),
    .cart_changed(cart_changed),
-   .rom_eject(rom_eject),
+   //.rom_eject(rom_eject),
    //.mapper_A(mapper_A),
    //.mapper_B(mapper_B),
    .cart_conf(cart_conf),
@@ -430,6 +430,7 @@ msx MSX
    .VS(vsync),
    .hblank(hblank),
    .vblank(vblank),
+   .cart_sound(cart_sound),
    .audio(audio),
    .ps2_key(ps2_key),
    .joy0(joy0),
@@ -510,11 +511,30 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
   .dout(tape_adc),
   .active(tape_adc_act)
 );
-///////////////// LOAD PACK   /////////////////
 
-wire [27:0] ddr3_addr;
-wire  [7:0] ddr3_dout, ddr3_din;
-wire        ddr3_rd, ddr3_wr, ddr3_ready;
+///////////////// LOAD PACK   /////////////////
+wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
+wire  [7:0] ddr3_dout, ddr3_din, ddr3_din_download;
+wire        ddr3_rd, ddr3_rd_download, ddr3_rd_cas, ddr3_wr, ddr3_wr_download, ddr3_ready, ddr3_request_download;
+
+assign ddr3_addr = ddr3_request_download ? ddr3_addr_download : ddr3_addr_cas ;
+assign ddr3_rd   = ddr3_request_download ? ddr3_rd_download   : ddr3_rd_cas   ;
+assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
+assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
+
+assign DDRAM_CLK    = clk21m;
+ddram buffer
+(
+   .*,
+   .addr(ddr3_addr),
+   .dout(ddr3_dout),
+   .din(ddr3_din),
+   .we(ddr3_wr),
+   .rd(ddr3_rd),
+   .ready(ddr3_ready),
+   .reset(reset)
+);
+
 sdram sdram
 (
     .init(~locked_sdram),
@@ -531,7 +551,7 @@ sdram sdram
 wire sdram_ready, sdram_download, sdram_we, sdram_rd, need_reset, msx_type;
 wire [24:0] sdram_addr;
 wire  [7:0] sdram_din, sdram_dout;
-
+wire signed [15:0] cart_sound;
 msx_download msx_download
 (
    .clk(clk21m),
@@ -546,21 +566,25 @@ msx_download msx_download
    .cpu_mreq(cpu_mreq),
    .cpu_rd(cpu_rd),
    .cpu_wr(cpu_wr),
-
+   .sound(cart_sound),
    .rom_eject(status[10]),
+   .cart_changed(cart_changed),
    .need_reset(need_reset),
+   .sram_save(status[38]),
+   .sram_load(status[39]),
    .msx_type(msx_type),
    .ioctl_download(ioctl_download),
    .ioctl_index(ioctl_index),
    .ioctl_addr(ioctl_addr[26:0] ),
    .cart_conf(cart_conf),
    
-   .ddr3_addr(ddr3_addr),
-   .ddr3_rd(ddr3_rd),
-   .ddr3_wr(ddr3_wr),
+   .ddr3_addr(ddr3_addr_download),
+   .ddr3_rd(ddr3_rd_download),
+   .ddr3_wr(ddr3_wr_download),
    .ddr3_dout(ddr3_dout),
-   .ddr3_din(ddr3_din),
+   .ddr3_din(ddr3_din_download),
    .ddr3_ready(ddr3_ready),
+   .ddr3_request(ddr3_request_download),
 
    .sdram_addr(sdram_addr),
    .sdram_din(sdram_din),
@@ -571,37 +595,25 @@ msx_download msx_download
    .sdram_rd(sdram_rd),
    .sdram_size(sdram_size),
 
-   .img_mounted(hps_img_mounted[3]),
+   .img_mounted(hps_img_mounted[5:0]),
    .img_size(hps_img_size),
    .img_readonly(hps_img_readonly),
-   .fdc_sd_lba(sd_lba[3]),
-   .fdc_sd_rd(sd_rd[3]),
-   .fdc_sd_wr(sd_wr[3]),
-   .fdc_sd_ack(sd_ack[3]),
-   .fdc_sd_buff_addr(sd_buff_addr),
-   .fdc_sd_buff_dout(sd_buff_dout),
-   .fdc_sd_buff_din(sd_buff_din[3]),
-   .fdc_sd_buff_wr(sd_buff_wr),
+   .sd_lba(sd_lba[0:5]),
+   .sd_rd(sd_rd[5:0]),
+   .sd_wr(sd_wr[5:0]),
+   .sd_ack(sd_ack[5:0]),
+   .sd_buff_addr(sd_buff_addr),
+   .sd_buff_dout(sd_buff_dout),
+   .sd_buff_din(sd_buff_din[0:5]),
+   .sd_buff_wr(sd_buff_wr),
 
    .active_slot(slot)
 );
 
-ddram buffer
-(
-   .*,
-   .addr(ddr3_addr),
-   .dout(ddr3_dout),
-   .din(ddr3_din),
-   .we(ddr3_wr),
-   .rd(ddr3_rd),
-   .ready(ddr3_ready),
-   .reset(reset)
-);
+
 
 ///////////////// CAS EMULATE /////////////////
-assign DDRAM_CLK    = clk21m;
 wire   ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd8);
-assign ioctl_wait   = (ioctl_isCAS & ~buff_mem_ready) ;
 wire buff_mem_ready;
 /*
 ddram buffer
@@ -629,10 +641,10 @@ tape cass
    .clk(clk21m),
    .ce_5m3(ce_5m39_p),
    .cas_out(CAS_dout),
-   .ram_a(CAS_addr),
-   .ram_di(CAS_di),
-   .ram_rd(CAS_rd),
-   .buff_mem_ready(buff_mem_ready),
+   .ram_a(ddr3_addr_cas),
+   .ram_di(ddr3_dout),
+   .ram_rd(ddr3_rd_cas),
+   .buff_mem_ready(ddr3_ready),
    .play(play),
    .rewind(rewind)
 );

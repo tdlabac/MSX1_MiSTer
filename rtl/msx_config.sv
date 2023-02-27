@@ -44,8 +44,8 @@ module msx_config
     output               fdc_enabled,
     output MSX::config_t MSXconf,
     output               reset_request,
-    output         [1:0] cart_changed,
-    output         [1:0] rom_eject
+    output               cart_changed
+    //output         [1:0] rom_eject
 );
 
 
@@ -104,6 +104,6 @@ always @(posedge clk) begin
 end
 
 assign reset_request = lastConfig != act_config;
-assign cart_changed = {last_cart_type[5:3] != act_cart_type[5:3], last_cart_type[2:0] != act_cart_type[2:0]};
-assign rom_eject = {cart_conf[1].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0, cart_conf[0].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0};
+assign cart_changed = last_cart_type[5:0] != act_cart_type[5:0];
+//assign rom_eject = {cart_conf[1].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0, cart_conf[0].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0};
 endmodule

@@ -30,9 +30,7 @@ module msx
    input  [10:0] ps2_key,
    input   [5:0] joy0,
    input   [5:0] joy1,
-   input  [14:0] cart_sound_A,
-   input  [14:0] cart_sound_B,
-
+   input signed [15:0] cart_sound,
    output   [1:0] slot,
    //Cassete
    output        cas_motor,
@@ -54,10 +52,10 @@ assign cpu_m1   = ~m1_n;
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
 //  -----------------------------------------------------------------------------
-wire [15:0] sound_slots = {cart_sound_A[14],cart_sound_A} + {cart_sound_B[14],cart_sound_B};
+//wire [15:0] sound_slots = {cart_sound_A[14],cart_sound_A} + {cart_sound_B[14],cart_sound_B};
 wire  [9:0] audioPSG    = ay_ch_mix + {keybeep,5'b00000} + {(cas_audio_in & ~cas_motor),4'b0000};
-wire [15:0] fm          = {2'b0, audioPSG, 4'b0000};
-wire [16:0] audio_mix   = {sound_slots[15], sound_slots} + {fm[15], fm};
+wire [16:0] fm          = {3'b00, audioPSG, 4'b0000};
+wire [16:0] audio_mix   = {cart_sound[15], cart_sound} + fm;
 wire [15:0] compr[7:0]  = '{ {1'b1, audio_mix[13:0], 1'b0}, 16'h8000, 16'h8000, 16'h8000, 16'h7FFF, 16'h7FFF, 16'h7FFF,  {1'b0, audio_mix[13:0], 1'b0}};
 assign audio            = compr[audio_mix[16:14]];
 

@@ -8,6 +8,7 @@ module download
    input                [15:0] ioctl_index,
    input                [26:0] ioctl_addr,
    input                       rom_eject,
+   input                       cart_changed,
    //input                       need_reload,
    input MSX::config_cart_t    cart_conf[2],
    output               [27:0] ddr3_addr,
@@ -60,7 +61,7 @@ assign sdram_din     = init_sdram_din;
 assign sdram_addr    = init_sdram_addr;
 assign sdram_request = init_sdram_request;
 
-assign update_request = config_update_request | rom_update_request | fw_update_request;
+assign update_request = config_update_request | rom_update_request | fw_update_request | cart_changed;
 assign ddr3_request   = ddr3_upload_debug | config_ddr3_request | fw_ddr3_request | init_ddr3_request;
 
 wire rom_update_request;

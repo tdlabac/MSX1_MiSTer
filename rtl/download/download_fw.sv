@@ -73,12 +73,14 @@ module download_fw #(parameter MAX_FW_ROM = 8)
                      4'h1 : if (ddr3_dout != "S") state       <= STATE_SLEEP;
                      4'h2 : if (ddr3_dout != "X") state       <= STATE_SLEEP;
                      4'h4 : fw_store_id                       <= ddr3_dout[2:0];
-                     4'h6 : fw_store[fw_store_id].block_count <= ddr3_dout;
-                     4'h7 : 
+                     4'h6 : 
                         begin
-                           fw_store[fw_store_id].sram_block_count <= ddr3_dout;
+                           fw_store[fw_store_id].block_count <= ddr3_dout;
+                           fw_store[fw_store_id].sram_block_count <= fw_store_id == CART_TYP_FM_PAC ? 8'd2 :
+                                                                     fw_store_id == CART_TYP_GM2    ? 8'd4 :
+                                                                                                      8'd0 ;
                            fw_store[fw_store_id].store_address    <= start_addr + addr + 5'h10;
-                           addr                                   <= addr + 5'h10 + (fw_store[fw_store_id].block_count << 14);
+                           addr                                   <= addr + 5'h10 + (ddr3_dout << 14);
                            state                                  <= STATE_PARSE;
                         end
                   endcase
