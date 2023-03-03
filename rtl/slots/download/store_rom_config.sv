@@ -1,4 +1,4 @@
-module download_rom 
+module store_rom_config
 (
    input                   clk,
    input                   ioctl_download,

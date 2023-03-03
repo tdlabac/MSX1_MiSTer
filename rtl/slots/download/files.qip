@@ -1,0 +1,7 @@
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) download.sv                 ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) store_msx_config.sv         ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) store_fw_config.sv          ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) store_rom_config.sv         ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) upload_ram.sv               ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) upload_debug.sv             ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mapper_detect.sv            ]

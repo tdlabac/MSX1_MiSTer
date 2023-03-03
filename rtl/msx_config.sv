@@ -34,7 +34,7 @@ module msx_config
     
     //output         [2:0] cart_type[2],
     output         [2:0] sram_size[2],
-    output         [2:0] sram_B_size,
+    //output         [2:0] sram_B_size,
     //output         [5:0] mapper_A,
     //output         [5:0] mapper_B,
     output               sram_A_select_hide,
@@ -75,7 +75,7 @@ assign sram_size[0] = cart_conf[0].typ == CART_TYP_FM_PAC ? 3'd4                
                                                          3'd4                  ; //8kB
 
 assign sram_size[1] = cart_conf[1].typ == CART_TYP_FM_PAC ? 3'd4                  :
-                                                         3'd0                  ;
+                                                            3'd0                  ;
 
 assign fdc_enabled = MSXconf.typ == MSX2 | cart_conf[0].typ == CART_TYP_FDC;
 

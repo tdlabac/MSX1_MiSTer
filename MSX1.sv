@@ -206,7 +206,6 @@ wire       [5:0] joy0, joy1;
 wire             ioctl_download;
 wire      [15:0] ioctl_index;
 wire             ioctl_wr;
-wire             ioctl_wait;
 wire      [26:0] ioctl_addr;
 wire       [7:0] ioctl_dout;
 wire      [31:0] sd_lba[0:VDNUM-1];
@@ -293,6 +292,7 @@ localparam CONF_STR = {
 };
 
 wire [7:0] status_menumask;
+wire [1:0] sdram_size;
 assign status_menumask[0] = MSXconf.cas_audio_src == CAS_AUDIO_ADC;
 assign status_menumask[1] = fdc_enabled;
 assign status_menumask[2] = MSXconf.typ == MSX1;
@@ -301,6 +301,7 @@ assign status_menumask[4] = ROM_B_load_hide;
 assign status_menumask[5] = sram_A_select_hide;
 assign status_menumask[6] = sram_loadsave_hide;
 assign status_menumask[7] = sdram_size == 2'd0;
+assign sdram_size         = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
 
 hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
 (
@@ -321,7 +322,6 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .ioctl_wr(ioctl_wr),
    .ioctl_addr(ioctl_addr),
    .ioctl_dout(ioctl_dout),
-   .ioctl_wait(ioctl_wait),
    .img_mounted(hps_img_mounted),
    .img_size(hps_img_size),
    .img_readonly(hps_img_readonly),
@@ -337,14 +337,9 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .RTC(rtc)
 );
 
-wire  [1:0] sdram_size = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
-
-
 /////////////////   CONFIG   /////////////////
-//wire [2:0] cart_type[2], sram_size[2];
-wire       cart_changed; 
 wire [5:0] mapper_A, mapper_B;
-wire       sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
+wire       cart_changed, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
 
 msx_config msx_config 
 (
@@ -354,16 +349,9 @@ msx_config msx_config
    .msx_type(msx_type),
    .HPS_status(status),
    .scandoubler(scandoubler),
-   //.mapper_detected(cart_rom_auto_mapper),
-   //.sram_size_detected(cart_sram_size),
    .sdram_size(sdram_size),
-   //.cart_type(cart_type),
    .cart_changed(cart_changed),
-   //.rom_eject(rom_eject),
-   //.mapper_A(mapper_A),
-   //.mapper_B(mapper_B),
    .cart_conf(cart_conf),
-   //.sram_size(sram_size),
    .sram_A_select_hide(sram_A_select_hide),
    .sram_loadsave_hide(sram_loadsave_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
@@ -372,11 +360,9 @@ msx_config msx_config
    .MSXconf(MSXconf)
 );
 
-wire [14:0] cart_sound_A;
-wire [14:0] cart_sound_B;
-
 /////////////////   CLOCKS   /////////////////
 wire clk21m, clk_sdram, locked_sdram;
+wire ce_10m7_p, ce_10m7_n, ce_5m39_p, ce_5m39_n, ce_3m58_p, ce_3m58_n, ce_10hz;
 pll pll
 (
    .refclk(CLK_50M),
@@ -386,7 +372,6 @@ pll pll
    .locked(locked_sdram)
 );
 
-wire ce_10m7_p, ce_10m7_n, ce_5m39_p, ce_5m39_n, ce_3m58_p, ce_3m58_n, ce_10hz;
 clock clock
 (
    .*
@@ -396,15 +381,11 @@ clock clock
 wire reset = RESET | status[0] | status[10] | need_reset | config_reset;
 
 ///////////////// Computer /////////////////
-
-wire [7:0] R,G,B;
-wire hsync, vsync, blank_n, hblank, vblank, ce_pix;
-wire [15:0] audio;
-
-wire [15:0] cpu_addr;
-wire  [7:0] cpu_din, cpu_dout;
-wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
+wire  [7:0] R, G, B, cpu_din, cpu_dout;
 wire [1:0]  slot;
+wire [15:0] cpu_addr, audio;
+wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
+wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
 
 msx MSX
 (
@@ -443,14 +424,18 @@ msx MSX
 );
 
 /////////////////  VIDEO  /////////////////
-assign CLK_VIDEO = clk21m;
-assign CE_PIXEL = ce_10m7_p;
-assign VGA_SL = status[4:3];
+logic [9:0] vcrop;
+logic wide;
+wire scandoubler, vcrop_en, vga_de;
+wire [1:0] ar;
 
-wire  scandoubler = forced_scandoubler || status[4:3];
-wire vcrop_en = status[7];
-reg [9:0] vcrop;
-reg wide;
+assign CLK_VIDEO   = clk21m;
+assign CE_PIXEL    = ce_10m7_p;
+assign VGA_SL      = status[4:3];
+assign vcrop_en    = status[7];
+assign ar          = status[2:1];
+assign scandoubler = forced_scandoubler || status[4:3];
+
 always @(posedge CLK_VIDEO) begin
 	vcrop <= 0;
 	wide <= 0;
@@ -470,8 +455,6 @@ always @(posedge CLK_VIDEO) begin
 	end
 end
 
-
-wire [1:0] ar = status[2:1];
 video_freak video_freak
 (
 	.*,
@@ -484,7 +467,6 @@ video_freak video_freak
 	.SCALE(status[6:5])
 );
 
-wire vga_de;
 gamma_fast gamma
 (
 	.clk_vid(CLK_VIDEO),
@@ -494,7 +476,6 @@ gamma_fast gamma
 	.VSync(vsync),
 	.DE(blank_n),
 	.RGB_in({R,G,B}),
-
 	.HSync_out(VGA_HS),
 	.VSync_out(VGA_VS),
 	.DE_out(vga_de),
@@ -502,14 +483,16 @@ gamma_fast gamma
 );
 
 /////////////////  Tape In   /////////////////
-wire tape_in = tape_adc_act & tape_adc;
-wire tape_adc, tape_adc_act;
+wire tape_adc, tape_adc_act, tape_in;
+
+assign tape_in = tape_adc_act & tape_adc;
+
 ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
 (
-  .clk(clk21m),
-  .ADC_BUS(ADC_BUS),
-  .dout(tape_adc),
-  .active(tape_adc_act)
+   .clk(clk21m),
+   .ADC_BUS(ADC_BUS),
+   .dout(tape_adc),
+   .active(tape_adc_act)
 );
 
 ///////////////// LOAD PACK   /////////////////
@@ -521,38 +504,40 @@ assign ddr3_addr = ddr3_request_download ? ddr3_addr_download : ddr3_addr_cas ;
 assign ddr3_rd   = ddr3_request_download ? ddr3_rd_download   : ddr3_rd_cas   ;
 assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
 assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
+assign DDRAM_CLK = clk21m;
 
-assign DDRAM_CLK    = clk21m;
 ddram buffer
 (
-   .*,
+   .DDRAM_CLK(clk21m),
    .addr(ddr3_addr),
    .dout(ddr3_dout),
    .din(ddr3_din),
    .we(ddr3_wr),
    .rd(ddr3_rd),
    .ready(ddr3_ready),
-   .reset(reset)
+   .reset(reset),
+   .*
 );
 
 sdram sdram
 (
-    .init(~locked_sdram),
-    .clk(clk_sdram),
-    .dout(sdram_dout),
-    .din (sdram_din),
-    .addr(sdram_addr),
-    .we(sdram_we),
-    .rd(sdram_rd),
-    .ready(sdram_ready),
-    .*
+   .init(~locked_sdram),
+   .clk(clk_sdram),
+   .dout(sdram_dout),
+   .din (sdram_din),
+   .addr(sdram_addr),
+   .we(sdram_we),
+   .rd(sdram_rd),
+   .ready(sdram_ready),
+   .*
 );    
 
-wire sdram_ready, sdram_download, sdram_we, sdram_rd, need_reset, msx_type;
-wire [24:0] sdram_addr;
-wire  [7:0] sdram_din, sdram_dout;
+wire               sdram_ready, sdram_download, sdram_we, sdram_rd, need_reset, msx_type;
+wire        [24:0] sdram_addr;
+wire         [7:0] sdram_din, sdram_dout;
 wire signed [15:0] cart_sound;
-msx_download msx_download
+
+msx_slots msx_slots
 (
    .clk(clk21m),
    .clk_en(ce_3m58_p),
@@ -610,32 +595,13 @@ msx_download msx_download
    .active_slot(slot)
 );
 
-
-
 ///////////////// CAS EMULATE /////////////////
-wire   ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd8);
-wire buff_mem_ready;
-/*
-ddram buffer
-(
-   .*,
-   .addr(ioctl_isCAS ? ioctl_addr[26:0] : CAS_addr),
-   .dout(CAS_di),
-   .din(ioctl_dout),
-   .we(ioctl_wr && ioctl_isCAS),
-   .rd(~ioctl_isCAS && CAS_rd),
-   .ready(buff_mem_ready),
-   .reset(reset)
-);
-*/
-wire motor;
-wire CAS_dout;
-wire play, rewind;
-wire CAS_rd;
-wire [26:0] CAS_addr;
-wire [7:0] CAS_di;
-assign play = ~motor;
-assign rewind = status[9] | ioctl_isCAS | reset;
+wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;
+
+assign play         = ~motor;
+assign ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd5);
+assign rewind       = status[9] | ioctl_isCAS | reset;
+
 tape cass 
 (
    .clk(clk21m),

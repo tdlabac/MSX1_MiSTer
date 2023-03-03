@@ -1,4 +1,4 @@
-module msx_download_debug
+module upload_debug
 (
    input                   clk,
    input                   reset,
@@ -17,11 +17,12 @@ module msx_download_debug
    output logic            ddr3_wr,
    input                   ddr3_ready
 );
-   assign ddr3_addr = 28'h1400000 + addr;
-
+   
    logic [2:0] state;
    logic [10:0] addr;
-
+   
+   assign ddr3_addr = 28'h1400000 + addr;
+   
    always @(posedge clk) begin
       if (reset) begin
          state       <= 3'd1;
@@ -92,7 +93,6 @@ module msx_download_debug
                         8'd25: ddr3_din <= sram_block[1].mem_offset[23:16];
                         8'd26: ddr3_din <= sram_block[1].mem_offset[15:8];
                         8'd27: ddr3_din <= sram_block[1].mem_offset[7:0];
-
                         default: ddr3_din <= 8'd0;
                      endcase
                   3'd3:
@@ -145,4 +145,5 @@ module msx_download_debug
          endcase
       end
    end
+
 endmodule

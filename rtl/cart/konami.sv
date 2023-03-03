@@ -8,8 +8,7 @@ module cart_konami
     input            wr,
     input            cs,
     input            slot,
-    output    [24:0] mem_addr,
-    output           mem_oe
+    output    [24:0] mem_addr
 );
 
    wire [24:0] mem_addr_A, mem_addr_B;

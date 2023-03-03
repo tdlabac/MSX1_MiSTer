@@ -109,7 +109,7 @@ assign sound_A = cart_conf[0].typ == CART_TYP_FM_PAC       ? sound_fmpac[0] :
                  cart_conf[0].typ == CART_TYP_SCC2         ? sound_scc[0]   :
                  cart_conf[0].typ == CART_TYP_ROM          
                  & rom_info[0].mapper == MAPPER_KONAMI_SCC ? sound_scc[0]   :
-                                                             0              ;
+                                                             16'd0          ;
                                                                           
 
 assign sound_B = cart_conf[1].typ == CART_TYP_FM_PAC       ? sound_fmpac[1] :
@@ -117,7 +117,7 @@ assign sound_B = cart_conf[1].typ == CART_TYP_FM_PAC       ? sound_fmpac[1] :
                  cart_conf[1].typ == CART_TYP_SCC2         ? sound_scc[1]   :
                  cart_conf[1].typ == CART_TYP_ROM          
                  & rom_info[1].mapper == MAPPER_KONAMI_SCC ? sound_scc[1]   :
-                                                             0              ;
+                                                             16'd0          ;
 
 assign sound = sound_A + sound_B;                                                                        
 
@@ -163,7 +163,6 @@ cart_konami konami
     .cs(en_konami),
     .rom_size(rom_info[slot].size),
     .mem_addr(mem_addr_konami),
-    .mem_oe(),
     .*
 );
 

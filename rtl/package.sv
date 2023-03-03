@@ -55,7 +55,7 @@ package MSX;
     } fw_block;
     
     typedef struct {
-        logic  [2:0] ioctl_id;
+        //logic  [2:0] ioctl_id;
         config_typ_t typ;
         logic  [3:0] block_id;
         logic  [7:0] block_count;

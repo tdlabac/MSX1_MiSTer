@@ -88,8 +88,8 @@ module ascii16
 
    wire [7:0] bank_base = addr[15] == 0 ? bank0 : bank1; 
 
-   assign sram_we   = cs & (bank1 & sram_mask) & addr[15:14] == 2'b10 & wr;
-   assign sram_oe   = cs & (bank_base & sram_mask);
+   assign sram_we   = cs & |(bank1 & sram_mask) & addr[15:14] == 2'b10 & wr;
+   assign sram_oe   = cs & |(bank_base & sram_mask);
 
    assign mem_addr  = sram_oe ? addr[12:0] : {(bank_base & mask), addr[13:0]};
 
