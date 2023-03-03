@@ -37,7 +37,12 @@ module msx
    input         cas_audio_in,
    //MSX config
    input  [64:0] rtc_time,
-   input MSX::config_t MSXconf
+   input MSX::config_t MSXconf,
+   //KBD layout
+   input   [8:0] kbd_addr,
+   input   [7:0] kbd_din,
+   input         kbd_we,
+   input         kbd_request
 );
 
 assign cpu_addr = a;
@@ -209,11 +214,15 @@ assign d_to_cpu = rd_n                                      ? 8'hFF           :
 wire [7:0] d_from_kb;
 keyboard msx_key
 (
-   .reset_n_i(~reset),
-   .clk_i(clk21m),
-   .ps2_code_i(ps2_key),
-   .kb_addr_i(ppi_out_c[3:0]),
-   .kb_data_o(d_from_kb)
+   .reset(reset),
+   .clk(clk21m),
+   .ps2_key(ps2_key),
+   .kb_row(ppi_out_c[3:0]),
+   .kb_data(d_from_kb),
+   .kbd_addr(kbd_addr),
+   .kbd_din(kbd_din),
+   .kbd_we(kbd_we),
+   .kbd_request(kbd_request)
 );
 
 //  -----------------------------------------------------------------------------

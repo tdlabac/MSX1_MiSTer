@@ -420,7 +420,11 @@ msx MSX
    .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
    .MSXconf(MSXconf),
-   .slot(slot)
+   .slot(slot),
+   .kbd_addr(kbd_addr),
+   .kbd_din(kbd_din),
+   .kbd_we(kbd_we),
+   .kbd_request(kbd_request)
 );
 
 /////////////////  VIDEO  /////////////////
@@ -536,6 +540,10 @@ wire               sdram_ready, sdram_download, sdram_we, sdram_rd, need_reset, 
 wire        [24:0] sdram_addr;
 wire         [7:0] sdram_din, sdram_dout;
 wire signed [15:0] cart_sound;
+wire         [9:0] kbd_addr;
+wire         [7:0] kbd_din;
+wire               kbd_we;
+wire               kbd_request;
 
 msx_slots msx_slots
 (
@@ -592,7 +600,11 @@ msx_slots msx_slots
    .sd_buff_din(sd_buff_din[0:5]),
    .sd_buff_wr(sd_buff_wr),
 
-   .active_slot(slot)
+   .active_slot(slot),
+   .kbd_addr(kbd_addr),
+   .kbd_din(kbd_din),
+   .kbd_we(kbd_we),
+   .kbd_request(kbd_request)
 );
 
 ///////////////// CAS EMULATE /////////////////

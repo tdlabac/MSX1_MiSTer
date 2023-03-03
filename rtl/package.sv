@@ -35,7 +35,7 @@ typedef enum logic {MSX2,MSX1} MSX_typ_t;
 typedef enum logic [1:0] {AUTO,PAL,NTSC} video_mode_t;
 typedef enum logic {CAS_AUDIO_FILE,CAS_AUDIO_ADC} cas_audio_src_t;
 typedef enum logic [1:0] {SIZE128,SIZE64,SIZE512,SIZE256} ram_size_t;
-typedef enum logic [4:0] {CONFIG_NONE, CONFIG_RAM, CONFIG_BIOS, CONFIG_FDC, CONFIG_CART_A, CONFIG_CART_B} config_typ_t;
+typedef enum logic [4:0] {CONFIG_NONE, CONFIG_RAM, CONFIG_BIOS, CONFIG_FDC, CONFIG_CART_A, CONFIG_CART_B, CONFIG_KBD_LAYOUT} config_typ_t;
 typedef enum logic [1:0] {BLOCK_TYP_RAM, BLOCK_TYP_ROM, BLOCK_TYP_FDC} block_typ_t;
 typedef enum logic [3:0] {SLOT_TYP_EMPTY, SLOT_TYP_RAM, SLOT_TYP_ROM, SLOT_TYP_MSX2_RAM, SLOT_TYP_MAPPER, SLOT_TYP_CART_A, SLOT_TYP_CART_B} slot_typ_t;
 typedef enum logic [2:0] {CART_TYP_ROM, CART_TYP_SCC, CART_TYP_SCC2, CART_TYP_FM_PAC, CART_TYP_GM2, CART_TYP_FDC, CART_TYP_EMPTY } cart_typ_t;

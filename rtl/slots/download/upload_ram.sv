@@ -16,6 +16,10 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    output logic        [7:0] bram_din,
    output logic              bram_we,
    output                    bram_request,
+   output logic        [9:0] kbd_addr,
+   output logic        [7:0] kbd_din,
+   output logic              kbd_we,
+   output                    kbd_request,
    input               [1:0] MSXtype,
    input                     update_request,
    output logic              update_ack,
@@ -30,7 +34,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    output MSX::sram_block_t  sram_block[2]
    
 );
-   typedef enum logic [2:0] {STATE_WAIT, STATE_INIT_SLOT, STATE_FILL_SLOT, STATE_UPLOAD_RAM, STATE_FILL_NEXT, STATE_INIT_SRAM} state_t;
+   typedef enum logic [2:0] {STATE_WAIT, STATE_INIT_SLOT, STATE_FILL_SLOT, STATE_UPLOAD_RAM, STATE_FILL_NEXT, STATE_INIT_SRAM, STATE_UPLOAD_KBD_LAYOUT} state_t;
    
    initial begin
       update_ack     = 1'b0;
@@ -44,6 +48,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    assign ddr3_reqest   = state != STATE_WAIT;
    assign sdram_request = ddr3_reqest;
    assign bram_request  = ddr3_reqest;
+   assign kbd_request   = ddr3_reqest;
    
    config_typ_t act_config_typ;
    slot_typ_t   act_slot_typ;
@@ -53,6 +58,8 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    state_t      next_state;
    logic        last_sdram_we;
    logic        last_bram_we;
+   logic        last_kbd_we;
+
    logic        do_we;
    logic  [3:0] config_cnt;   
 
@@ -72,6 +79,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
       logic  [3:0] share_fw_id;
       sdram_we <= 1'd0;
       bram_we  <= 1'd0;
+      kbd_we   <= 1'd0;
       if (ddr3_ready) ddr3_rd <= 1'b0;
       case(state)
             STATE_WAIT: begin
@@ -217,6 +225,15 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         end
                      endcase
                   end
+                  CONFIG_KBD_LAYOUT: begin
+                     if (ddr3_ready) begin
+                        start_addr  <= msx_config[config_cnt].store_address;
+                        addr        <= 24'd0;
+                        kbd_addr    <= 10'd0;
+                        state       <= STATE_UPLOAD_KBD_LAYOUT;
+                        ddr3_rd     <= 1'b1;
+                     end
+                  end
                   default: begin
                      state <= STATE_FILL_NEXT;
                   end
@@ -267,6 +284,27 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   end
                end
             end
+            STATE_UPLOAD_KBD_LAYOUT: begin
+               if (~last_kbd_we & kbd_we) begin
+                  kbd_addr <= 10'(kbd_addr + 1'b1);
+               end
+               if (ddr3_ready & ~ddr3_rd) begin
+                  if (~kbd_we) begin
+                     if (addr[21:0] == 22'h200 ) begin
+                        state <= STATE_FILL_NEXT;
+                     end else begin
+                        kbd_din <= ddr3_dout;
+                        do_we <= 1'b1;
+                        if (do_we) begin
+                           kbd_we  <= 1'b1;
+                           do_we   <= 1'b0;
+                           addr    <= addr + 1'b1;
+                           ddr3_rd <= 1'b1;
+                        end
+                     end
+                  end
+               end
+            end
             STATE_FILL_NEXT: begin
                if (config_cnt == MAX_CONFIG - 1) begin
                   state <= STATE_WAIT;
@@ -277,7 +315,8 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             end
       endcase
       last_sdram_we <= sdram_we;
-		last_bram_we <=  bram_we;
+		last_bram_we  <=  bram_we;
+      last_kbd_we   <=  kbd_we;
    end
 
    wire  [5:0] detect_mapper;

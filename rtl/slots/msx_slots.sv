@@ -41,6 +41,11 @@ module msx_slots
    input                       sdram_ready,
    input                 [7:0] sdram_dout,
    input                 [1:0] sdram_size,
+   //KBD LAYOUT
+   output                [9:0] kbd_addr,
+   output                [7:0] kbd_din,
+   output                      kbd_we,
+   output                      kbd_request,
    //SD FDC
    input                 [5:0] img_mounted,
    input                [31:0] img_size,
@@ -237,13 +242,17 @@ dpram #(.addr_width(18)) SRAM
 );
 
 wire FDC_output_en;
+wire FDC_cs;
 wire [7:0] d_to_cpu_FDC;
+
+assign FDC_cs = memory_block[block_id].typ == BLOCK_TYP_FDC |
+                (slot_typ == SLOT_TYP_CART_A | slot_typ == SLOT_TYP_CART_B) & cart_conf[slot_id].typ == CART_TYP_FDC;
 fdc fdc
 (
    .clk(clk),
    .reset(reset),
    .clk_en(clk_en),
-   .cs(memory_block[block_id].typ == BLOCK_TYP_FDC),
+   .cs(FDC_cs),
    .addr(cpu_addr[13:0]),
    .d_from_cpu(cpu_dout),
    .d_to_cpu(d_to_cpu_FDC),

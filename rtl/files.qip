@@ -9,7 +9,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) p
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx.sv                                ]
 set_global_assignment -name VHDL_FILE          [file join $::quartus(qip_path) bram.vhd                              ]
 set_global_assignment -name VERILOG_FILE       [file join $::quartus(qip_path) jt8255.v                              ]
-set_global_assignment -name VHDL_FILE          [file join $::quartus(qip_path) keyboard.vhd                          ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) keyboard.sv                           ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) tape.sv                               ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) ddram.sv                              ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) sdram.sv                              ]
