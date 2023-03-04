@@ -118,19 +118,16 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
                         msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                         if (act_block_count >= 8'd2 & act_block < 2'd3) begin
-                           if (msx_config[config_cnt].slot_internal_mapper) msx_slot[act_slot].subslot[act_subslot + 2'd1].typ <= act_slot_typ;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].block_id <= act_block_id;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].offset <= 2'd1;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].init <= 1'b1;
                         end
                         if (act_block_count >= 8'd3 & act_block < 2'd2) begin
-                           if (msx_config[config_cnt].slot_internal_mapper) msx_slot[act_slot].subslot[act_subslot + 2'd2].typ <= act_slot_typ;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].block_id <= act_block_id;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].offset <= 2'd2;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].init <= 1'b1;
                         end
                         if (act_block_count >= 8'd4 & act_block < 2'd1) begin
-                           if (msx_config[config_cnt].slot_internal_mapper) msx_slot[act_slot].subslot[act_subslot + 2'd3].typ <= act_slot_typ;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].block_id <= act_block_id;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].offset <= 2'd3;
                            msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].init <= 1'b1;
