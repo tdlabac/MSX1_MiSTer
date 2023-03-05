@@ -111,9 +111,10 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   CONFIG_FDC,
                   CONFIG_BIOS: begin
                      if (ddr3_ready) begin
-                        if (msx_config[config_cnt].slot_internal_mapper) msx_slot[act_slot].typ <= SLOT_TYP_MAPPER;
-                        else                                             msx_slot[act_slot].typ <= act_slot_typ;
-                        if (msx_config[config_cnt].slot_internal_mapper) msx_slot[act_slot].subslot[act_subslot].typ <= act_slot_typ;
+                        if (msx_slot[act_slot].typ == SLOT_TYP_EMPTY) msx_slot[act_slot].typ <= act_slot_typ;
+                        if (act_subslot > 0)                          msx_slot[act_slot].typ <= SLOT_TYP_MAPPER;
+                        msx_slot[act_slot].subslot[act_subslot].typ <= act_slot_typ;
+
                         msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
                         msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
                         msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
