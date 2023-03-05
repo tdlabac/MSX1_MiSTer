@@ -154,14 +154,15 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   end
                   CONFIG_CART_A,
                   CONFIG_CART_B: begin                          
-                     state <= STATE_FILL_NEXT;   
+                     state <= STATE_FILL_NEXT;
+                     msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                      case(cart_conf[act_config_typ == CONFIG_CART_B].typ)
                         CART_TYP_EMPTY: begin 
                            //None
                         end
                         CART_TYP_ROM: begin
                            if (ioctl_rom[act_config_typ == CONFIG_CART_B].loaded) begin
-                              msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
+                              //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                               msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
                               msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
                               msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
@@ -207,7 +208,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                                  state <= STATE_UPLOAD_RAM;
                                  next_state <= STATE_UPLOAD_RAM;
                               end
-                              msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
+                              //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                               msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
                               msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                            end
@@ -239,7 +240,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             STATE_INIT_SRAM: begin
                if (~last_bram_we & bram_we) begin
                   bram_addr <= bram_addr + 1'b1;
-                  if (sdram_size == 2'd0) sdram_addr <= sdram_addr + 1'b1;            //Pokud neni SDRAM zapisujeme do BRAM
+                  if (sdram_size == 2'd0) sdram_addr <= sdram_addr + 1'b1;            //Pokud neni SDRAM zapisujeme do BRAM proto potřebuji posunovat ukazatel
                end
                if (~bram_we) begin                                                    //Muzeme psat do BRAM
                   if (addr[21:0] > {sram_block[act_config_typ == CONFIG_CART_B].block_count - 1'b1, 14'h3FFF} ) begin
