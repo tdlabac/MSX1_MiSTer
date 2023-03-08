@@ -86,9 +86,9 @@ assign sd_buff_din[0] = 8'h00;
 localparam MAX_MEM_BLOCK = 16;
 MSX::block_t memory_block[MAX_MEM_BLOCK];
 MSX::sram_block_t sram_block[2];
-MSX::slot_t msx_slot[4];
+//MSX::slot_t msx_slot[4];
 MSX::rom_info_t rom_info[2];
-
+MSX::msx_slots_t     msx_slots;
 
 assign debug_sram_offset1 = sram_block[0].mem_offset;
 assign debug_sram_offset2 = sram_block[1].mem_offset;
@@ -96,7 +96,8 @@ assign debug_sram_offset2 = sram_block[1].mem_offset;
 logic [7:0] mapper_slot[4];
 logic mapper_en;
 
-assign mapper_en = (cpu_addr == 16'hFFFF & msx_slot[active_slot].typ == SLOT_TYP_MAPPER);
+//assign mapper_en = (cpu_addr == 16'hFFFF & msx_slot[active_slot].typ == SLOT_TYP_MAPPER);
+assign mapper_en = (cpu_addr == 16'hFFFF & msx_slots.slot_typ[active_slot] == SLOT_TYP_MAPPER);
 
 always @(posedge reset, posedge clk) begin
    if (reset) begin
@@ -117,6 +118,7 @@ wire [24:0] mem_addr, offset;
 wire        slot_id, block_init, cpu_we;
 slot_typ_t  slot_typ;
 
+/*
 assign {active_subslot, active_block}  = msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 4'd0                                                 :
                                          msx_slot[active_slot].typ == SLOT_TYP_CART_B ? 4'd0                                                 :
                                          msx_slot[active_slot].typ != SLOT_TYP_MAPPER     ? {2'd0, cpu_addr[15:14]}                          :
@@ -124,12 +126,28 @@ assign {active_subslot, active_block}  = msx_slot[active_slot].typ == SLOT_TYP_C
                                          cpu_addr[15:14] == 2'b01                         ? {mapper_slot[active_slot][3:2], cpu_addr[15:14]} :
                                          cpu_addr[15:14] == 2'b10                         ? {mapper_slot[active_slot][5:4], cpu_addr[15:14]} :
                                                                                             {mapper_slot[active_slot][7:6], cpu_addr[15:14]} ;
+*/
 
-assign slot_typ     = msx_slot[active_slot].typ != SLOT_TYP_MAPPER ? msx_slot[active_slot].typ : msx_slot[active_slot].subslot[active_subslot].typ;
+assign {active_subslot, active_block}  = msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_A ? 4'd0                                                 :
+                                         msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_B ? 4'd0                                                 :
+                                         msx_slots.slot_typ[active_slot] != SLOT_TYP_MAPPER ? {2'd0, cpu_addr[15:14]}                          :
+                                         cpu_addr[15:14] == 2'b00                           ? {mapper_slot[active_slot][1:0], cpu_addr[15:14]} :
+                                         cpu_addr[15:14] == 2'b01                           ? {mapper_slot[active_slot][3:2], cpu_addr[15:14]} :
+                                         cpu_addr[15:14] == 2'b10                           ? {mapper_slot[active_slot][5:4], cpu_addr[15:14]} :
+                                                                                              {mapper_slot[active_slot][7:6], cpu_addr[15:14]} ;
+
+//assign slot_typ     = msx_slot[active_slot].typ == SLOT_TYP_MAPPER ? msx_slot[active_slot].subslot[active_subslot].block[active_block].typ : msx_slot[active_slot].typ ;
+assign slot_typ     = msx_slots.slot_typ[active_slot] == SLOT_TYP_MAPPER ? msx_slots.mem_block[active_slot][active_subslot][active_block].typ : msx_slots.slot_typ[active_slot] ;
 assign slot_id      = slot_typ == SLOT_TYP_CART_B;
+/*
 assign block_id     = msx_slot[active_slot].subslot[active_subslot].block[active_block].block_id;
 assign block_offset = msx_slot[active_slot].subslot[active_subslot].block[active_block].offset;
 assign block_init   = msx_slot[active_slot].subslot[active_subslot].block[active_block].init;
+*/
+assign block_id     = msx_slots.mem_block[active_slot][active_subslot][active_block].block_id;
+assign block_offset = msx_slots.mem_block[active_slot][active_subslot][active_block].offset;
+assign block_init   = msx_slots.mem_block[active_slot][active_subslot][active_block].init;
+
 assign offset       = sram_oe ? sram_block[slot_id].mem_offset : memory_block[block_id].mem_offset;
 assign cpu_we       = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
 assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, cpu_addr[13:0]}  : 
@@ -141,7 +159,7 @@ assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, c
 assign debug_block_id = block_id;
 assign debug_block_offset = block_offset;
 assign debug_offset = offset;
-assign debug_typ = memory_block[block_id].typ;
+assign debug_typ = 0; //memory_block[block_id].typ;
 assign debug_active_subslot = active_subslot;
 assign debug_active_block = active_block;
 assign debug_block_init = block_init;
@@ -177,7 +195,9 @@ assign sd_buff_din[2] = ram_format ? 8'hFF : sram_dout; //CART NVRAM
 assign sd_buff_din[3] = ram_format ? 8'hFF : sram_dout; //ROM A NVRAM
 assign sd_buff_din[4] = ram_format ? 8'hFF : sram_dout; //ROM_B NVRAM
 
-assign FDC_cs = memory_block[block_id].typ == BLOCK_TYP_FDC |
+//TODO prehodit jinam. memory block je memory
+assign FDC_cs = //memory_block[block_id].typ == BLOCK_TYP_FDC |
+                slot_typ == SLOT_TYP_FDC |
                 (slot_typ == SLOT_TYP_CART_A | slot_typ == SLOT_TYP_CART_B) & cart_conf[slot_id].typ == CART_TYP_FDC;
 
 wire        FDC_cs, FDC_output_en;

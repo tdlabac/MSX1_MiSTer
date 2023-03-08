@@ -3,12 +3,13 @@ module upload_debug
    input                   clk,
    input                   reset,
    input MSX::block_t      memory_block[16],
-   input MSX::slot_t       msx_slot[4],
+   //input MSX::slot_t       msx_slot[4],
    input MSX::rom_info_t   rom_info[2],
    input MSX::ioctl_rom_t  ioctl_rom[2],
    input MSX::msx_config_t msx_config[16],
    input MSX::fw_rom_t     fw_store[8],
    input MSX::sram_block_t sram_block[2],
+   input MSX::msx_slots_t   msx_slots,
 
    //DDR3
    output           [27:0] ddr3_addr,
@@ -35,27 +36,41 @@ module upload_debug
             3'd2: begin
                case(addr[10:8])
                   3'd0:
-                     case (addr[3:0])
-                        4'd0:  ddr3_din <= {6'd0,addr[7:6]};
-                        4'd1:  ddr3_din <= msx_slot[addr[7:6]].typ;
-                        4'd2:  ddr3_din <= {6'd0,addr[5:4]};
-                        4'd3:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].init;
-                        4'd4:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].block_id;
-                        4'd5:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].offset;
-                        4'd6:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].init;
-                        4'd7:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].block_id;
-                        4'd8:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].offset;
-                        4'd9:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].init;
-                        4'd10: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].block_id;
-                        4'd11: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].offset;
-                        4'd12: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].init;
-                        4'd13: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].block_id;
-                        4'd14: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].offset;
-                        4'd15: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].typ;
+                     case (addr[7])
+                        1'd0:
+                           case (addr[0])
+                              1'd0: ddr3_din <= msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].typ;
+                              1'd1: ddr3_din <= {msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].block_id,
+                                                 msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].offset,
+                                                 msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].init};
+                              /*
+                              4'd0:  ddr3_din <= {6'd0,addr[7:6]};
+                              4'd1:  ddr3_din <= msx_slot[addr[7:6]].typ;
+                              4'd2:  ddr3_din <= {6'd0,addr[5:4]};
+                              4'd3:  ddr3_din <= {msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].typ, msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].init};
+                              4'd4:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].block_id;
+                              4'd5:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[0].offset;
+                              4'd6:  ddr3_din <= {msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].typ, msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].init};
+                              4'd7:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].block_id;
+                              4'd8:  ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[1].offset;
+                              4'd9:  ddr3_din <= {msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].typ, msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].init};
+                              4'd10: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].block_id;
+                              4'd11: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[2].offset;
+                              4'd12: ddr3_din <= {msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].typ, msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].init};
+                              4'd13: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].block_id;
+                              4'd14: ddr3_din <= msx_slot[addr[7:6]].subslot[addr[5:4]].block[3].offset;
+                              4'd15: ddr3_din <= 8'h00; //msx_slot[addr[7:6]].subslot[addr[5:4]].typ;
+                              */
+                           endcase
+                        1'd1:
+                           if (addr[6:2] == 5'd0) 
+                              ddr3_din <= msx_slots.slot_typ[addr[1:0]];
+                           else 
+                              ddr3_din <= 8'd0;
                      endcase
                   3'd1:
                      case (addr[3:0])
-                        4'd0:  ddr3_din <= memory_block[addr[7:4]].typ;
+                        4'd0:  ddr3_din <= 8'h00; //memory_block[addr[7:4]].typ;
                         4'd1:  ddr3_din <= memory_block[addr[7:4]].block_count;
                         4'd2:  ddr3_din <= memory_block[addr[7:4]].mem_offset[23:16];
                         4'd3:  ddr3_din <= memory_block[addr[7:4]].mem_offset[15:8];

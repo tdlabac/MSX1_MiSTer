@@ -68,23 +68,27 @@ module store_msx_config #(parameter MAX_CONFIG = 16)
                   4'h1 : if (ddr3_dout != "S") state        <= STATE_BLOCK_NONE;
                   4'h2 : if (ddr3_dout != "X") state        <= STATE_BLOCK_NONE;
                   4'h3 : if (config_cnt == 0) msx_type      <= ddr3_dout[1:0];
-                  4'h4 : begin
+                  4'h4 : msx_config[config_cnt].slot        <= ddr3_dout[1:0];
+                  4'h5 : msx_config[config_cnt].sub_slot    <= ddr3_dout[1:0];                  
+                  4'h6 : msx_config[config_cnt].start_block <= ddr3_dout[1:0];
+                  4'h7 : begin
                      if (config_typ_t'(ddr3_dout) == CONFIG_RAM & ram_block_count > 8'd0) begin
-                        state <= STATE_BLOCK_NONE;  //RAM je v systemu 1x
+                        state <= STATE_BLOCK_NONE;                                                    //RAM ONLY ONE
                      end else begin
                         msx_config[config_cnt].typ          <= config_typ_t'(ddr3_dout);
                      end
                   end
-                  4'h5 : msx_config[config_cnt].block_id    <= ddr3_dout[3:0];
-                  4'h6 : msx_config[config_cnt].block_count <= ddr3_dout;
-                  4'h7 : begin
-                     msx_config[config_cnt].slot                 <= ddr3_dout[6:5];
-                     msx_config[config_cnt].slot_internal_mapper <= ddr3_dout[4];
-                     msx_config[config_cnt].sub_slot             <= ddr3_dout[3:2];
-                     msx_config[config_cnt].start_block          <= ddr3_dout[1:0];
-                     msx_config[config_cnt].store_address        <= start_addr + addr + 5'h10;
-                     addr  <= addr + 5'h10 + (msx_config[config_cnt].typ == CONFIG_RAM ? 8'd0 : msx_config[config_cnt].block_count << 14);
-                     if(msx_config[config_cnt].typ == CONFIG_RAM) ram_block_count <= msx_config[config_cnt].block_count;
+                  4'h8 : msx_config[config_cnt].block_id    <= ddr3_dout[3:0];
+                  4'h9 : begin                  
+                     msx_config[config_cnt].block_count     <= ddr3_dout;
+                     msx_config[config_cnt].store_address   <= start_addr + addr + 5'h10;
+                     addr  <= addr + 5'h10 + (msx_config[config_cnt].typ == CONFIG_RAM        ? 'd0   :
+                                              msx_config[config_cnt].typ == CONFIG_ROM_MIRROR ? 'd0   :
+                                              msx_config[config_cnt].typ == CONFIG_IO_MIRROR  ? 'd0   :
+                                              msx_config[config_cnt].typ == CONFIG_MIRROR     ? 'd0   :
+                                              msx_config[config_cnt].typ == CONFIG_KBD_LAYOUT ? 'h200 :
+                                                                                                ddr3_dout << 14);
+                     if (msx_config[config_cnt].typ == CONFIG_RAM) ram_block_count <= ddr3_dout;
                      state <= STATE_PARSE_NEXT;
                   end
                endcase

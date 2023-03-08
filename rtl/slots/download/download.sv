@@ -31,7 +31,8 @@ module download
    output                      sdram_we,
    input                 [1:0] sdram_size,
    output MSX::block_t         memory_block[MAX_MEM_BLOCK],
-   output MSX::slot_t          msx_slot[4],
+   //output MSX::slot_t          msx_slot[4],
+   output MSX::msx_slots_t     msx_slots,
    output MSX::rom_info_t      rom_info[2],
    output MSX::sram_block_t    sram_block[2],
    output                      msx_type,
@@ -45,6 +46,7 @@ localparam MAX_FW_ROM = 8;
 MSX::ioctl_rom_t  ioctl_rom[2];
 MSX::msx_config_t msx_config[MAX_CONFIG];
 MSX::fw_rom_t     fw_store[MAX_FW_ROM];
+
 
 wire        ram_ddr3_rd,      config_ddr3_rd,      fw_ddr3_rd;
 wire        ram_ddr3_request, config_ddr3_request, fw_ddr3_request;      
@@ -96,6 +98,14 @@ upload_ram upload_ram
    .sdram_din(ram_sdram_din),
    .sdram_we(ram_sdram_we),
    .sdram_request(ram_sdram_request),
+	.debug_act_slot(),
+   .debug_act_block(),
+   .debug_act_subslot(),
+   .debug_act_block_id(),
+   .debug_act_block_count(),
+   .debug_act_config_typ(),
+   .debug_act_slot_typ(),
+	.debug_state(),
    .*
 );
 
