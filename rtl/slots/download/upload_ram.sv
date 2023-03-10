@@ -264,7 +264,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                            sram_block[act_config_typ == CONFIG_CART_B].block_count <= 8'd8;
                            state <= STATE_INIT_SRAM;
                            next_state <= STATE_FILL_NEXT;
-                           bram_din <= 8'hFF;
+                           bram_din <= 8'h00;
                            addr <= 24'd0;
                         end
                         default: begin
@@ -307,7 +307,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               sram_block[act_config_typ == CONFIG_CART_B].mem_offset  <= bram_addr;
                               sram_block[act_config_typ == CONFIG_CART_B].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count;
                               state <= STATE_INIT_SRAM;
-                              bram_din <= 8'hFF;
+                              bram_din <= 8'h00;
                               addr <= 24'd0;
                            end
                         end
@@ -358,8 +358,8 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         end
                         state <= STATE_FILL_NEXT;
                      end else begin
-                        sdram_din <= act_slot_typ == SLOT_TYP_MSX2_RAM | act_slot_typ == SLOT_TYP_RAM ? 8'hFF : ddr3_dout;
-                        //sdram_din <= memory_block[act_block_id].typ != BLOCK_TYP_RAM ? ddr3_dout : 8'hFF;  
+                        sdram_din <= act_slot_typ == SLOT_TYP_MSX2_RAM | act_slot_typ == SLOT_TYP_RAM ? 8'h00 : ddr3_dout;
+                        //sdram_din <= memory_block[act_block_id].typ != BLOCK_TYP_RAM ? ddr3_dout : 8'h00;  
                         do_we <= 1'b1;
                         if (do_we) begin
                            sdram_we <= 1'b1;                                                                  //Write to RAM
