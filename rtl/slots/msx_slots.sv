@@ -173,14 +173,14 @@ assign sdram_addr = dw_sdram_upload              ? dw_sdram_addr             : m
 assign sdram_din  = dw_sdram_upload              ? dw_sdram_din              : cpu_dout;
 assign sdram_we   = dw_sdram_upload              ? dw_sdram_we               : cpu_we & ~mapper_en & ~sram_oe;
 assign sdram_rd   = dw_sdram_upload              ? 1'b0                      : cpu_rd & cpu_mreq;
-assign cpu_din    = cart_output_en               ? d_to_cpu_cart             :
-                    FDC_output_en                ? d_to_cpu_FDC              :
-                    msx2_mapper_req              ? msx2_mapper_dout          :
-                    mapper_en                    ? ~mapper_slot[active_slot] :
-                    sram_oe                      ? bram_dout                 :
-                    sdram_size == 0 & block_init ? bram_dout                 :
-                    block_init                   ? sdram_dout                :
-                                                   8'hFF                     ;
+assign {debug_cpu_din_src, cpu_din}  = mapper_en                    ? {3'd00, ~mapper_slot[active_slot] }:
+                                       cart_output_en               ? {3'd01, d_to_cpu_cart             }:
+                                       FDC_output_en                ? {3'd02, d_to_cpu_FDC              }:
+                                       msx2_mapper_req              ? {3'd03, msx2_mapper_dout          }:
+                                       sram_oe                      ? {3'd04, bram_dout                 }:
+                                       sdram_size == 0 & block_init ? {3'd05, bram_dout                 }:
+                                       block_init                   ? {3'd06, sdram_dout                }:
+                                                                      {3'd07, 8'hFF                     };
 
 assign bram_addr = dw_bram_upload ? dw_bram_addr                                 :
                                     mem_addr                                     ;
