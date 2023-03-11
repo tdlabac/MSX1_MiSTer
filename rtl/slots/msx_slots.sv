@@ -74,7 +74,8 @@ module msx_slots
    output           slot_typ_t debug_slot_typ,
    output                      debug_slot_id,
    output               [24:0] debug_sram_offset1,
-   output               [24:0] debug_sram_offset2
+   output               [24:0] debug_sram_offset2,
+   output                [2:0] debug_cpu_din_src
 );
 
 //Unused port
@@ -86,7 +87,6 @@ assign sd_buff_din[0] = 8'h00;
 localparam MAX_MEM_BLOCK = 16;
 MSX::block_t memory_block[MAX_MEM_BLOCK];
 MSX::sram_block_t sram_block[2];
-//MSX::slot_t msx_slot[4];
 MSX::rom_info_t rom_info[2];
 MSX::msx_slots_t     msx_slots;
 
@@ -96,7 +96,6 @@ assign debug_sram_offset2 = sram_block[1].mem_offset;
 logic [7:0] mapper_slot[4];
 logic mapper_en;
 
-//assign mapper_en = (cpu_addr == 16'hFFFF & msx_slot[active_slot].typ == SLOT_TYP_MAPPER);
 assign mapper_en = (cpu_addr == 16'hFFFF & msx_slots.slot_typ[active_slot] == SLOT_TYP_MAPPER);
 
 always @(posedge reset, posedge clk) begin
@@ -118,16 +117,6 @@ wire [24:0] mem_addr, offset;
 wire        slot_id, block_init, cpu_we;
 slot_typ_t  slot_typ;
 
-/*
-assign {active_subslot, active_block}  = msx_slot[active_slot].typ == SLOT_TYP_CART_A ? 4'd0                                                 :
-                                         msx_slot[active_slot].typ == SLOT_TYP_CART_B ? 4'd0                                                 :
-                                         msx_slot[active_slot].typ != SLOT_TYP_MAPPER     ? {2'd0, cpu_addr[15:14]}                          :
-                                         cpu_addr[15:14] == 2'b00                         ? {mapper_slot[active_slot][1:0], cpu_addr[15:14]} :
-                                         cpu_addr[15:14] == 2'b01                         ? {mapper_slot[active_slot][3:2], cpu_addr[15:14]} :
-                                         cpu_addr[15:14] == 2'b10                         ? {mapper_slot[active_slot][5:4], cpu_addr[15:14]} :
-                                                                                            {mapper_slot[active_slot][7:6], cpu_addr[15:14]} ;
-*/
-
 assign {active_subslot, active_block}  = msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_A ? 4'd0                                                 :
                                          msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_B ? 4'd0                                                 :
                                          msx_slots.slot_typ[active_slot] != SLOT_TYP_MAPPER ? {2'd0, cpu_addr[15:14]}                          :
@@ -136,14 +125,8 @@ assign {active_subslot, active_block}  = msx_slots.slot_typ[active_slot] == SLOT
                                          cpu_addr[15:14] == 2'b10                           ? {mapper_slot[active_slot][5:4], cpu_addr[15:14]} :
                                                                                               {mapper_slot[active_slot][7:6], cpu_addr[15:14]} ;
 
-//assign slot_typ     = msx_slot[active_slot].typ == SLOT_TYP_MAPPER ? msx_slot[active_slot].subslot[active_subslot].block[active_block].typ : msx_slot[active_slot].typ ;
 assign slot_typ     = msx_slots.slot_typ[active_slot] == SLOT_TYP_MAPPER ? msx_slots.mem_block[active_slot][active_subslot][active_block].typ : msx_slots.slot_typ[active_slot] ;
 assign slot_id      = slot_typ == SLOT_TYP_CART_B;
-/*
-assign block_id     = msx_slot[active_slot].subslot[active_subslot].block[active_block].block_id;
-assign block_offset = msx_slot[active_slot].subslot[active_subslot].block[active_block].offset;
-assign block_init   = msx_slot[active_slot].subslot[active_subslot].block[active_block].init;
-*/
 assign block_id     = msx_slots.mem_block[active_slot][active_subslot][active_block].block_id;
 assign block_offset = msx_slots.mem_block[active_slot][active_subslot][active_block].offset;
 assign block_init   = msx_slots.mem_block[active_slot][active_subslot][active_block].init;
@@ -159,7 +142,7 @@ assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, c
 assign debug_block_id = block_id;
 assign debug_block_offset = block_offset;
 assign debug_offset = offset;
-assign debug_typ = 0; //memory_block[block_id].typ;
+assign debug_typ = 0;
 assign debug_active_subslot = active_subslot;
 assign debug_active_block = active_block;
 assign debug_block_init = block_init;
@@ -168,7 +151,6 @@ assign debug_cpuWE_typ = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_R
 assign debug_cpuWE2 = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
 assign debug_slot_id = slot_id;
 
-//assign ram_addr   = dw_sdram_upload ? dw_sdram_addr[16:0] : mem_addr[16:0];
 assign sdram_addr = dw_sdram_upload              ? dw_sdram_addr             : mem_addr;
 assign sdram_din  = dw_sdram_upload              ? dw_sdram_din              : cpu_dout;
 assign sdram_we   = dw_sdram_upload              ? dw_sdram_we               : cpu_we & ~mapper_en & ~sram_oe;
@@ -195,10 +177,19 @@ assign sd_buff_din[2] = ram_format ? 8'hFF : sram_dout; //CART NVRAM
 assign sd_buff_din[3] = ram_format ? 8'hFF : sram_dout; //ROM A NVRAM
 assign sd_buff_din[4] = ram_format ? 8'hFF : sram_dout; //ROM_B NVRAM
 
-//TODO prehodit jinam. memory block je memory
-assign FDC_cs = //memory_block[block_id].typ == BLOCK_TYP_FDC |
-                slot_typ == SLOT_TYP_FDC |
+assign FDC_cs = slot_typ == SLOT_TYP_FDC |
                 (slot_typ == SLOT_TYP_CART_A | slot_typ == SLOT_TYP_CART_B) & cart_conf[slot_id].typ == CART_TYP_FDC;
+
+
+logic [15:0] dbg_addr;
+spram #(.addr_width(16), .mem_name("DBG")) DBG 
+(
+   .clock(clk),
+   .address({block_offset, cpu_addr[13:0]}),
+   .q(),
+   .data(sdram_din), 
+   .wren(cpu_we & ~mapper_en & ~sram_oe)
+);
 
 wire        FDC_cs, FDC_output_en;
 wire  [7:0] d_to_cpu_FDC;
@@ -230,10 +221,10 @@ fdc fdc
 wire [24:0] bram_addr;
 wire  [7:0] bram_dout, bram_din, sram_dout;
 wire        bram_we;
-dpram #(.addr_width(18)) SRAM
+dpram #(.addr_width(17)) SRAM
 (
    .clock(clk),
-   .address_a(bram_addr[17:0]),
+   .address_a(bram_addr[16:0]),
    .q_a(bram_dout),
    .data_a(bram_din), 
    .wren_a(bram_we),          
