@@ -60,22 +60,7 @@ module msx_slots
    output                [7:0] sd_buff_din[6],
    input                       sd_buff_wr,
 
-   input                 [1:0] active_slot,
-
-   output                [3:0] debug_block_id,
-   output                [1:0] debug_block_offset,
-   output               [24:0] debug_offset,
-   output                [1:0] debug_typ, 
-   output                [1:0] debug_active_subslot,
-   output                [1:0] debug_active_block,
-   output                      debug_block_init,
-   output                      debug_cpuWE_typ,
-   output                      debug_cpuWE2,
-   output           slot_typ_t debug_slot_typ,
-   output                      debug_slot_id,
-   output               [24:0] debug_sram_offset1,
-   output               [24:0] debug_sram_offset2,
-   output                [2:0] debug_cpu_din_src
+   input                 [1:0] active_slot
 );
 
 //Unused port
@@ -89,9 +74,6 @@ MSX::block_t memory_block[MAX_MEM_BLOCK];
 MSX::sram_block_t sram_block[2];
 MSX::rom_info_t rom_info[2];
 MSX::msx_slots_t     msx_slots;
-
-assign debug_sram_offset1 = sram_block[0].mem_offset;
-assign debug_sram_offset2 = sram_block[1].mem_offset;
 
 logic [7:0] mapper_slot[4];
 logic mapper_en;
@@ -138,31 +120,19 @@ assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, c
                                 slot_typ == SLOT_TYP_CART_A   ? mem_cart_rom                    :
                                 slot_typ == SLOT_TYP_CART_B   ? mem_cart_rom                    :
                                                                {block_offset, cpu_addr[13:0]})  ;
-                                                                                                    
-assign debug_block_id = block_id;
-assign debug_block_offset = block_offset;
-assign debug_offset = offset;
-assign debug_typ = 0;
-assign debug_active_subslot = active_subslot;
-assign debug_active_block = active_block;
-assign debug_block_init = block_init;
-assign debug_slot_typ = slot_typ;
-assign debug_cpuWE_typ = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM);
-assign debug_cpuWE2 = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
-assign debug_slot_id = slot_id;
 
 assign sdram_addr = dw_sdram_upload              ? dw_sdram_addr             : mem_addr;
 assign sdram_din  = dw_sdram_upload              ? dw_sdram_din              : cpu_dout;
 assign sdram_we   = dw_sdram_upload              ? dw_sdram_we               : cpu_we & ~mapper_en & ~sram_oe;
 assign sdram_rd   = dw_sdram_upload              ? 1'b0                      : cpu_rd & cpu_mreq;
-assign {debug_cpu_din_src, cpu_din}  = mapper_en                    ? {3'd00, ~mapper_slot[active_slot] }:
-                                       cart_output_en               ? {3'd01, d_to_cpu_cart             }:
-                                       FDC_output_en                ? {3'd02, d_to_cpu_FDC              }:
-                                       msx2_mapper_req              ? {3'd03, msx2_mapper_dout          }:
-                                       sram_oe                      ? {3'd04, bram_dout                 }:
-                                       sdram_size == 0 & block_init ? {3'd05, bram_dout                 }:
-                                       block_init                   ? {3'd06, sdram_dout                }:
-                                                                      {3'd07, 8'hFF                     };
+assign cpu_din    = mapper_en                    ? ~mapper_slot[active_slot] :
+                    cart_output_en               ? d_to_cpu_cart             :
+                    FDC_output_en                ? d_to_cpu_FDC              :
+                    msx2_mapper_req              ? msx2_mapper_dout          :
+                    sram_oe                      ? bram_dout                 :
+                    sdram_size == 0 & block_init ? bram_dout                 :
+                    block_init                   ? sdram_dout                :
+                                                   8'hFF                     ;
 
 assign bram_addr = dw_bram_upload ? dw_bram_addr                                 :
                                     mem_addr                                     ;
@@ -179,17 +149,6 @@ assign sd_buff_din[4] = ram_format ? 8'hFF : sram_dout; //ROM_B NVRAM
 
 assign FDC_cs = slot_typ == SLOT_TYP_FDC |
                 (slot_typ == SLOT_TYP_CART_A | slot_typ == SLOT_TYP_CART_B) & cart_conf[slot_id].typ == CART_TYP_FDC;
-
-
-logic [15:0] dbg_addr;
-spram #(.addr_width(16), .mem_name("DBG")) DBG 
-(
-   .clock(clk),
-   .address({block_offset, cpu_addr[13:0]}),
-   .q(),
-   .data(sdram_din), 
-   .wren(cpu_we & ~mapper_en & ~sram_oe)
-);
 
 wire        FDC_cs, FDC_output_en;
 wire  [7:0] d_to_cpu_FDC;
@@ -221,10 +180,10 @@ fdc fdc
 wire [24:0] bram_addr;
 wire  [7:0] bram_dout, bram_din, sram_dout;
 wire        bram_we;
-dpram #(.addr_width(17)) SRAM
+dpram #(.addr_width(18)) SRAM
 (
    .clock(clk),
-   .address_a(bram_addr[16:0]),
+   .address_a(bram_addr[17:0]),
    .q_a(bram_dout),
    .data_a(bram_din), 
    .wren_a(bram_we),          
@@ -290,11 +249,6 @@ nvram_backup nvram_backup
    .ram_offset(ram_offset),
    .ram_format(ram_format),
    .ram_we(ram_we),
-   .debug_size(),
-   .debug_lba_start(),
-   .debug_block_count(),
-   .debug_lba_start_to_init(),
-   .debug_init_count(),
    .*
 );
 

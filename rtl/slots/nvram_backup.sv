@@ -19,17 +19,8 @@ module nvram_backup
    output logic        [12:0] ram_lba,
    output logic        [24:0] ram_offset,
    output logic               ram_format,
-   output logic               ram_we,
-   output              [63:0] debug_size,
-   output              [31:0] debug_lba_start,
-   output              [12:0] debug_block_count,
-   output logic        [12:0] debug_lba_start_to_init,
-   output logic        [12:0] debug_init_count
+   output logic               ram_we
 );
-//0 NVRAM MSX
-//1 NVRAM FW
-//2 NVRAM ROM A
-//3 NVRAM ROM B
 
 //Unused port
 assign sd_lba[0]      = 0;
@@ -81,10 +72,6 @@ logic [12:0] block_count;
 logic [31:0] lba_start;
 logic        done = 1'b0;
 
-assign debug_size        = image_size[1];
-assign debug_lba_start   = lba_start;
-assign debug_block_count = block_count;
-
 assign sd_lba[1] = ram_format ? 32'((image_size[num] >> 9) + ram_lba) : 32'(lba_start + ram_lba);
 assign ram_we    = sd_rd[num];
 
@@ -119,8 +106,6 @@ always @(posedge clk) begin
          end
       end
       STATE_CHECK_SIZE: begin
-         debug_lba_start_to_init <= 13'(image_size[num] >> 9);
-         debug_init_count        <= 13'(lba_start + block_count  - (image_size[num] >> 9));
          if ((lba_start + block_count) > (image_size[num] >> 9)) state <= STATE_FORMAT;
          else state <= STATE_PROCESS;
       end

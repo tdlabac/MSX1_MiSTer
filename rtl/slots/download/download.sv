@@ -98,14 +98,6 @@ upload_ram upload_ram
    .sdram_din(ram_sdram_din),
    .sdram_we(ram_sdram_we),
    .sdram_request(ram_sdram_request),
-	.debug_act_slot(),
-   .debug_act_block(),
-   .debug_act_subslot(),
-   .debug_act_block_id(),
-   .debug_act_block_count(),
-   .debug_act_config_typ(),
-   .debug_act_slot_typ(),
-	.debug_state(),
    .*
 );
 

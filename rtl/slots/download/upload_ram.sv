@@ -29,19 +29,9 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    input  MSX::ioctl_rom_t   ioctl_rom[2],
    input  MSX::fw_rom_t      fw_store[MAX_FW_ROM],
    output MSX::rom_info_t    rom_info[2],
-   //output MSX::slot_t        msx_slot[4],
-
    output MSX::msx_slots_t   msx_slots,
    output MSX::block_t       memory_block[MAX_MEM_BLOCK],
-   output MSX::sram_block_t  sram_block[2],
-   output              [1:0] debug_act_slot,
-   output              [1:0] debug_act_block,
-   output              [1:0] debug_act_subslot,
-   output              [3:0] debug_act_block_id,
-   output              [7:0] debug_act_block_count,
-   output config_typ_t       debug_act_config_typ,
-   output slot_typ_t         debug_act_slot_typ, 
-   output state_t            debug_state
+   output MSX::sram_block_t  sram_block[2]
 );
    typedef enum logic [2:0] {STATE_WAIT, STATE_INIT_SLOT, STATE_FILL_SLOT, STATE_UPLOAD_RAM, STATE_FILL_NEXT, STATE_INIT_SRAM, STATE_UPLOAD_KBD_LAYOUT} state_t;
    
@@ -75,12 +65,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    wire   [1:0] act_slot        = msx_config[config_cnt].slot;
    wire   [1:0] act_block       = msx_config[config_cnt].start_block;
    wire   [1:0] act_subslot     = msx_config[config_cnt].sub_slot;
-   /*
-   wire   [3:0] act_block_id    = act_config_typ == CONFIG_IO_MIRROR  ? msx_slot[act_slot].subslot[act_subslot].block[msx_config[config_cnt].block_id].block_id :
-                                  act_config_typ == CONFIG_ROM_MIRROR ? msx_slot[act_slot].subslot[act_subslot].block[msx_config[config_cnt].block_id].block_id :
-                                  act_config_typ == CONFIG_MIRROR     ? msx_slot[act_slot].subslot[act_subslot].block[msx_config[config_cnt].block_id].block_id :
-                                                                        msx_config[config_cnt].block_id;
-*/
+
    wire   [3:0] act_block_id    = act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
                                   act_config_typ == CONFIG_ROM_MIRROR ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
                                   act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
@@ -89,15 +74,6 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
 
    wire   [7:0] act_block_count = msx_config[config_cnt].block_count;
    assign       act_config_typ  = msx_config[config_cnt].typ;                             
-   /*
-   assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR     ? msx_slot[act_slot].subslot[act_subslot].block[msx_config[config_cnt].block_id].typ :
-                                  act_config_typ == CONFIG_IO_MIRROR  ? msx_slot[act_slot].subslot[act_subslot].block[msx_config[config_cnt].block_id].typ :
-                                  act_config_typ == CONFIG_ROM_MIRROR ? SLOT_TYP_ROM                                                    :
-                                  act_config_typ == CONFIG_BIOS       ? SLOT_TYP_ROM                                                    :  //2
-                                  act_config_typ == CONFIG_FDC        ? SLOT_TYP_FDC                                                    :  //2
-                                  MSXtype == 0                        ? SLOT_TYP_RAM                                                    :  //1
-                                                                        SLOT_TYP_MSX2_RAM                                               ;  //3
-   */
    assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
                                   act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
                                   act_config_typ == CONFIG_ROM_MIRROR ? SLOT_TYP_ROM                                                    :
@@ -107,15 +83,6 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                                   act_config_typ == CONFIG_CART_B     ? SLOT_TYP_CART_B                                                 :  //6
                                   MSXtype == 0                        ? SLOT_TYP_RAM                                                    :  //1
                                                                         SLOT_TYP_MSX2_RAM                                               ;  //3                                                                        
-   
-   assign debug_act_slot = act_slot;
-   assign debug_act_block = act_block;
-   assign debug_act_subslot = act_subslot;
-   assign debug_act_block_id = act_block_id;
-   assign debug_act_block_count = act_block_count;
-   assign debug_act_config_typ = act_config_typ;
-   assign debug_act_slot_typ = act_slot_typ;
-   assign debug_state = state;
 
    always @(posedge clk) begin 
       logic  [5:0] init;
