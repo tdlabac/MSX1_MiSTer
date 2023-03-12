@@ -23,11 +23,13 @@ module fdc
    input          sd_buff_wr
 );
 
-reg image_mounted = 1'b0;
+logic image_mounted = 1'b0;
+logic layout = 1'b0;
 
 always @(posedge clk) begin
    if (img_mounted) begin
       image_mounted <= img_size != 0;
+      layout <= img_size > 'h5A000 ? 1'b0 : 1'b1;
    end
 end
 
@@ -80,7 +82,7 @@ wd1793 #(.RWMODE(1), .EDSK(0)) fdc1
    .drq(drq),
    .intrq(intrq),
    .ready(fdd_ready),
-   .layout(1'b0),
+   .layout(layout),
    .size_code(3'h2),
    .side(sideReg[0]),
    .img_mounted(img_mounted),
