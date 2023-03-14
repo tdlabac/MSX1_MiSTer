@@ -12,17 +12,18 @@ module store_msx_config #(parameter MAX_CONFIG = 16)
    input                    update_ack,
    output logic             update_request,
    output logic       [1:0] msx_type,
-   output logic       [7:0] ram_block_count,
+   output logic       [7:0] ram_block_count[0:1],
    output MSX::msx_config_t msx_config[MAX_CONFIG]
 );
    typedef enum logic [2:0] {STATE_SLEEP, STATE_PARSE, STATE_PARSE_BLOCK, STATE_BLOCK_NONE, STATE_PARSE_NEXT} state_t;
    
    initial begin
-      update_request  = 1'b0;
-      state           = STATE_SLEEP;
-      msx_type        = 2'd0;
-      ddr3_rd         = 1'b0;
-      ram_block_count = 8'd0;
+      update_request     = 1'b0;
+      state              = STATE_SLEEP;
+      msx_type           = 2'd0;
+      ddr3_rd            = 1'b0;
+      ram_block_count[0] = 8'd0;
+      ram_block_count[1] = 8'd0;
    end
 
    state_t       state;
@@ -41,11 +42,12 @@ module store_msx_config #(parameter MAX_CONFIG = 16)
       case(state)
          STATE_SLEEP: begin
             if (last_ioctl_download & ~ioctl_download & ioctl_index[5:0] == 6'd1) begin
-               start_addr      <= 28'h000000;
-               addr            <= 24'b0;
-               config_cnt      <= 4'b0;
-               state           <= STATE_PARSE;
-               ram_block_count <= 8'd0;
+               start_addr         <= 28'h000000;
+               addr               <= 24'b0;
+               config_cnt         <= 4'b0;
+               state              <= STATE_PARSE;
+               ram_block_count[0] <= 8'd0;
+               ram_block_count[1] <= 8'd0;
             end
          end
          STATE_PARSE: begin
@@ -71,13 +73,7 @@ module store_msx_config #(parameter MAX_CONFIG = 16)
                   4'h4 : msx_config[config_cnt].slot        <= ddr3_dout[1:0];
                   4'h5 : msx_config[config_cnt].sub_slot    <= ddr3_dout[1:0];                  
                   4'h6 : msx_config[config_cnt].start_block <= ddr3_dout[1:0];
-                  4'h7 : begin
-                     if (config_typ_t'(ddr3_dout) == CONFIG_RAM & ram_block_count > 8'd0) begin
-                        state <= STATE_BLOCK_NONE;                                                    //RAM ONLY ONE
-                     end else begin
-                        msx_config[config_cnt].typ          <= config_typ_t'(ddr3_dout);
-                     end
-                  end
+                  4'h7 : msx_config[config_cnt].typ         <= config_typ_t'(ddr3_dout);
                   4'h8 : msx_config[config_cnt].block_id    <= ddr3_dout[3:0];
                   4'h9 : begin                  
                      msx_config[config_cnt].block_count     <= ddr3_dout;
@@ -88,7 +84,7 @@ module store_msx_config #(parameter MAX_CONFIG = 16)
                                               msx_config[config_cnt].typ == CONFIG_MIRROR     ? 'd0   :
                                               msx_config[config_cnt].typ == CONFIG_KBD_LAYOUT ? 'h200 :
                                                                                                 ddr3_dout << 14);
-                     if (msx_config[config_cnt].typ == CONFIG_RAM) ram_block_count <= ddr3_dout;
+                     if (msx_config[config_cnt].typ == CONFIG_RAM && msx_config[config_cnt].block_id > 0) ram_block_count[msx_config[config_cnt].block_id > 1] <= ddr3_dout;
                      state <= STATE_PARSE_NEXT;
                   end
                endcase

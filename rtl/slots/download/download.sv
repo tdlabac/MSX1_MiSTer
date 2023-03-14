@@ -36,7 +36,7 @@ module download
    output MSX::rom_info_t      rom_info[2],
    output MSX::sram_block_t    sram_block[2],
    output                      msx_type,
-   output                [7:0] ram_block_count
+   output                [7:0] ram_block_count[0:1]
 );
 
 localparam MAX_CONFIG = 16;

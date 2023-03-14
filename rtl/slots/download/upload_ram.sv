@@ -60,8 +60,9 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    logic        last_kbd_we;
 
    logic        do_we;
-   logic  [3:0] config_cnt;   
+   logic  [3:0] config_cnt, new_block_id;   
 
+   wire         act_slot_is_ram;
    wire   [1:0] act_slot        = msx_config[config_cnt].slot;
    wire   [1:0] act_block       = msx_config[config_cnt].start_block;
    wire   [1:0] act_subslot     = msx_config[config_cnt].sub_slot;
@@ -69,24 +70,27 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    wire   [3:0] act_block_id    = act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
                                   act_config_typ == CONFIG_ROM_MIRROR ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
                                   act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
-                                                                        msx_config[config_cnt].block_id;
-   
+                                                                        new_block_id;  
 
    wire   [7:0] act_block_count = msx_config[config_cnt].block_count;
    assign       act_config_typ  = msx_config[config_cnt].typ;                             
-   assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
-                                  act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
-                                  act_config_typ == CONFIG_ROM_MIRROR ? SLOT_TYP_ROM                                                    :
-                                  act_config_typ == CONFIG_BIOS       ? SLOT_TYP_ROM                                                    :  //2
-                                  act_config_typ == CONFIG_FDC        ? SLOT_TYP_FDC                                                    :  //2
-                                  act_config_typ == CONFIG_CART_A     ? SLOT_TYP_CART_A                                                 :  //5
-                                  act_config_typ == CONFIG_CART_B     ? SLOT_TYP_CART_B                                                 :  //6
-                                  MSXtype == 0                        ? SLOT_TYP_RAM                                                    :  //1
-                                                                        SLOT_TYP_MSX2_RAM                                               ;  //3                                                                        
+   assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR      ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
+                                  act_config_typ == CONFIG_IO_MIRROR   ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
+                                  act_config_typ == CONFIG_ROM_MIRROR  ? SLOT_TYP_ROM                                                    :
+                                  act_config_typ == CONFIG_BIOS        ? SLOT_TYP_ROM                                                    :
+                                  act_config_typ == CONFIG_FDC         ? SLOT_TYP_FDC                                                    :
+                                  act_config_typ == CONFIG_CART_A      ? SLOT_TYP_CART_A                                                 :
+                                  act_config_typ == CONFIG_CART_B      ? SLOT_TYP_CART_B                                                 :
+                                  msx_config[config_cnt].block_id == 0 ? SLOT_TYP_RAM                                                    :
+                                  msx_config[config_cnt].block_id == 1 ? SLOT_TYP_MSX2_RAM1                                              :
+                                                                         SLOT_TYP_MSX2_RAM2                                              ;
+
+   assign act_slot_is_ram = act_slot_typ == SLOT_TYP_MSX2_RAM1 | act_slot_typ == SLOT_TYP_MSX2_RAM2 | act_slot_typ == SLOT_TYP_RAM ;
 
    always @(posedge clk) begin 
       logic  [5:0] init;
       logic  [3:0] share_fw_id;
+      logic        add_block_id;
       sdram_we <= 1'd0;
       bram_we  <= 1'd0;
       kbd_we   <= 1'd0;
@@ -103,6 +107,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   share_fw_id               <= 4'd0;
                   sram_block[0].block_count <= 8'd0;
                   sram_block[1].block_count <= 8'd0;
+                  new_block_id              <= 4'd0;
                   state                     <= STATE_INIT_SLOT;                  
                end  else begin
                   update_ack    <= 1'b0;
@@ -119,6 +124,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                init <= init + 1'b1;
             end
             STATE_FILL_SLOT: begin
+               add_block_id <= 1'b0;
                case (act_config_typ)
                   CONFIG_RAM,
                   CONFIG_FDC,
@@ -178,11 +184,13 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                            CONFIG_RAM: begin
                               memory_block[act_block_id].block_count <= act_block_count;
                               memory_block[act_block_id].mem_offset  <= sdram_addr;
+                              add_block_id                           <= 1'b1;
                            end
                            CONFIG_FDC: begin
                               memory_block[act_block_id].block_count <= act_block_count;
                               memory_block[act_block_id].mem_offset  <= sdram_addr;
                               ddr3_rd                                <= 1'b1;
+                              add_block_id                           <= 1'b1;
                            end
                            CONFIG_IO_MIRROR,
                            CONFIG_ROM_MIRROR,
@@ -193,6 +201,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               memory_block[act_block_id].block_count <= act_block_count;
                               memory_block[act_block_id].mem_offset  <= sdram_addr;
                               ddr3_rd                                <= 1'b1;
+                              add_block_id                           <= 1'b1;
                            end
                         endcase 
                      end
@@ -224,6 +233,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               ddr3_rd <= 1'b1;                     
                               addr <= 24'd0;
                               state <= STATE_UPLOAD_RAM;
+                              add_block_id <= 1'b1;
                            end
                         end
                         CART_TYP_SCC2: begin
@@ -260,6 +270,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                                  addr <= 24'd0;
                                  state <= STATE_UPLOAD_RAM;
                                  next_state <= STATE_UPLOAD_RAM;
+                                 add_block_id <= 1'b1;
                               end
                               //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                               //msx_slot[act_slot].subslot[act_subslot].block[act_block].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
@@ -325,14 +336,13 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         end
                         state <= STATE_FILL_NEXT;
                      end else begin
-                        sdram_din <= act_slot_typ == SLOT_TYP_MSX2_RAM | act_slot_typ == SLOT_TYP_RAM ? 8'h00 : ddr3_dout;
-                        //sdram_din <= memory_block[act_block_id].typ != BLOCK_TYP_RAM ? ddr3_dout : 8'h00;  
+                        sdram_din <= act_slot_is_ram ? 8'h00 : ddr3_dout;
                         do_we <= 1'b1;
                         if (do_we) begin
                            sdram_we <= 1'b1;                                                                  //Write to RAM
                            do_we <= 1'b0;
                            addr <= addr + 1'b1;                                                               //Next addr
-                           if (act_slot_typ != SLOT_TYP_MSX2_RAM | act_slot_typ != SLOT_TYP_RAM ) begin
+                           if (~act_slot_is_ram) begin
                               ddr3_rd <= 1'b1;                                                                //Read
                            end
                         end
@@ -350,7 +360,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         state <= STATE_FILL_NEXT;
                      end else begin
                         kbd_din <= ddr3_dout;
-                        do_we <= 1'b1;
+                        do_we   <= 1'b1;
                         if (do_we) begin
                            kbd_we  <= 1'b1;
                            do_we   <= 1'b0;
@@ -363,10 +373,11 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             end
             STATE_FILL_NEXT: begin
                if (config_cnt == MAX_CONFIG - 1) begin
-                  state <= STATE_WAIT;
+                  state        <= STATE_WAIT;
                end else begin
-                  config_cnt <= config_cnt + 1'b1;
-                  state <= STATE_FILL_SLOT;
+                  config_cnt   <= config_cnt + 1'b1;
+                  new_block_id <= new_block_id + add_block_id;
+                  state        <= STATE_FILL_SLOT;
                end
             end
       endcase
