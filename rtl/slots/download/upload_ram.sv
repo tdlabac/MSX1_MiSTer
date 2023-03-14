@@ -209,8 +209,12 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   CONFIG_CART_A,
                   CONFIG_CART_B: begin                          
                      state <= STATE_FILL_NEXT;
-                     //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
-                     msx_slots.slot_typ[act_slot] <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
+                     
+                     if (msx_slots.slot_typ[act_slot] == SLOT_TYP_EMPTY) 
+                        msx_slots.slot_typ[act_slot] <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
+                     if (act_subslot > 0)
+                        msx_slots.slot_typ[act_slot] <= SLOT_TYP_MAPPER;
+
                      case(cart_conf[act_config_typ == CONFIG_CART_B].typ)
                         CART_TYP_EMPTY: begin 
                            //None
