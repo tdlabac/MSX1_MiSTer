@@ -51,7 +51,7 @@ module upload_debug
                      endcase
                   3'd1:
                      case (addr[3:0])
-                        4'd0:  ddr3_din <= 8'h00; //memory_block[addr[7:4]].typ;
+                        4'd0:  ddr3_din <= 8'h00;
                         4'd1:  ddr3_din <= memory_block[addr[7:4]].block_count;
                         4'd2:  ddr3_din <= memory_block[addr[7:4]].mem_offset[23:16];
                         4'd3:  ddr3_din <= memory_block[addr[7:4]].mem_offset[15:8];

@@ -31,7 +31,6 @@ module download
    output                      sdram_we,
    input                 [1:0] sdram_size,
    output MSX::block_t         memory_block[MAX_MEM_BLOCK],
-   //output MSX::slot_t          msx_slot[4],
    output MSX::msx_slots_t     msx_slots,
    output MSX::rom_info_t      rom_info[2],
    output MSX::sram_block_t    sram_block[2],

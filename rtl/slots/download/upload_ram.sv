@@ -119,8 +119,6 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                msx_slots.mem_block[init[5:4]][init[3:2]][init[1:0]].init <= 1'b0;
                msx_slots.mem_block[init[5:4]][init[3:2]][init[1:0]].typ <= SLOT_TYP_EMPTY;
                msx_slots.slot_typ[init[5:4]] <= SLOT_TYP_EMPTY;
-               //msx_slot[init[5:4]].subslot[init[3:2]].block[init[1:0]].init <= 1'b0;
-               //msx_slot[init[5:4]].typ <= SLOT_TYP_EMPTY;
                init <= init + 1'b1;
             end
             STATE_FILL_SLOT: begin
@@ -133,52 +131,34 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   CONFIG_ROM_MIRROR,
                   CONFIG_MIRROR: begin
                      if (ddr3_ready) begin
-                        //if (msx_slot[act_slot].typ == SLOT_TYP_EMPTY) msx_slot[act_slot].typ <= act_slot_typ;
-                        //if (act_subslot > 0)                          msx_slot[act_slot].typ <= SLOT_TYP_MAPPER;                        
                         if (msx_slots.slot_typ[act_slot] == SLOT_TYP_EMPTY) msx_slots.slot_typ[act_slot] <= act_slot_typ;
                         if (act_subslot > 0)                                msx_slots.slot_typ[act_slot] <= SLOT_TYP_MAPPER;
                         
-                        //msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
-                        //msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
-                        //msx_slot[act_slot].subslot[act_subslot].block[act_block].typ <= act_slot_typ;
                         msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= act_block_id;
                         msx_slots.mem_block[act_slot][act_subslot][act_block].offset <= 2'd0;
                         msx_slots.mem_block[act_slot][act_subslot][act_block].typ <= act_slot_typ;
                         
-                        //if (act_config_typ != CONFIG_IO_MIRROR) msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                         if (act_config_typ != CONFIG_IO_MIRROR) msx_slots.mem_block[act_slot][act_subslot][act_block].init <= 1'b1;
                         if (act_block_count >= 8'd2 & act_block < 2'd3) begin                           
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].block_id <= act_block_id;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].offset <= 2'd1;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].typ <= act_slot_typ;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd1].block_id <= act_block_id;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd1].offset <= 2'd1;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd1].typ <= act_slot_typ;
-                           //if (act_config_typ != CONFIG_IO_MIRROR) msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd1].init <= 1'b1;
                            if (act_config_typ != CONFIG_IO_MIRROR) msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd1].init <= 1'b1;
                         end
                         if (act_block_count >= 8'd3 & act_block < 2'd2) begin
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].block_id <= act_block_id;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].offset <= 2'd2;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].typ <= act_slot_typ;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd2].block_id <= act_block_id;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd2].offset <= 2'd2;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd2].typ <= act_slot_typ;
-                           //if (act_config_typ != CONFIG_IO_MIRROR) msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd2].init <= 1'b1;
                            if (act_config_typ != CONFIG_IO_MIRROR) msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd2].init <= 1'b1;
                         end
                         if (act_block_count >= 8'd4 & act_block < 2'd1) begin
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].block_id <= act_block_id;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].offset <= 2'd3;
-                           //msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].typ <= act_slot_typ;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd3].block_id <= act_block_id;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd3].offset <= 2'd3;
                            msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd3].typ <= act_slot_typ;
-                           //if (act_config_typ != CONFIG_IO_MIRROR)  msx_slot[act_slot].subslot[act_subslot].block[act_block + 2'd3].init <= 1'b1;
                            if (act_config_typ != CONFIG_IO_MIRROR) msx_slots.mem_block[act_slot][act_subslot][act_block + 2'd3].init <= 1'b1;
                         end
-                        start_addr  <= msx_config[config_cnt].store_address;   //Odkud
-                        addr   <= 24'd0;                                       //offset
+                        start_addr  <= msx_config[config_cnt].store_address;
+                        addr   <= 24'd0;
                         state <= STATE_UPLOAD_RAM;
                         case (act_config_typ)
                            CONFIG_RAM: begin
@@ -221,11 +201,6 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         end
                         CART_TYP_ROM: begin
                            if (ioctl_rom[act_config_typ == CONFIG_CART_B].loaded) begin
-                              //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].typ      <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= act_block_id;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].offset   <= 2'd0;
@@ -233,7 +208,6 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               start_addr  <= act_config_typ == CONFIG_CART_A ? 28'hA00000 : 28'hF00000;
                               memory_block[act_block_id].block_count <= 8'(ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14);
                               memory_block[act_block_id].mem_offset <= sdram_addr;
-                              //memory_block[act_block_id].typ <= BLOCK_TYP_ROM;
                               ddr3_rd <= 1'b1;                     
                               addr <= 24'd0;
                               state <= STATE_UPLOAD_RAM;
@@ -249,26 +223,16 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                            addr <= 24'd0;
                         end
                         default: begin
-                                 //Nasli jsme cart a vime kam mapovat.
-                                 //Rozhodnout se co se nahraje do RAM
-                                 //Nastavit slot na spravne chovani
-                                 //Doresit SRAM jak pro ROM tak i pro FW
-
                            next_state <= STATE_FILL_NEXT;
                            if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count > 8'd0) begin
-                              if (cart_conf[act_config_typ == CONFIG_CART_A] == cart_conf[act_config_typ == CONFIG_CART_B] & share_fw_id > 0) begin //Shodne a inicializovane
-                                 //msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= share_fw_id;
+                              if (cart_conf[act_config_typ == CONFIG_CART_A] == cart_conf[act_config_typ == CONFIG_CART_B] & share_fw_id > 0) begin
                                  msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= share_fw_id;
                                  state <= STATE_FILL_NEXT;
                               end else begin                                          
-                                 //msx_slot[act_slot].subslot[act_subslot].block[act_block].block_id <= act_block_id;
-                                 //msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
-                                 //msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                                  msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= act_block_id;
-                                 start_addr  <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].store_address;   //Odkud
+                                 start_addr  <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].store_address;
                                  memory_block[act_block_id].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count;
                                  memory_block[act_block_id].mem_offset <= sdram_addr;
-                                 //memory_block[act_block_id].typ <= BLOCK_TYP_ROM;
                                  share_fw_id <= act_block_id;
                                  ddr3_rd <= 1'b1;                     
                                  addr <= 24'd0;
@@ -276,16 +240,12 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                                  next_state <= STATE_UPLOAD_RAM;
                                  add_block_id <= 1'b1;
                               end
-                              //msx_slot[act_slot].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].typ <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].typ   <= act_config_typ == CONFIG_CART_A ? SLOT_TYP_CART_A : SLOT_TYP_CART_B;                                 
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].offset <= 2'd0;
-                              //msx_slot[act_slot].subslot[act_subslot].block[act_block].init <= 1'b1;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].offset   <= 2'd0;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].init     <= 1'b1;
                            end
                            
-                           if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count > 8'd0) begin // Je potreba SRAM
+                           if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count > 8'd0) begin
                               sram_block[act_config_typ == CONFIG_CART_B].mem_offset  <= bram_addr;
                               sram_block[act_config_typ == CONFIG_CART_B].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].sram_block_count;
                               state <= STATE_INIT_SRAM;
@@ -312,9 +272,9 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             STATE_INIT_SRAM: begin
                if (~last_bram_we & bram_we) begin
                   bram_addr <= bram_addr + 1'b1;
-                  if (sdram_size == 2'd0) sdram_addr <= sdram_addr + 1'b1;            //Pokud neni SDRAM zapisujeme do BRAM proto potřebuji posunovat ukazatel
+                  if (sdram_size == 2'd0) sdram_addr <= sdram_addr + 1'b1;
                end
-               if (~bram_we) begin                                                    //Muzeme psat do BRAM
+               if (~bram_we) begin
                   if (addr[21:0] > {sram_block[act_config_typ == CONFIG_CART_B].block_count - 1'b1, 14'h3FFF} ) begin
                      state <= next_state;
                      addr <= 24'd0;
@@ -326,11 +286,11 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             end
             STATE_UPLOAD_RAM: begin
                if (~last_sdram_we & sdram_we) begin
-                  sdram_addr <= sdram_addr + 1'b1;                                        //Po zapisu zvedni adresu
-                  if (sdram_size == 2'd0) bram_addr <= bram_addr + 1'b1;                  //Pokud neni SDRAM zapisujeme do BRAM posunme ukazatel
+                  sdram_addr <= sdram_addr + 1'b1;
+                  if (sdram_size == 2'd0) bram_addr <= bram_addr + 1'b1;
                end
-               if (ddr3_ready & ~ddr3_rd) begin                                                  //Read Done
-                  if (sdram_ready & ~sdram_we) begin                                             //Muzeme psat do SDRAM
+               if (ddr3_ready & ~ddr3_rd) begin
+                  if (sdram_ready & ~sdram_we) begin
                      if (addr[21:0] > {memory_block[act_block_id].block_count - 1'b1, 14'h3FFF} ) begin
                         if (act_config_typ == CONFIG_CART_A | act_config_typ == CONFIG_CART_B) begin
                            rom_info[act_config_typ == CONFIG_CART_B].offset <= detect_offset;
@@ -343,11 +303,11 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         sdram_din <= act_slot_is_ram ? 8'h00 : ddr3_dout;
                         do_we <= 1'b1;
                         if (do_we) begin
-                           sdram_we <= 1'b1;                                                                  //Write to RAM
+                           sdram_we <= 1'b1;
                            do_we <= 1'b0;
-                           addr <= addr + 1'b1;                                                               //Next addr
+                           addr <= addr + 1'b1;
                            if (~act_slot_is_ram) begin
-                              ddr3_rd <= 1'b1;                                                                //Read
+                              ddr3_rd <= 1'b1;
                            end
                         end
                      end

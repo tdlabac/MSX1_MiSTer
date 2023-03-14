@@ -57,7 +57,6 @@ package MSX;
     } fw_block;
     
     typedef struct {
-        //logic  [2:0] ioctl_id;
         config_typ_t typ;
         logic  [3:0] block_id;
         logic  [7:0] block_count;
@@ -81,7 +80,6 @@ package MSX;
     } msx_slots_t;
 
     typedef struct {
-        //block_typ_t  typ;                //Typ Bloku  
         logic  [7:0] block_count;        //delka
         logic [24:0] mem_offset;         //Umisteni SDRAM/BRAM
     } block_t;    
@@ -91,16 +89,6 @@ package MSX;
         logic [24:0] mem_offset;         //Umisteni SDRAM/BRAM
     } sram_block_t;
 
-/*
-    typedef struct {         
-        mem_block_t  block[4];
-    } subslot_t;    
-    
-    typedef struct {
-        slot_typ_t   typ;
-        subslot_t    subslot[4];
-    } slot_t;
-*/
     typedef struct {
         logic  [5:0] mapper;
         logic  [3:0] offset;

@@ -31,4 +31,5 @@ assign en_gm2          = en & cart_typ == CART_TYP_GM2;
 assign en_scc          = en & cart_typ == CART_TYP_SCC;
 assign en_scc2         = en & cart_typ == CART_TYP_SCC2;
 assign en_none         = en & cart_typ == MAPPER_NO_UNKNOWN;
+
 endmodule
