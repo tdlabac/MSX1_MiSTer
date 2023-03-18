@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<fwConfig>  
+  <fw name="FM_PAC">
+    <filename>FM_PAC.ROM</filename>
+    <SHA1>9d789166e3caf28e4742fe933d962e99618c633d</SHA1>
+  </fw>
+  <fw name="GM2">
+    <filename>GM2.ROM</filename>
+    <SHA1>5c00f9e3a48411e08fac89b1dfdd2a6e95853919</SHA1>
+  </fw>
+  <fw name="FDC">
+    <filename>VY010.ROM</filename>
+    <SHA1>8924e3e11eb1c8c1edcb7efa63c26d2bdc142473</SHA1>
+  </fw>
+</fwConfig>
