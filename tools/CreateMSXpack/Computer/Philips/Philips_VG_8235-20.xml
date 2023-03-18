@@ -37,7 +37,7 @@
     </secondary>
     <secondary slot="2">
       <block id="0">
-        <type>RAM MAPPER 1</type>
+        <type>RAM MAPPER</type>
         <count>8</count>
       </block>
     </secondary>

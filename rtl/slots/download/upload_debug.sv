@@ -38,10 +38,10 @@ module upload_debug
                      case (addr[7])
                         1'd0:
                            case (addr[0])
-                              1'd0: ddr3_din <= msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].typ;
-                              1'd1: ddr3_din <= {msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].block_id,
+                              1'd0: ddr3_din <= {msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].typ,
                                                  msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].offset,
                                                  msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].init};
+                              1'd1: ddr3_din <= {msx_slots.mem_block[addr[6:5]][addr[4:3]][addr[2:1]].block_id, 4'd0};
                            endcase
                         1'd1:
                            if (addr[6:2] == 5'd0) 
@@ -51,7 +51,7 @@ module upload_debug
                      endcase
                   3'd1:
                      case (addr[3:0])
-                        4'd0:  ddr3_din <= 8'h00;
+                        4'd0:  ddr3_din <= 5'd0;
                         4'd1:  ddr3_din <= memory_block[addr[7:4]].block_count;
                         4'd2:  ddr3_din <= memory_block[addr[7:4]].mem_offset[23:16];
                         4'd3:  ddr3_din <= memory_block[addr[7:4]].mem_offset[15:8];
@@ -94,11 +94,11 @@ module upload_debug
                   3'd3:
                      case (addr[3:0])
                         4'd0:  ddr3_din <= msx_config[addr[7:4]].typ;
-                        4'd1:  ddr3_din <= msx_config[addr[7:4]].block_id;
+                        4'd1:  ddr3_din <= msx_config[addr[7:4]].reference;
                         4'd2:  ddr3_din <= msx_config[addr[7:4]].block_count;
                         4'd3:  ddr3_din <= msx_config[addr[7:4]].slot;
                         4'd4:  ddr3_din <= msx_config[addr[7:4]].sub_slot;
-                        4'd5:  ddr3_din <= msx_config[addr[7:4]].slot_internal_mapper;
+                        4'd5:  ddr3_din <= 8'd0;
                         4'd6:  ddr3_din <= msx_config[addr[7:4]].start_block;
                         4'd7:  ddr3_din <= msx_config[addr[7:4]].store_address[23:16];
                         4'd8:  ddr3_din <= msx_config[addr[7:4]].store_address[15:8];

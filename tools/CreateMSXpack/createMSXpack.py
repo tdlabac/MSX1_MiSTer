@@ -6,8 +6,8 @@ import base64
 
 ROM_DIR = 'ROM'
 XML_DIR = 'Computer'
-BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER 1", "RAM MAPPER 2", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
-RAM_TYPES = ["RAM", "RAM MAPPER 1", "RAM MAPPER 2"]
+BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
+#RAM_TYPES = ["RAM", "RAM MAPPER"]
 MSX_TYPES = ["MSX1", "MSX2"]
 
 
@@ -19,13 +19,14 @@ def file_hash(filename):
 
 def get_block_type_id(typ):
     """Return the tuple of (type, id) for the given block type."""
-    id = 0
-    if typ in RAM_TYPES:
-        id = RAM_TYPES.index(typ)
-        typ = 1
-    else:
-        typ = BLOCK_TYPES.index(typ) - 2
-    return (typ, id)
+#    id = 0
+#    if typ in RAM_TYPES:
+#        id = RAM_TYPES.index(typ)
+#        typ = 1
+#    else:
+#    typ = BLOCK_TYPES.index(typ) - 2
+    return BLOCK_TYPES.index(typ)
+#    return (typ, id)
 
 
 def get_msx_type_id(typ):
@@ -35,9 +36,9 @@ def get_msx_type_id(typ):
 
 def create_block(msx_type, primary, secondary, block_id, typ, count, sha1, ref):
     """Create and return a bytearray representing a block."""
-    (typ, id) = get_block_type_id(typ)
+    typ = get_block_type_id(typ)
     ref = 0 if ref is None else int(ref)
-    id = id if typ == 1 else ref
+    #id = id if typ == 1 else ref
     count = 0 if count is None else int(count)
 
     head = bytearray()
@@ -47,7 +48,7 @@ def create_block(msx_type, primary, secondary, block_id, typ, count, sha1, ref):
     head.append(int(secondary))
     head.append(int(block_id))
     head.append(typ)
-    head.append(id)
+    head.append(ref)
     head.append(count)
     head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00'))
     return head

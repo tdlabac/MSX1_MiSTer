@@ -70,6 +70,7 @@ assign sd_wr[0]       = 1'b0;
 assign sd_buff_din[0] = 8'h00;
 
 localparam MAX_MEM_BLOCK = 16;
+
 MSX::block_t memory_block[MAX_MEM_BLOCK];
 MSX::sram_block_t sram_block[2];
 MSX::rom_info_t rom_info[2];
@@ -95,6 +96,7 @@ end
 //Memory mapping
 wire  [1:0] active_subslot, active_block, block_offset;
 wire  [3:0] block_id;
+wire  [7:0] block_count;
 wire [24:0] mem_addr, offset;
 wire        slot_id, block_init, cpu_we;
 slot_typ_t  slot_typ;
@@ -114,23 +116,25 @@ assign block_offset = msx_slots.mem_block[active_slot][active_subslot][active_bl
 assign block_init   = msx_slots.mem_block[active_slot][active_subslot][active_block].init;
 
 assign offset       = sram_oe ? sram_block[slot_id].mem_offset : memory_block[block_id].mem_offset;
-assign cpu_we       = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM1 | slot_typ == SLOT_TYP_MSX2_RAM2) & cpu_wr & cpu_mreq & block_init;
-assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM       ? {block_offset, cpu_addr[13:0]}   : 
-                                slot_typ == SLOT_TYP_MSX2_RAM1 ? {msx2_ram_bank1, cpu_addr[13:0]} :
-                                slot_typ == SLOT_TYP_MSX2_RAM2 ? {msx2_ram_bank2, cpu_addr[13:0]} :
-                                slot_typ == SLOT_TYP_CART_A    ? mem_cart_rom                     :
-                                slot_typ == SLOT_TYP_CART_B    ? mem_cart_rom                     :
-                                                                 {block_offset, cpu_addr[13:0]})  ;
+assign block_count  = memory_block[block_id].block_count;
+
+assign cpu_we       = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
+assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, cpu_addr[13:0]}   : 
+                                slot_typ == SLOT_TYP_MSX2_RAM ? {msx2_ram_bank, cpu_addr[13:0]}  :
+                                slot_typ == SLOT_TYP_CART_A   ? mem_cart_rom                     :
+                                slot_typ == SLOT_TYP_CART_B   ? mem_cart_rom                     :
+                                                                {block_offset, cpu_addr[13:0]})  ;
 
 assign sdram_addr = dw_sdram_upload              ? dw_sdram_addr             : mem_addr;
 assign sdram_din  = dw_sdram_upload              ? dw_sdram_din              : cpu_dout;
 assign sdram_we   = dw_sdram_upload              ? dw_sdram_we               : cpu_we & ~mapper_en & ~sram_oe;
 assign sdram_rd   = dw_sdram_upload              ? 1'b0                      : cpu_rd & cpu_mreq;
-assign cpu_din    = mapper_en                    ? ~mapper_slot[active_slot] :
+assign cpu_din    = ~cpu_rd                      ? 8'hFF                     :
+                    mapper_en                    ? ~mapper_slot[active_slot] :
                     cart_output_en               ? d_to_cpu_cart             :
                     FDC_output_en                ? d_to_cpu_FDC              :
-                    msx2_mapper_req1             ? msx2_mapper_dout1         :
-                    msx2_mapper_req2             ? msx2_mapper_dout2         :
+                    msx2_mapper_req              ? msx2_mapper_dout          :
+                    ~cpu_mreq                    ? 8'hFF                     :                    
                     sram_oe                      ? bram_dout                 :
                     sdram_size == 0 & block_init ? bram_dout                 :
                     block_init                   ? sdram_dout                :
@@ -223,27 +227,15 @@ cart_rom cart_rom
    .sound(sound)
 );
 
-wire  [7:0] msx2_ram_bank1, msx2_mapper_dout1;
-wire        msx2_mapper_req1;
-msx2_ram_mapper msx2_ram_mapper1
-(
-   .ram_bank(msx2_ram_bank1),
-   .mapper_dout(msx2_mapper_dout1),
-   .mapper_req(msx2_mapper_req1),
-   .ram_block_count(ram_block_count[0]),
-   .cs(slot_typ == SLOT_TYP_MSX2_RAM1),
-   .*
-);
+wire  [7:0] msx2_ram_bank, msx2_mapper_dout;
+wire        msx2_mapper_req;
 
-wire  [7:0] msx2_ram_bank2, msx2_mapper_dout2;
-wire        msx2_mapper_req2;
-msx2_ram_mapper msx2_ram_mapper2
+msx2_ram_mapper msx2_ram_mapper
 (
-   .ram_bank(msx2_ram_bank2),
-   .mapper_dout(msx2_mapper_dout2),
-   .mapper_req(msx2_mapper_req2),
-   .ram_block_count(ram_block_count[1]),
-   .cs(slot_typ == SLOT_TYP_MSX2_RAM2),
+   .ram_bank(msx2_ram_bank),
+   .mapper_dout(msx2_mapper_dout),
+   .mapper_req(msx2_mapper_req),
+   .ram_block_count(ram_mapper_count),
    .*
 );
 
@@ -269,7 +261,7 @@ nvram_backup nvram_backup
 );
 
 wire [24:0] dw_sdram_addr, dw_bram_addr;
-wire  [7:0] dw_sdram_din, ram_block_count[0:1], dw_bram_din;
+wire  [7:0] dw_sdram_din, dw_bram_din, ram_mapper_count;
 wire        dw_sdram_upload, dw_sdram_we, dw_bram_we, dw_bram_upload;
 download download
 (

@@ -31,7 +31,8 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    output MSX::rom_info_t    rom_info[2],
    output MSX::msx_slots_t   msx_slots,
    output MSX::block_t       memory_block[MAX_MEM_BLOCK],
-   output MSX::sram_block_t  sram_block[2]
+   output MSX::sram_block_t  sram_block[2],
+   output logic        [7:0] ram_mapper_count
 );
    typedef enum logic [2:0] {STATE_WAIT, STATE_INIT_SLOT, STATE_FILL_SLOT, STATE_UPLOAD_RAM, STATE_FILL_NEXT, STATE_INIT_SRAM, STATE_UPLOAD_KBD_LAYOUT} state_t;
    
@@ -67,25 +68,24 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
    wire   [1:0] act_block       = msx_config[config_cnt].start_block;
    wire   [1:0] act_subslot     = msx_config[config_cnt].sub_slot;
 
-   wire   [3:0] act_block_id    = act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
-                                  act_config_typ == CONFIG_ROM_MIRROR ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
-                                  act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].block_id :
+   wire   [3:0] act_block_id    = act_config_typ == CONFIG_IO_MIRROR  ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].reference].block_id :
+                                  act_config_typ == CONFIG_ROM_MIRROR ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].reference].block_id :
+                                  act_config_typ == CONFIG_MIRROR     ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].reference].block_id :
                                                                         new_block_id;  
 
    wire   [7:0] act_block_count = msx_config[config_cnt].block_count;
    assign       act_config_typ  = msx_config[config_cnt].typ;                             
-   assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR      ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
-                                  act_config_typ == CONFIG_IO_MIRROR   ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].block_id].typ :
+   assign       act_slot_typ    = act_config_typ == CONFIG_MIRROR      ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].reference].typ :
+                                  act_config_typ == CONFIG_IO_MIRROR   ? msx_slots.mem_block[act_slot][act_subslot][msx_config[config_cnt].reference].typ :
                                   act_config_typ == CONFIG_ROM_MIRROR  ? SLOT_TYP_ROM                                                    :
                                   act_config_typ == CONFIG_BIOS        ? SLOT_TYP_ROM                                                    :
                                   act_config_typ == CONFIG_FDC         ? SLOT_TYP_FDC                                                    :
                                   act_config_typ == CONFIG_CART_A      ? SLOT_TYP_CART_A                                                 :
                                   act_config_typ == CONFIG_CART_B      ? SLOT_TYP_CART_B                                                 :
-                                  msx_config[config_cnt].block_id == 0 ? SLOT_TYP_RAM                                                    :
-                                  msx_config[config_cnt].block_id == 1 ? SLOT_TYP_MSX2_RAM1                                              :
-                                                                         SLOT_TYP_MSX2_RAM2                                              ;
+                                  act_config_typ == CONFIG_RAM         ? SLOT_TYP_RAM                                                    :
+                                                                         SLOT_TYP_MSX2_RAM                                               ;
 
-   assign act_slot_is_ram = act_slot_typ == SLOT_TYP_MSX2_RAM1 | act_slot_typ == SLOT_TYP_MSX2_RAM2 | act_slot_typ == SLOT_TYP_RAM ;
+   assign act_slot_is_ram = act_slot_typ == SLOT_TYP_MSX2_RAM | act_slot_typ == SLOT_TYP_RAM ;
 
    always @(posedge clk) begin 
       logic  [5:0] init;
@@ -125,6 +125,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                add_block_id <= 1'b0;
                case (act_config_typ)
                   CONFIG_RAM,
+                  CONFIG_RAM_MAPPER,
                   CONFIG_FDC,
                   CONFIG_BIOS,
                   CONFIG_IO_MIRROR,
@@ -161,10 +162,12 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         addr   <= 24'd0;
                         state <= STATE_UPLOAD_RAM;
                         case (act_config_typ)
+                           CONFIG_RAM_MAPPER,
                            CONFIG_RAM: begin
                               memory_block[act_block_id].block_count <= act_block_count;
                               memory_block[act_block_id].mem_offset  <= sdram_addr;
                               add_block_id                           <= 1'b1;
+                              if (act_config_typ == CONFIG_RAM_MAPPER) ram_mapper_count <= act_block_count;
                            end
                            CONFIG_FDC: begin
                               memory_block[act_block_id].block_count <= act_block_count;
