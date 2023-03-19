@@ -119,9 +119,6 @@ end
 //  -----------------------------------------------------------------------------
 //  -- MSX1 / MSX2 handler
 //  -----------------------------------------------------------------------------
-wire [7:0] d_from_msx;
-wire dataBusRQ_msx;
-wire vdp_int_n;
 
 reg map_valid = 0;
 wire ppi_en = ~ppi_n;
@@ -138,42 +135,13 @@ assign slot =    ~map_valid         ? 2'b00         :
                   a[15:14] == 2'b10 ? ppi_out_a[5:4] :
                                       ppi_out_a[7:6] ;
 
-
-msx_select msx_select (
-   .MSXconf(MSXconf),
-   .clk21m(clk21m),
-   .ce_10m7_p(ce_10m7_p),
-   .ce_10hz(ce_10hz),
-   .reset(reset),
-   .addr(a),
-   .d_from_cpu,
-   .d_to_cpu(d_from_msx),
-   .dataBusRQ(dataBusRQ_msx),
-   .wr_n(wr_n),
-   .rd_n(rd_n),
-   .iorq_n(iorq_n),
-   .mreq_n(mreq_n),
-   .m1_n(m1_n),
-   .rfrsh_n(rfrsh_n),
-   //.vdp_pal(vdp_pal),
-   //.border(border),
-   .R(R),
-   .G(G),
-   .B(B),
-   .HS(HS),
-   .VS(VS),
-   .DE(DE),
-   .vdp_int_n(vdp_int_n),
-   .hblank(hblank),
-   .vblank(vblank),
-   .rtc_time(rtc_time)
-);
-
 //  -----------------------------------------------------------------------------
 //  -- IO Decoder
 //  -----------------------------------------------------------------------------
-wire psg_n = ~((a[7:3] == 5'b10100) & ~iorq_n & m1_n);
-wire ppi_n = ~((a[7:3] == 5'b10101) & ~iorq_n & m1_n);
+wire psg_n  = ~((a[7:3] == 5'b10100)   & ~iorq_n & m1_n);
+wire ppi_n  = ~((a[7:3] == 5'b10101)   & ~iorq_n & m1_n);
+wire vdp_en =   (a[7:3] == 5'b10011)   & ~iorq_n & m1_n ;
+wire rtc_en =   (a[7:1] == 7'b1011010) & ~iorq_n & m1_n & MSXconf.typ == MSX2;
 
 //  -----------------------------------------------------------------------------
 //  -- 82C55 PPI
@@ -203,11 +171,12 @@ jt8255 PPI
 //  -----------------------------------------------------------------------------
 //  -- CPU data multiplex
 //  -----------------------------------------------------------------------------
-assign d_to_cpu = rd_n                                      ? 8'hFF           :
-                  dataBusRQ_msx                             ? d_from_msx      :
-                  ~(psg_n                                 ) ? d_from_psg      :
-                  ~(ppi_n                                 ) ? d_from_8255     :
-                                                              cpu_din         ;
+assign d_to_cpu = rd_n   ? 8'hFF           :
+                  vdp_en ? d_to_cpu_vdp    :
+                  rtc_en ? d_from_rtc      :
+                  ~psg_n ? d_from_psg      :
+                  ~ppi_n ? d_from_8255     :
+                           cpu_din         ;
 //  -----------------------------------------------------------------------------
 //  -- Keyboard decoder
 //  -----------------------------------------------------------------------------
@@ -273,6 +242,168 @@ jt49_bus PSG
    .IOA_out(),
    .IOB_in(8'hFF),
    .IOB_out(psg_iob)
+);
+
+//  -----------------------------------------------------------------------------
+//  -- RTC
+//  -----------------------------------------------------------------------------
+wire [7:0] d_from_rtc;
+
+rtc rtc
+(
+   .clk21m(clk21m),
+   .reset(reset),
+   .setup(reset),
+   .rt(rtc_time),
+   .clkena(ce_10hz),
+   .req(req & rtc_en),
+   .ack(),
+   .wrt(~wr_n),
+   .adr(a),
+   .dbi(d_from_rtc),
+   .dbo(d_from_cpu)
+);
+
+//  -----------------------------------------------------------------------------
+//  -- Video
+//  -----------------------------------------------------------------------------
+wire       VRAM_we_lo_vdp, VRAM_we_hi_vdp, vdp18, vdp ;
+wire       vdp_int_n;
+wire [7:0] d_to_cpu_vdp;
+
+assign vdp18          = MSXconf.typ == MSX1;
+assign vdp            = MSXconf.typ == MSX2;
+
+//CPU access
+assign d_to_cpu_vdp   = vdp18 ? d_from_vdp18                : d_from_vdp;
+assign vdp_int_n      = vdp18 ? int_n_vdp18                 : int_n_vdp;
+
+//Video access
+assign R              = vdp18 ? R_vdp18                     : {R_vdp,R_vdp[5:4]};
+assign G              = vdp18 ? G_vdp18                     : {G_vdp,G_vdp[5:4]};
+assign B              = vdp18 ? B_vdp18                     : {B_vdp,B_vdp[5:4]};
+assign HS             = vdp18 ? ~HS_n_vdp18                 : ~HS_n_vdp;
+assign VS             = vdp18 ? ~VS_n_vdp18                 : ~VS_n_vdp;
+assign DE             = vdp18 ? DE_vdp18                    : DE_vdp;
+assign hblank         = vdp18 ? hblank_vdp18                : 1'b0;
+assign vblank         = vdp18 ? vblank_vdp18                : 1'b0;
+
+//VRAM access
+assign VRAM_address   = vdp18 ? {2'b00, VRAM_address_vdp18} : VRAM_address_vdp[15:0];
+assign VRAM_we_lo     = vdp18 ? VRAM_we_vdp18               : VRAM_we_lo_vdp;
+assign VRAM_we_hi     = vdp18 ? 1'b0                        : VRAM_we_hi_vdp;
+assign VRAM_do        = vdp18 ? VRAM_do_vdp18               : VRAM_do_vdp;
+
+assign VRAM_we_lo_vdp = ~VRAM_we_n_vdp & DLClk_vdp & ~VRAM_address_vdp[16];
+assign VRAM_we_hi_vdp = ~VRAM_we_n_vdp & DLClk_vdp &  VRAM_address_vdp[16];
+
+reg iack;
+always @(posedge clk21m) begin
+   if (reset) iack <= 0;
+   else begin
+      if (iorq_n  & mreq_n)
+         iack <= 0;
+      else
+         if (req)
+            iack <= 1;
+   end
+end
+wire req = ~((iorq_n & mreq_n) | (wr_n & rd_n) | iack);
+
+wire        int_n_vdp18;
+wire  [7:0] d_from_vdp18;
+wire  [7:0] R_vdp18, G_vdp18, B_vdp18;
+wire        HS_n_vdp18, VS_n_vdp18, DE_vdp18, DLClk_vdp18, hblank_vdp18, vblank_vdp18, Blank_vdp18;
+wire [15:0] VRAM_address_vdp18;
+wire  [7:0] VRAM_do_vdp18;
+wire        VRAM_we_vdp18;
+vdp18_core #(.compat_rgb_g(0)) vdp_vdp18
+(
+   .clk_i(clk21m),
+   .clk_en_10m7_i(ce_10m7_p),
+   .reset_n_i(~reset),
+   .csr_n_i(~(vdp_en & vdp18) | rd_n),
+   .csw_n_i(~(vdp_en & vdp18) | wr_n),
+   .mode_i(a[0]),
+   .cd_i(d_from_cpu),
+   .cd_o(d_from_vdp18),
+   .int_n_o(int_n_vdp18),
+   .vram_we_o(VRAM_we_vdp18),
+   .vram_a_o(VRAM_address_vdp18),
+   .vram_d_o(VRAM_do_vdp18),
+   .vram_d_i(VRAM_di_lo),
+   .border_i(MSXconf.border),
+   .rgb_r_o(R_vdp18),
+   .rgb_g_o(G_vdp18),
+   .rgb_b_o(B_vdp18),
+   .hsync_n_o(HS_n_vdp18),
+   .vsync_n_o(VS_n_vdp18),
+   .hblank_o(hblank_vdp18),
+   .vblank_o(vblank_vdp18),
+   .blank_n_o(DE_vdp18),
+   .is_pal_i(MSXconf.video_mode == PAL)
+);
+
+wire        int_n_vdp;
+wire  [7:0] d_from_vdp;
+wire  [5:0] R_vdp, G_vdp, B_vdp;
+wire        HS_n_vdp, VS_n_vdp, DE_vdp, DLClk_vdp, Blank_vdp;
+wire [16:0] VRAM_address_vdp;
+wire  [7:0] VRAM_do_vdp;
+wire        VRAM_we_n_vdp;
+vdp vdp_vdp 
+(
+   .CLK21M(clk21m),
+   .RESET(reset),
+   .REQ(req & vdp_en & vdp),
+   .ACK(),
+   .WRT(~wr_n),
+   .ADR(a),
+   .DBI(d_from_vdp),
+   .DBO(d_from_cpu),
+   .INT_N(int_n_vdp),
+   .PRAMOE_N(),
+   .PRAMWE_N(VRAM_we_n_vdp),
+   .PRAMADR(VRAM_address_vdp),
+   .PRAMDBI({VRAM_di_hi, VRAM_di_lo}),
+   .PRAMDBO(VRAM_do_vdp),
+   .VDPSPEEDMODE(0),
+   .CENTERYJK_R25_N(0),
+   .PVIDEOR(R_vdp),
+   .PVIDEOG(G_vdp),
+   .PVIDEOB(B_vdp),
+   .PVIDEODE(DE_vdp),
+   .BLANK_O(Blank_vdp),
+   .PVIDEOHS_N(HS_n_vdp),
+   .PVIDEOVS_N(VS_n_vdp),
+   .PVIDEOCS_N(),
+   .PVIDEODHCLK(),
+   .PVIDEODLCLK(DLClk_vdp),
+   .DISPRESO(MSXconf.scandoubler),
+   .LEGACY_VGA(1),
+   .RATIOMODE(3'b000),
+   .NTSC_PAL_TYPE(MSXconf.video_mode == AUTO),
+   .FORCED_V_MODE(MSXconf.video_mode == PAL)
+);
+
+wire [15:0] VRAM_address;
+wire  [7:0] VRAM_do, VRAM_di_lo, VRAM_di_hi;
+wire        VRAM_we_lo, VRAM_we_hi;
+spram #(.addr_width(16),.mem_name("VRA2")) vram_lo
+(
+   .clock(clk21m),
+   .address(VRAM_address),
+   .wren(VRAM_we_lo),
+   .data(VRAM_do),
+   .q(VRAM_di_lo)
+);
+spram #(.addr_width(16),.mem_name("VRA3")) vram_hi
+(
+   .clock(clk21m),
+   .address(VRAM_address),
+   .wren(VRAM_we_hi),
+   .data(VRAM_do),
+   .q(VRAM_di_hi)
 );
 
 endmodule

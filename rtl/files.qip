@@ -1,5 +1,3 @@
-set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) msx1/files.qip                        ]
-set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) msx2/files.qip                        ]
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) video/video.qip                       ]
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) sound/sound.qip                       ]
 set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) cpu/T80.qip                           ]
@@ -7,5 +5,4 @@ set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) p
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) package.sv                            ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx.sv                                ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) tape.sv                               ]
-set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_select.sv                         ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_config.sv                         ]
