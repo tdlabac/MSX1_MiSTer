@@ -96,7 +96,6 @@ end
 //Memory mapping
 wire  [1:0] active_subslot, active_block, block_offset;
 wire  [3:0] block_id;
-wire  [7:0] block_count;
 wire [24:0] mem_addr, offset;
 wire        slot_id, block_init, cpu_we;
 slot_typ_t  slot_typ;
@@ -116,7 +115,6 @@ assign block_offset = msx_slots.mem_block[active_slot][active_subslot][active_bl
 assign block_init   = msx_slots.mem_block[active_slot][active_subslot][active_block].init;
 
 assign offset       = sram_oe ? sram_block[slot_id].mem_offset : memory_block[block_id].mem_offset;
-assign block_count  = memory_block[block_id].block_count;
 
 assign cpu_we       = (slot_typ == SLOT_TYP_RAM | slot_typ == SLOT_TYP_MSX2_RAM) & cpu_wr & cpu_mreq & block_init;
 assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, cpu_addr[13:0]}   : 

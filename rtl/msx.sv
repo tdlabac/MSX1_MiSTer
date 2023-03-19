@@ -1,58 +1,73 @@
 module msx
 (
-   input         reset,
+   input                    reset,
    //Clock
-   input         clk21m,
-   input         ce_10m7_p,
-   input         ce_3m58_p,
-   input         ce_3m58_n,
-   input         ce_10hz,
-   //CPU bus
-   output [15:0] cpu_addr,
-   output  [7:0] cpu_dout,
-   input   [7:0] cpu_din,
-   output        cpu_wr,
-   output        cpu_rd,
-   output        cpu_mreq,
-   output        cpu_iorq,
-   output        cpu_m1,
+   input                    clk21m,
+   input                    ce_10m7_p,
+   input                    ce_3m58_p,
+   input                    ce_3m58_n,
+   input                    ce_10hz,
    //Video
-   output  [7:0] R,
-   output  [7:0] G,
-   output  [7:0] B,
-   output        DE,
-   output        HS,
-   output        VS,
-   output        hblank,
-   output        vblank,
+   output             [7:0] R,
+   output             [7:0] G,
+   output             [7:0] B,
+   output                   DE,
+   output                   HS,
+   output                   VS,
+   output                   hblank,
+   output                   vblank,
    //I/O
-   output [15:0] audio,
-   input  [10:0] ps2_key,
-   input   [5:0] joy0,
-   input   [5:0] joy1,
-   input signed [15:0] cart_sound,
-   output   [1:0] slot,
+   output            [15:0] audio,
+   input  [           10:0] ps2_key,
+   input              [5:0] joy0,
+   input              [5:0] joy1,
+   
    //Cassete
-   output        cas_motor,
-   input         cas_audio_in,
+   output                   cas_motor,
+   input                    cas_audio_in,
    //MSX config
-   input  [64:0] rtc_time,
-   input MSX::config_t MSXconf,
-   //KBD layout
-   input   [8:0] kbd_addr,
-   input   [7:0] kbd_din,
-   input         kbd_we,
-   input         kbd_request
+   input             [64:0] rtc_time,
+   input MSX::config_t      MSXconf,
+   input MSX::config_cart_t cart_conf[2],
+   output                   msx_type,
+   input                    rom_eject,
+   input                    sram_save,
+   input                    sram_load,
+   input                    cart_changed,
+   output                   need_reset,
+   //IOCTL
+   input                    ioctl_download,
+   input             [15:0] ioctl_index,
+   input             [26:0] ioctl_addr,
+   //DDR3
+   output      logic [27:0] ddr3_addr,
+   output                   ddr3_rd,
+   output                   ddr3_wr,
+   input              [7:0] ddr3_dout,
+   output             [7:0] ddr3_din,
+   input                    ddr3_ready,
+   output                   ddr3_request,
+   //SDRAM
+   output            [24:0] sdram_addr,
+   output             [7:0] sdram_din,
+   output                   sdram_we,
+   output                   sdram_rd,
+   input                    sdram_ready,
+   input              [7:0] sdram_dout,
+   input              [1:0] sdram_size,
+   //SD FDC
+   input                 [5:0] img_mounted,
+   input                [31:0] img_size,
+   input                       img_readonly,
+   output               [31:0] sd_lba[6],
+   output                [5:0] sd_rd,
+   output                [5:0] sd_wr,
+   input                 [5:0] sd_ack,
+   input                [13:0] sd_buff_addr,
+   input                 [7:0] sd_buff_dout,
+   output                [7:0] sd_buff_din[6],
+   input                       sd_buff_wr   
 );
-
-assign cpu_addr = a;
-assign cpu_dout = d_from_cpu;
-assign cpu_wr   = ~wr_n;
-assign cpu_rd   = ~rd_n;
-assign cpu_mreq = ~mreq_n;
-assign cpu_iorq = ~iorq_n;
-assign cpu_m1   = ~m1_n;
-
 
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
@@ -122,6 +137,8 @@ end
 
 reg map_valid = 0;
 wire ppi_en = ~ppi_n;
+wire [1:0] slot;
+
 always @(posedge reset, posedge clk21m) begin
     if (reset)
         map_valid = 0;
@@ -176,7 +193,7 @@ assign d_to_cpu = rd_n   ? 8'hFF           :
                   rtc_en ? d_from_rtc      :
                   ~psg_n ? d_from_psg      :
                   ~ppi_n ? d_from_8255     :
-                           cpu_din         ;
+                           d_from_slots    ;
 //  -----------------------------------------------------------------------------
 //  -- Keyboard decoder
 //  -----------------------------------------------------------------------------
@@ -314,7 +331,7 @@ wire        int_n_vdp18;
 wire  [7:0] d_from_vdp18;
 wire  [7:0] R_vdp18, G_vdp18, B_vdp18;
 wire        HS_n_vdp18, VS_n_vdp18, DE_vdp18, DLClk_vdp18, hblank_vdp18, vblank_vdp18, Blank_vdp18;
-wire [15:0] VRAM_address_vdp18;
+wire [13:0] VRAM_address_vdp18;
 wire  [7:0] VRAM_do_vdp18;
 wire        VRAM_we_vdp18;
 vdp18_core #(.compat_rgb_g(0)) vdp_vdp18
@@ -404,6 +421,69 @@ spram #(.addr_width(16),.mem_name("VRA3")) vram_hi
    .wren(VRAM_we_hi),
    .data(VRAM_do),
    .q(VRAM_di_hi)
+);
+
+wire         [7:0] d_from_slots, kbd_din;
+wire         [8:0] kbd_addr;
+wire signed [15:0] cart_sound;
+wire               kbd_we, kbd_request;
+msx_slots msx_slots
+(
+   .clk(clk21m),
+   .clk_en(ce_3m58_p),
+   .reset(reset),
+   .cpu_addr(a),
+   .cpu_din(d_from_slots),  
+   .cpu_dout(d_from_cpu),
+   .cpu_iorq(~iorq_n),
+   .cpu_m1(~m1_n),
+   .cpu_mreq(~mreq_n),
+   .cpu_rd(~rd_n),
+   .cpu_wr(~wr_n),
+   .sound(cart_sound),
+   .rom_eject(rom_eject),
+   .cart_changed(cart_changed),
+   .need_reset(need_reset),
+   .sram_save(sram_save),
+   .sram_load(sram_load),
+   .msx_type(msx_type),
+   .ioctl_download(ioctl_download),
+   .ioctl_index(ioctl_index),
+   .ioctl_addr(ioctl_addr),
+   .cart_conf(cart_conf), 
+   .ddr3_addr(ddr3_addr),
+   .ddr3_rd(ddr3_rd),
+   .ddr3_wr(ddr3_wr),
+   .ddr3_dout(ddr3_dout),
+   .ddr3_din(ddr3_din),
+   .ddr3_ready(ddr3_ready),
+   .ddr3_request(ddr3_request),
+
+   .sdram_addr(sdram_addr),
+   .sdram_din(sdram_din),
+   .sdram_we(sdram_we),
+   .sdram_ready(sdram_ready),
+   .sdram_dout(sdram_dout),
+   .sdram_rd(sdram_rd),
+   .sdram_size(sdram_size),
+
+   .img_mounted(img_mounted[5:0]),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
+   .sd_lba(sd_lba[0:5]),
+   .sd_rd(sd_rd[5:0]),
+   .sd_wr(sd_wr[5:0]),
+   .sd_ack(sd_ack[5:0]),
+   .sd_buff_addr(sd_buff_addr),
+   .sd_buff_dout(sd_buff_dout),
+   .sd_buff_din(sd_buff_din[0:5]),
+   .sd_buff_wr(sd_buff_wr),
+
+   .active_slot(slot),
+   .kbd_addr(kbd_addr),
+   .kbd_din(kbd_din),
+   .kbd_we(kbd_we),
+   .kbd_request(kbd_request)
 );
 
 endmodule

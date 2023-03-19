@@ -216,9 +216,9 @@ wire      [13:0] sd_buff_addr;
 wire       [7:0] sd_buff_dout;
 wire       [7:0] sd_buff_din[0:VDNUM-1];
 wire             sd_buff_wr;
-wire [VDNUM-1:0] hps_img_mounted;
-wire      [31:0] hps_img_size;
-wire             hps_img_readonly;
+wire [VDNUM-1:0] img_mounted;
+wire      [31:0] img_size;
+wire             img_readonly;
 wire      [15:0] sdram_sz;
 wire      [64:0] rtc;
 
@@ -322,9 +322,9 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .ioctl_wr(ioctl_wr),
    .ioctl_addr(ioctl_addr),
    .ioctl_dout(ioctl_dout),
-   .img_mounted(hps_img_mounted),
-   .img_size(hps_img_size),
-   .img_readonly(hps_img_readonly),
+   .img_mounted(img_mounted),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
    .sd_lba(sd_lba),
    .sd_rd(sd_rd),
    .sd_wr(sd_wr),
@@ -382,10 +382,10 @@ wire reset = RESET | status[0] | status[10] | need_reset | config_reset;
 
 ///////////////// Computer /////////////////
 wire  [7:0] R, G, B, cpu_din, cpu_dout;
-wire [1:0]  slot;
 wire [15:0] cpu_addr, audio;
 wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
+wire        msx_type, need_reset;
 
 msx MSX
 (
@@ -395,14 +395,6 @@ msx MSX
    .ce_3m58_n(ce_3m58_n),
    .ce_10hz(ce_10hz),
    .reset(reset),
-   .cpu_addr(cpu_addr),
-   .cpu_din(cpu_din),
-   .cpu_dout(cpu_dout),
-   .cpu_wr(cpu_wr),
-   .cpu_rd(cpu_rd),
-   .cpu_mreq(cpu_mreq),
-   .cpu_iorq(cpu_iorq),
-   .cpu_m1(cpu_m1),
    .R(R),
    .G(G),
    .B(B),
@@ -411,7 +403,6 @@ msx MSX
    .VS(vsync),
    .hblank(hblank),
    .vblank(vblank),
-   .cart_sound(cart_sound),
    .audio(audio),
    .ps2_key(ps2_key),
    .joy0(joy0),
@@ -420,11 +411,44 @@ msx MSX
    .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
    .MSXconf(MSXconf),
-   .slot(slot),
-   .kbd_addr(kbd_addr),
-   .kbd_din(kbd_din),
-   .kbd_we(kbd_we),
-   .kbd_request(kbd_request)
+   .msx_type(msx_type),
+   .cart_conf(cart_conf),
+   .rom_eject(status[10]),
+   .sram_save(status[38]),
+   .sram_load(status[39]),
+   .cart_changed(cart_changed),
+   .need_reset(need_reset),
+   .ioctl_download(ioctl_download),
+   .ioctl_index(ioctl_index),
+   .ioctl_addr(ioctl_addr[26:0]),
+
+   .ddr3_addr(ddr3_addr_download),
+   .ddr3_rd(ddr3_rd_download),
+   .ddr3_wr(ddr3_wr_download),
+   .ddr3_dout(ddr3_dout),
+   .ddr3_din(ddr3_din_download),
+   .ddr3_ready(ddr3_ready),
+   .ddr3_request(ddr3_request_download),
+
+   .sdram_addr(sdram_addr),
+   .sdram_din(sdram_din),
+   .sdram_we(sdram_we),
+   .sdram_ready(sdram_ready),
+   .sdram_dout(sdram_dout),
+   .sdram_rd(sdram_rd),
+   .sdram_size(sdram_size),
+
+   .img_mounted(img_mounted[5:0]),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
+   .sd_lba(sd_lba[0:5]),
+   .sd_rd(sd_rd[5:0]),
+   .sd_wr(sd_wr[5:0]),
+   .sd_ack(sd_ack[5:0]),
+   .sd_buff_addr(sd_buff_addr),
+   .sd_buff_dout(sd_buff_dout),
+   .sd_buff_din(sd_buff_din[0:5]),
+   .sd_buff_wr(sd_buff_wr)
 );
 
 /////////////////  VIDEO  /////////////////
@@ -523,6 +547,9 @@ ddram buffer
    .*
 );
 
+wire         sdram_ready, sdram_we, sdram_rd;
+wire  [24:0] sdram_addr;
+wire   [7:0] sdram_din, sdram_dout;
 sdram sdram
 (
    .init(~locked_sdram),
@@ -536,76 +563,9 @@ sdram sdram
    .*
 );    
 
-wire               sdram_ready, sdram_download, sdram_we, sdram_rd, need_reset, msx_type;
-wire        [24:0] sdram_addr;
-wire         [7:0] sdram_din, sdram_dout;
-wire signed [15:0] cart_sound;
-wire         [9:0] kbd_addr;
-wire         [7:0] kbd_din;
-wire               kbd_we;
-wire               kbd_request;
 
-msx_slots msx_slots
-(
-   .clk(clk21m),
-   .clk_en(ce_3m58_p),
-   .reset(reset),
-  
-   .cpu_addr(cpu_addr),
-   .cpu_din(cpu_din),
-   .cpu_dout(cpu_dout),
-   .cpu_iorq(cpu_iorq),
-   .cpu_m1(cpu_m1),
-   .cpu_mreq(cpu_mreq),
-   .cpu_rd(cpu_rd),
-   .cpu_wr(cpu_wr),
-   .sound(cart_sound),
-   .rom_eject(status[10]),
-   .cart_changed(cart_changed),
-   .need_reset(need_reset),
-   .sram_save(status[38]),
-   .sram_load(status[39]),
-   .msx_type(msx_type),
-   .ioctl_download(ioctl_download),
-   .ioctl_index(ioctl_index),
-   .ioctl_addr(ioctl_addr[26:0] ),
-   .cart_conf(cart_conf),
-   
-   .ddr3_addr(ddr3_addr_download),
-   .ddr3_rd(ddr3_rd_download),
-   .ddr3_wr(ddr3_wr_download),
-   .ddr3_dout(ddr3_dout),
-   .ddr3_din(ddr3_din_download),
-   .ddr3_ready(ddr3_ready),
-   .ddr3_request(ddr3_request_download),
 
-   .sdram_addr(sdram_addr),
-   .sdram_din(sdram_din),
-   .sdram_we(sdram_we),
-   //.sdram_download(sdram_download),
-   .sdram_ready(sdram_ready),
-   .sdram_dout(sdram_dout),
-   .sdram_rd(sdram_rd),
-   .sdram_size(sdram_size),
 
-   .img_mounted(hps_img_mounted[5:0]),
-   .img_size(hps_img_size),
-   .img_readonly(hps_img_readonly),
-   .sd_lba(sd_lba[0:5]),
-   .sd_rd(sd_rd[5:0]),
-   .sd_wr(sd_wr[5:0]),
-   .sd_ack(sd_ack[5:0]),
-   .sd_buff_addr(sd_buff_addr),
-   .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[0:5]),
-   .sd_buff_wr(sd_buff_wr),
-
-   .active_slot(slot),
-   .kbd_addr(kbd_addr),
-   .kbd_din(kbd_din),
-   .kbd_we(kbd_we),
-   .kbd_request(kbd_request)
-);
 
 ///////////////// CAS EMULATE /////////////////
 wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;
