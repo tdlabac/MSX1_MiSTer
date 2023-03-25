@@ -1,23 +1,3 @@
-
-/*
-parameter MAPPER_NO_UNKNOWN = 6'd0;
-parameter MAPPER_ASCII8     = 6'd1;
-parameter MAPPER_ASCII16    = 6'd2;
-parameter MAPPER_KONAMI     = 6'd3;
-parameter MAPPER_KONAMI_SCC = 6'd4;
-parameter MAPPER_KOEI       = 6'd5;
-parameter MAPPER_LINEAR     = 6'd5;
-parameter MAPPER_R_TYPE     = 6'd7;
-parameter MAPPER_WIZARDRY   = 6'd8;
-
-parameter CART_TYPE_ROM     = 3'd0;
-parameter CART_TYPE_SCC     = 3'd1;
-parameter CART_TYPE_SCC2    = 3'd2;
-parameter CART_TYPE_FM_PAC  = 3'd3;
-parameter CART_TYPE_GM2     = 3'd4;
-parameter CART_TYPE_FDC     = 3'd5;
-parameter CART_TYPE_EMPTY   = 3'd6;
-*/
 parameter IMG_SRAM          = 4'd0;
 parameter IMG_SRAM_A        = 4'd1;
 parameter IMG_SRAM_B        = 4'd2;

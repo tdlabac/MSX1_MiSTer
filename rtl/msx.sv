@@ -113,7 +113,7 @@ t80pa #(.Mode(0)) T80
 //  -----------------------------------------------------------------------------
 wire exwait_n = 1;
 
-reg wait_n = 1'b0;
+logic wait_n = 1'b0;
 always @(posedge clk21m, negedge exwait_n, negedge u1_2_q) begin
    if (~exwait_n)
       wait_n <= 1'b0;
@@ -123,7 +123,7 @@ always @(posedge clk21m, negedge exwait_n, negedge u1_2_q) begin
       wait_n <= m1_n;
 end
 
-reg u1_2_q = 1'b0;
+logic u1_2_q = 1'b0;
 always @(posedge clk21m, negedge exwait_n) begin
    if (~exwait_n)
       u1_2_q <= 1'b1;
@@ -135,7 +135,7 @@ end
 //  -- MSX1 / MSX2 handler
 //  -----------------------------------------------------------------------------
 
-reg map_valid = 0;
+logic map_valid = 0;
 wire ppi_en = ~ppi_n;
 wire [1:0] slot;
 
@@ -222,7 +222,7 @@ wire [5:0] joyB = joy_b & {psg_iob[2], psg_iob[3], 4'b1111};
 assign psg_ioa = {cas_audio_in,1'b0, psg_iob[6] ? joyB : joyA};
 wire [9:0] ay_ch_mix;
 
-reg u21_1_q = 1'b0;
+logic u21_1_q = 1'b0;
 always @(posedge clk21m,  posedge psg_n) begin
    if (psg_n)
       u21_1_q <= 1'b0;
@@ -230,7 +230,7 @@ always @(posedge clk21m,  posedge psg_n) begin
       u21_1_q <= ~psg_n;
 end
 
-reg u21_2_q = 1'b0;
+logic u21_2_q = 1'b0;
 always @(posedge clk21m, posedge psg_n) begin
    if (psg_n)
       u21_2_q <= 1'b0;
@@ -314,7 +314,7 @@ assign VRAM_do        = vdp18 ? VRAM_do_vdp18               : VRAM_do_vdp;
 assign VRAM_we_lo_vdp = ~VRAM_we_n_vdp & DLClk_vdp & ~VRAM_address_vdp[16];
 assign VRAM_we_hi_vdp = ~VRAM_we_n_vdp & DLClk_vdp &  VRAM_address_vdp[16];
 
-reg iack;
+logic iack;
 always @(posedge clk21m) begin
    if (reset) iack <= 0;
    else begin

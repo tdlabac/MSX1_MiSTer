@@ -389,39 +389,16 @@ wire        msx_type, need_reset;
 
 msx MSX
 (
-   .clk21m(clk21m),
-   .ce_10m7_p(ce_10m7_p),
-   .ce_3m58_p(ce_3m58_p),
-   .ce_3m58_n(ce_3m58_n),
-   .ce_10hz(ce_10hz),
-   .reset(reset),
-   .R(R),
-   .G(G),
-   .B(B),
    .HS(hsync),
    .DE(blank_n),
    .VS(vsync),
-   .hblank(hblank),
-   .vblank(vblank),
-   .audio(audio),
-   .ps2_key(ps2_key),
-   .joy0(joy0),
-   .joy1(joy1),
    .cas_motor(motor),
    .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
-   .MSXconf(MSXconf),
-   .msx_type(msx_type),
-   .cart_conf(cart_conf),
    .rom_eject(status[10]),
    .sram_save(status[38]),
    .sram_load(status[39]),
-   .cart_changed(cart_changed),
-   .need_reset(need_reset),
-   .ioctl_download(ioctl_download),
-   .ioctl_index(ioctl_index),
    .ioctl_addr(ioctl_addr[26:0]),
-
    .ddr3_addr(ddr3_addr_download),
    .ddr3_rd(ddr3_rd_download),
    .ddr3_wr(ddr3_wr_download),
@@ -429,15 +406,6 @@ msx MSX
    .ddr3_din(ddr3_din_download),
    .ddr3_ready(ddr3_ready),
    .ddr3_request(ddr3_request_download),
-
-   .sdram_addr(sdram_addr),
-   .sdram_din(sdram_din),
-   .sdram_we(sdram_we),
-   .sdram_ready(sdram_ready),
-   .sdram_dout(sdram_dout),
-   .sdram_rd(sdram_rd),
-   .sdram_size(sdram_size),
-
    .img_mounted(img_mounted[5:0]),
    .img_size(img_size),
    .img_readonly(img_readonly),
@@ -448,7 +416,8 @@ msx MSX
    .sd_buff_addr(sd_buff_addr),
    .sd_buff_dout(sd_buff_dout),
    .sd_buff_din(sd_buff_din[0:5]),
-   .sd_buff_wr(sd_buff_wr)
+   .sd_buff_wr(sd_buff_wr),
+   .*
 );
 
 /////////////////  VIDEO  /////////////////
@@ -562,10 +531,6 @@ sdram sdram
    .ready(sdram_ready),
    .*
 );    
-
-
-
-
 
 ///////////////// CAS EMULATE /////////////////
 wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;
