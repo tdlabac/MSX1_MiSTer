@@ -175,7 +175,6 @@ module emu
 assign ADC_BUS  = 'Z;
 assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
-assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 
 assign VGA_F1 = 0;
 assign VGA_SCALER  = 0;
@@ -192,7 +191,7 @@ assign LED_POWER = 0;
 assign LED_USER = 0;
 assign BUTTONS = 0;
 
-localparam VDNUM = 6;
+localparam VDNUM = 7;
 
 MSX::config_t    MSXconf;
 MSX::config_cart_t cart_conf[2];
@@ -417,7 +416,67 @@ msx MSX
    .sd_buff_dout(sd_buff_dout),
    .sd_buff_din(sd_buff_din[0:5]),
    .sd_buff_wr(sd_buff_wr),
+   //SD CARD
+   .mmc_sck(sdclk),
+   .mmc_mosi(sdmosi),
+   .mmc_cs(sdss),
+   .mmc_miso(sdmiso),
    .*
+);
+
+//////////////////   SD   ///////////////////
+wire sdclk;
+wire sdmosi;
+wire vsdmiso;
+wire sdmiso = vsd_sel ? vsdmiso : SD_MISO;
+wire sdss;
+
+reg vsd_sel = 0;
+always @(posedge clk21m) if(img_mounted) vsd_sel <= |img_size;
+
+assign SD_CS   = sdss   |  vsd_sel;
+assign SD_SCK  = sdclk  & ~vsd_sel;
+assign SD_MOSI = sdmosi & ~vsd_sel;
+
+reg sd_act;
+
+always @(posedge clk21m) begin
+    reg old_mosi, old_miso;
+    integer timeout = 0;
+
+    old_mosi <= sdmosi;
+    old_miso <= sdmiso;
+
+    sd_act <= 0;
+    if(timeout < 1000000) begin
+        timeout <= timeout + 1;
+        sd_act <= 1;
+    end
+
+    if((old_mosi ^ sdmosi) || (old_miso ^ sdmiso)) timeout <= 0;
+end
+
+sd_card sd_card
+(
+    .*,
+    .clk_sys(clk21m),
+    .reset(reset),
+    .img_mounted(img_mounted[6]),
+    .img_size(img_size[6]),
+    .sd_lba(sd_lba[6]),
+    .sd_rd(sd_rd[6]),
+    .sd_wr(sd_wr[6]),
+    .sd_ack(sd_ack[6]),
+    .sd_buff_addr(sd_buff_addr),
+    .sd_buff_dout(sd_buff_dout),
+    .sd_buff_din(sd_buff_din[6]),
+    .sd_buff_wr(sd_buff_wr),
+    .clk_spi(clk_sdram),
+    .sdhc(1),
+    .sck(sdclk),
+    .ss(sdss | ~vsd_sel),
+    .mosi(sdmosi),
+    .miso(vsdmiso)
 );
 
 /////////////////  VIDEO  /////////////////

@@ -56,17 +56,22 @@ module msx
    input              [7:0] sdram_dout,
    input              [1:0] sdram_size,
    //SD FDC
-   input                 [5:0] img_mounted,
-   input                [31:0] img_size,
-   input                       img_readonly,
-   output               [31:0] sd_lba[6],
-   output                [5:0] sd_rd,
-   output                [5:0] sd_wr,
-   input                 [5:0] sd_ack,
-   input                [13:0] sd_buff_addr,
-   input                 [7:0] sd_buff_dout,
-   output                [7:0] sd_buff_din[6],
-   input                       sd_buff_wr   
+   input              [5:0] img_mounted,
+   input             [31:0] img_size,
+   input                    img_readonly,
+   output            [31:0] sd_lba[6],
+   output             [5:0] sd_rd,
+   output             [5:0] sd_wr,
+   input              [5:0] sd_ack,
+   input             [13:0] sd_buff_addr,
+   input              [7:0] sd_buff_dout,
+   output             [7:0] sd_buff_din[6],
+   input                    sd_buff_wr,
+  // SD/MMC slot ports
+   output                   mmc_sck,
+   output                   mmc_cs,
+   output                   mmc_mosi,
+   input                    mmc_miso
 );
 
 //  -----------------------------------------------------------------------------
@@ -485,5 +490,35 @@ msx_slots msx_slots
    .kbd_we(kbd_we),
    .kbd_request(kbd_request)
 );
+/*
+megasd megasd
+(
+   .clk21m(clk21m), 
+   .reset(reset), 
+   .clkena(ce_3m58_p), 
+   .req    => ErmReq, 
+   .ack(),
+   .wrt    => wrt, 
+   .adr    => adr, 
+   .dbi    => open, 
+   .dbo    => dbo,
+   .ramreq => ErmRam, 
+   .ramwrt => ErmWrt, 
+   .ramadr => ErmAdr, 
+   .ramdbi => RamDbi, 
+   .ramdbo(),
+   .mmcdbi => MmcDbi, 
+   .mmcena => MmcEna, 
+   .mmcact => MmcAct, 
+   .mmc_ck(mmc_sck), 
+   .mmc_cs(mmc_cs), 
+   .mmc_di(mmc_mosi), 
+   .mmc_do(mmc_miso),
+   .epc_ck(), 
+   .epc_cs(), 
+   .epc_oe(), 
+   .epc_di(), 
+   .epc_do(1'b0)
+); */
 
 endmodule

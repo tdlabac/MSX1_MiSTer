@@ -1,6 +1,6 @@
 parameter CONF_STR_SLOT_A = {
-    "h2O[19:17],SLOT A,ROM,SCC,SCC+,FM-PAC,GameMaster2,FDC,Empty;",
-    "H2O[19:17],SLOT A,ROM,SCC,SCC+,FM-PAC,GameMaster2,Empty;"
+    "h2O[19:17],SLOT A,ROM,SCC,SCC+,FM-PAC,MegaFlashROM SCC+ SD,GameMaster2,FDC,Empty;",
+    "H2O[19:17],SLOT A,ROM,SCC,SCC+,FM-PAC,MegaFlashROM SCC+ SD,GameMaster2,Empty;"
 };
 parameter CONF_STR_SLOT_B = {
     "O[31:29],SLOT B,ROM,SCC,SCC+,FM-PAC,Empty;"
@@ -55,24 +55,24 @@ wire [2:0] sram_A_select   = HPS_status[28:26];
 wire [3:0] mapper_A_select = HPS_status[23:20];
 wire [3:0] mapper_B_select = HPS_status[34:32]; 
 
-assign cart_conf[0].typ = cart_typ_t'(slot_A_select < 3'd5  ? slot_A_select   :
-                                      MSXconf.typ == MSX2   ? CART_TYP_EMPTY  :
-                                      slot_A_select == 3'd5 ? CART_TYP_FDC    :
-                                                              CART_TYP_EMPTY );
+assign cart_conf[0].typ = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
+                                      MSXconf.typ == MSX2           ? CART_TYP_EMPTY  :
+                                      slot_A_select == CART_TYP_FDC ? CART_TYP_FDC    :
+                                                                      CART_TYP_EMPTY );
 
-assign cart_conf[1].typ    = cart_typ_t'(slot_B_select < 3'd4  ? slot_B_select : CART_TYP_EMPTY );
+assign cart_conf[1].typ    = cart_typ_t'(slot_B_select < CART_TYP_MFRSD ? slot_B_select : CART_TYP_EMPTY );
 assign cart_conf[0].mapper = mapper_typ_t'(mapper_A_select == 4'd9 ? MAPPER_NO_UNKNOWN : {2'b00, mapper_A_select});
 assign cart_conf[1].mapper = mapper_typ_t'(mapper_B_select == 4'd9 ? MAPPER_NO_UNKNOWN : {2'b00,mapper_B_select});
 
 assign sram_A_select_hide = cart_conf[0].typ != CART_TYP_ROM | mapper_A_select == 4'd0; 
 assign sram_size[0] = cart_conf[0].typ == CART_TYP_FM_PAC ? 3'd4                  :
                       cart_conf[0].typ == CART_TYP_GM2    ? 3'd4                  :
-                      sram_A_select == 3'd7            ? 3'd0                  :                     
-                      sram_A_select_hide               ? sram_size_detected[0] :
-                      sram_A_select == 3'd0            ? sram_size_detected[0] :
-                      sdram_size > 2'd0                ? sram_A_select         :
-                      sram_A_select <= 3'd6            ? sram_A_select         :
-                                                         3'd4                  ; //8kB
+                      sram_A_select == 3'd7               ? 3'd0                  :                     
+                      sram_A_select_hide                  ? sram_size_detected[0] :
+                      sram_A_select == 3'd0               ? sram_size_detected[0] :
+                      sdram_size > 2'd0                   ? sram_A_select         :
+                      sram_A_select <= 3'd6               ? sram_A_select         :
+                                                            3'd4                  ; //8kB
 
 assign sram_size[1] = cart_conf[1].typ == CART_TYP_FM_PAC ? 3'd4                  :
                                                             3'd0                  ;
