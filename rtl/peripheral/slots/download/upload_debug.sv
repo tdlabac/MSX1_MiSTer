@@ -51,8 +51,8 @@ module upload_debug
                      endcase
                   3'd1:
                      case (addr[3:0])
-                        4'd0:  ddr3_din <= 5'd0;
-                        4'd1:  ddr3_din <= memory_block[addr[7:4]].block_count;
+                        4'd0:  ddr3_din <= memory_block[addr[7:4]].block_count[9:8];
+                        4'd1:  ddr3_din <= memory_block[addr[7:4]].block_count[7:0];
                         4'd2:  ddr3_din <= memory_block[addr[7:4]].mem_offset[23:16];
                         4'd3:  ddr3_din <= memory_block[addr[7:4]].mem_offset[15:8];
                         4'd4:  ddr3_din <= memory_block[addr[7:4]].mem_offset[7:0];
@@ -107,11 +107,12 @@ module upload_debug
                      endcase
                   3'd4:
                      case (addr[2:0])
-                        3'd0:  ddr3_din <= fw_store[addr[5:3]].block_count;
-                        3'd1:  ddr3_din <= fw_store[addr[5:3]].store_address[23:16];
-                        3'd2:  ddr3_din <= fw_store[addr[5:3]].store_address[15:8];
-                        3'd3:  ddr3_din <= fw_store[addr[5:3]].store_address[7:0];
-                        3'd4:  ddr3_din <= fw_store[addr[5:3]].sram_block_count;
+                        3'd0:  ddr3_din <= fw_store[addr[5:3]].block_count[9:8];
+                        3'd1:  ddr3_din <= fw_store[addr[5:3]].block_count[7:0];
+                        3'd2:  ddr3_din <= fw_store[addr[5:3]].store_address[23:16];
+                        3'd3:  ddr3_din <= fw_store[addr[5:3]].store_address[15:8];
+                        3'd4:  ddr3_din <= fw_store[addr[5:3]].store_address[7:0];
+                        3'd5:  ddr3_din <= fw_store[addr[5:3]].sram_block_count;
                         default: ddr3_din <= 8'd0;
                      endcase
                   default:  ddr3_din <= 8'd0;

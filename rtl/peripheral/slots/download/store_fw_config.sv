@@ -36,7 +36,7 @@ module store_fw_config #(parameter MAX_FW_ROM = 8)
       case(state)
          STATE_SLEEP: begin
             if (last_ioctl_download & ~ioctl_download & ioctl_index[5:0] == 6'd2) begin
-               start_addr  <= 28'h500000;
+               start_addr  <= 28'h100000;
                addr        <= 24'b0;
                fw_store_id <= 3'd0;
                state       <= STATE_CLEAN;
@@ -65,17 +65,18 @@ module store_fw_config #(parameter MAX_FW_ROM = 8)
                head_addr <= head_addr + 1'b1;
                ddr3_rd   <= 1'd1;
                case(head_addr)
-                  4'h0 : if (ddr3_dout != "M") state       <= STATE_SLEEP;
-                  4'h1 : if (ddr3_dout != "S") state       <= STATE_SLEEP;
-                  4'h2 : if (ddr3_dout != "X") state       <= STATE_SLEEP;
-                  4'h4 : fw_store_id                       <= ddr3_dout[2:0];
+                  4'h0 : if (ddr3_dout != "M") state            <= STATE_SLEEP;
+                  4'h1 : if (ddr3_dout != "S") state            <= STATE_SLEEP;
+                  4'h2 : if (ddr3_dout != "X") state            <= STATE_SLEEP;
+                  4'h4 : fw_store_id                            <= ddr3_dout[2:0];
+                  4'h5 : fw_store[fw_store_id].block_count[9:8] <= ddr3_dout[1:0];
                   4'h6 : begin
-                     fw_store[fw_store_id].block_count <= ddr3_dout;
+                     fw_store[fw_store_id].block_count[7:0] <= ddr3_dout;
                      fw_store[fw_store_id].sram_block_count <= fw_store_id == CART_TYP_FM_PAC ? 8'd2 :
                                                                fw_store_id == CART_TYP_GM2    ? 8'd4 :
                                                                                                 8'd0 ;
                      fw_store[fw_store_id].store_address    <= start_addr + addr + 5'h10;
-                     addr                                   <= addr + 5'h10 + (ddr3_dout << 14);
+                     addr                                   <= addr + 5'h10 + ({fw_store[fw_store_id].block_count[9:8], ddr3_dout} << 14);
                      state                                  <= STATE_PARSE;
                   end
                endcase

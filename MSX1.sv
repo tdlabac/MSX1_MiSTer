@@ -247,7 +247,7 @@ localparam CONF_STR = {
    "MSX1;",
    "-;",
    "FSC1,MSX,Load ROM PACK,30000000;",
-   "FSC2,MSX,Load FW  PACK,30500000;",
+   "FSC2,MSX,Load FW  PACK,30100000;",   
    //"O[11],MSX type,MSX2,MSX1;",
    CONF_STR_SLOT_A,
    "H3FS3,ROM,Load,30A00000;",

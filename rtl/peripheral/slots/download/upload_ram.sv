@@ -209,7 +209,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               msx_slots.mem_block[act_slot][act_subslot][act_block].offset   <= 2'd0;
                               msx_slots.mem_block[act_slot][act_subslot][act_block].init     <= 1'b1;
                               start_addr  <= act_config_typ == CONFIG_CART_A ? 28'hA00000 : 28'hF00000;
-                              memory_block[act_block_id].block_count <= 8'(ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14);
+                              memory_block[act_block_id].block_count <= 10'(ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14);
                               memory_block[act_block_id].mem_offset <= sdram_addr;
                               ddr3_rd <= 1'b1;                     
                               addr <= 24'd0;
@@ -227,7 +227,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         end
                         default: begin
                            next_state <= STATE_FILL_NEXT;
-                           if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count > 8'd0) begin
+                           if (fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count > 10'd0) begin
                               if (cart_conf[act_config_typ == CONFIG_CART_A] == cart_conf[act_config_typ == CONFIG_CART_B] & share_fw_id > 0) begin
                                  msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= share_fw_id;
                                  state <= STATE_FILL_NEXT;
@@ -278,7 +278,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                   if (sdram_size == 2'd0) sdram_addr <= sdram_addr + 1'b1;
                end
                if (~bram_we) begin
-                  if (addr[21:0] > {sram_block[act_config_typ == CONFIG_CART_B].block_count - 1'b1, 14'h3FFF} ) begin
+                  if (addr[23:0] > {sram_block[act_config_typ == CONFIG_CART_B].block_count - 1'b1, 14'h3FFF} ) begin
                      state <= next_state;
                      addr <= 24'd0;
                   end else begin
@@ -294,7 +294,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                end
                if (ddr3_ready & ~ddr3_rd) begin
                   if (sdram_ready & ~sdram_we) begin
-                     if (addr[21:0] > {memory_block[act_block_id].block_count - 1'b1, 14'h3FFF} ) begin
+                     if (addr[23:0] > {memory_block[act_block_id].block_count - 1'b1, 14'h3FFF} ) begin
                         if (act_config_typ == CONFIG_CART_A | act_config_typ == CONFIG_CART_B) begin
                            rom_info[act_config_typ == CONFIG_CART_B].offset <= detect_offset;
                            rom_info[act_config_typ == CONFIG_CART_B].size   <= detect_rom_size;
@@ -323,7 +323,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                end
                if (ddr3_ready & ~ddr3_rd) begin
                   if (~kbd_we) begin
-                     if (addr[21:0] == 22'h200 ) begin
+                     if (addr[23:0] == 24'h200 ) begin
                         state <= STATE_FILL_NEXT;
                      end else begin
                         kbd_din <= ddr3_dout;

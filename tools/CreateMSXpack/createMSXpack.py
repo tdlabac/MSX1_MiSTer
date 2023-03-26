@@ -8,7 +8,7 @@ ROM_DIR = 'ROM'
 XML_DIR_COMP = 'Computer'
 XML_DIR_FW = 'Extension'
 BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
-EXTENSIONS  = ["ROM", "SCC", "SCC2", "FM_PAC", "GM2", "FDC", "EMPTY" ]
+EXTENSIONS  = ["ROM", "SCC", "SCC2", "FM_PAC", "MEGA_FLASH_ROM_SCC_SD", "GM2", "FDC", "EMPTY" ]
 MSX_TYPES = ["MSX1", "MSX2"]
 
 
@@ -52,8 +52,8 @@ def create_FW_block(type, size):
     head.extend('MSX'.encode('ascii'))
     head.append(0)
     head.append(type)
-    head.append(0)
-    head.append(size)
+    head.append(size >> 8)
+    head.append(size & 255)
     head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'))
     return head
 
@@ -142,7 +142,6 @@ def parseDir(dir) :
 
                 tree = ET.parse(filepath)
                 root = tree.getroot()
-                print(output_filename)
                 outfile = open(output_filename, "wb")               
                 error = True
                 if root.tag == "msxConfig" :

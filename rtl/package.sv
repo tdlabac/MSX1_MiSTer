@@ -59,7 +59,7 @@ package MSX;
     } msx_slots_t;
 
     typedef struct {
-        logic  [7:0] block_count;        //delka
+        logic  [9:0] block_count;        //delka
         logic [24:0] mem_offset;         //Umisteni SDRAM/BRAM
     } block_t;    
     
@@ -87,7 +87,7 @@ package MSX;
 
     typedef struct {
         logic [27:0] store_address;      //Store DDR3
-        logic  [7:0] block_count;
+        logic  [9:0] block_count;
         logic  [7:0] sram_block_count;
     } fw_rom_t;
 
