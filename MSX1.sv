@@ -261,6 +261,7 @@ localparam CONF_STR = {
    "H6R[39],SRAM Load;",
    "h1-;",
    "h1S5,DSK,Mount Drive A:;",
+   "S6,VHD,Load SD card;",
    "-;",
    "O[8],Tape Input,File,ADC;",
    "H0F5,CAS,Cas File,31400000;",
@@ -417,10 +418,10 @@ msx MSX
    .sd_buff_din(sd_buff_din[0:5]),
    .sd_buff_wr(sd_buff_wr),
    //SD CARD
-   .mmc_sck(sdclk),
-   .mmc_mosi(sdmosi),
-   .mmc_cs(sdss),
-   .mmc_miso(sdmiso),
+	.spi_ss(sdss),
+	.spi_clk(sdclk),
+	.spi_di(sdmiso),
+	.spi_do(sdmosi),
    .*
 );
 
@@ -460,7 +461,6 @@ sd_card sd_card
 (
     .*,
     .clk_sys(clk21m),
-    .reset(reset),
     .img_mounted(img_mounted[6]),
     .img_size(img_size[6]),
     .sd_lba(sd_lba[6]),
@@ -471,7 +471,8 @@ sd_card sd_card
     .sd_buff_dout(sd_buff_dout),
     .sd_buff_din(sd_buff_din[6]),
     .sd_buff_wr(sd_buff_wr),
-    .clk_spi(clk_sdram),
+    
+    .clk_spi(clk21m),
     .sdhc(1),
     .sck(sdclk),
     .ss(sdss | ~vsd_sel),

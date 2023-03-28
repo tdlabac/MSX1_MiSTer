@@ -20,7 +20,12 @@ module cart_rom
     input MSX::rom_info_t    rom_info[2],
     output            [24:0] mem_addr,
     output                   sram_oe,
-    output                   sram_we
+    output                   sram_we,
+        // SD/MMC SPI
+    output reg               spi_ss,
+    output                   spi_clk,
+    input                    spi_di,
+    output                   spi_do
 );
 wire [24:0] mem_addr_konami, mem_addr_konami_scc, mem_addr_ascii8, mem_addr_ascii16, mem_addr_gm2, mem_addr_linear, mem_addr_none, mem_addr_fmPAC;
 wire        en_konami, en_konami_scc, en_ascii8, en_ascii16, en_gm2, en_linear, en_fmPAC, en_scc, en_scc2, en_fdc, en_none;
@@ -52,6 +57,7 @@ assign sram_we = sram_we_fmPAc | sram_we_gm2 | sram_we_ascii8 | sram_we_ascii16 
 assign d_to_cpu    = scc_oe                      ? d_to_cpu_scc   :
                      fmPac_oe                    ? d_to_cpu_fmPAC :
                      mfrsd_oe                    ? ~mapper_slot   :
+                     sdcard_oe                   ? d_from_sd      :
                                                    8'hFF          ; 
 assign cart_oe     = fmPac_oe | scc_oe | mfrsd_oe | (MFRSD & subSlot == 2'd2 & ~mfrsd_addr_valid) ; 
 
@@ -189,20 +195,42 @@ assign {mfrsd_addr, mfrsd_addr_valid} = subSlot == 2'b00 ? {addr[13:0],1'b1}    
                                                                        26'd0                  ;
 
 wire mfrsd_oe = mapper_en & rd & mreq;
-                                                
 
+wire sd_card_en = subSlot3_en & bankRegsSubSlot3[0][7:6] == 2'b01 & addr[15:13] == 3'b010; // 4000 - 5FFF
+wire sdcard_oe  = sd_card_en & mreq & rd;
 
+logic sd_rx, sd_tx;
+always @(posedge clk) begin
+   logic old_wr, old_rd, select_sd = 0;
+   sd_rx <= 1'b0;
+   sd_tx <= 1'b0;
+   if (~old_rd & mreq & rd) sd_rx <= ~select_sd & addr[12];
+   if (~old_wr & mreq & wr) begin
+      if (addr[15:11] == 5'b01011) // >= 5800
+         select_sd <= d_from_cpu[0];
+      else
+         sd_tx <= ~select_sd & addr[12];
+   end
+   old_rd <= rd;
+   old_wr <= wr;
+end
 
+// SPI
+wire [7:0] d_from_sd;
+spi_divmmc spi
+(
+   .clk_sys(clk),
+   .tx(sd_tx),
+   .rx(sd_rx),
+   .din(d_from_cpu),
+   .dout(d_from_sd),
+   .ready(),
 
-
-
-
-
-
-
-
-
-
+   .spi_ce(1'b1),
+   .spi_clk(spi_clk),
+   .spi_di(spi_di),
+   .spi_do(spi_do)
+);
 
 cart_mapper_decoder decoder
 (
@@ -299,5 +327,46 @@ cart_fm_pac fmPAC
     .sound(sound_fmpac),
     .*
 );
+
+endmodule
+
+// SPI module
+module spi_divmmc
+(
+	input        clk_sys,
+	output       ready,
+
+	input        tx,        // Byte ready to be transmitted
+	input        rx,        // request to read one byte
+	input  [7:0] din,
+	output [7:0] dout,
+
+	input        spi_ce,
+	output       spi_clk,
+	input        spi_di,
+	output       spi_do
+);
+
+assign    ready   = counter[4];
+assign    spi_clk = counter[0];
+assign    spi_do  = io_byte[7]; // data is shifted up during transfer
+assign    dout    = data;
+
+reg [4:0] counter = 5'b10000;  // tx/rx counter is idle
+reg [7:0] io_byte, data;
+
+always @(posedge clk_sys) begin
+	if(counter[4]) begin
+		if(rx | tx) begin
+			counter <= 0;
+			data    <= io_byte;
+			io_byte <= tx ? din : 8'hff;
+		end
+	end
+	else if (spi_ce) begin
+		if(spi_clk) io_byte <= { io_byte[6:0], spi_di };
+		counter <= counter + 2'd1;
+	end
+end
 
 endmodule

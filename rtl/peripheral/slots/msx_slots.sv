@@ -60,7 +60,11 @@ module msx_slots
    output                [7:0] sd_buff_din[6],
    input                       sd_buff_wr,
 
-   input                 [1:0] active_slot
+   input                 [1:0] active_slot,
+   output                      spi_ss,
+   output                      spi_clk,
+   input                       spi_di,
+   output                      spi_do
 );
 
 //Unused port
@@ -222,7 +226,8 @@ cart_rom cart_rom
    .sram_oe(sram_oe),
    .sram_we(sram_we),
    .cart_oe(cart_output_en),
-   .sound(sound)
+   .sound(sound),
+   .*
 );
 
 wire  [7:0] msx2_ram_bank, msx2_mapper_dout;
