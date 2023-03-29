@@ -59,7 +59,7 @@ assign d_to_cpu    = scc_oe                      ? d_to_cpu_scc   :
                      mfrsd_oe                    ? ~mapper_slot   :
                      sdcard_oe                   ? d_from_sd      :
                                                    8'hFF          ; 
-assign cart_oe     = fmPac_oe | scc_oe | mfrsd_oe | (MFRSD & subSlot == 2'd2 & ~mfrsd_addr_valid) ; 
+assign cart_oe     = fmPac_oe | scc_oe | mfrsd_oe | sdcard_oe | (MFRSD & subSlot == 2'd2 & ~mfrsd_addr_valid) ; 
 
 assign sound_A = cart_conf[0].typ == CART_TYP_FM_PAC       ? sound_fmpac[0] :
                  cart_conf[0].typ == CART_TYP_SCC          ? sound_scc[0]   :
@@ -204,12 +204,12 @@ always @(posedge clk) begin
    logic old_wr, old_rd, select_sd = 0;
    sd_rx <= 1'b0;
    sd_tx <= 1'b0;
-   if (~old_rd & mreq & rd) sd_rx <= ~select_sd & addr[12];
-   if (~old_wr & mreq & wr) begin
+   if (~old_rd & mreq & rd & sd_card_en) sd_rx <= ~select_sd & ~addr[12];
+   if (~old_wr & mreq & wr & sd_card_en) begin
       if (addr[15:11] == 5'b01011) // >= 5800
          select_sd <= d_from_cpu[0];
       else
-         sd_tx <= ~select_sd & addr[12];
+         sd_tx <= ~select_sd & ~addr[12];
    end
    old_rd <= rd;
    old_wr <= wr;

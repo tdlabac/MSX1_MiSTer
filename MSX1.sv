@@ -462,7 +462,7 @@ sd_card sd_card
     .*,
     .clk_sys(clk21m),
     .img_mounted(img_mounted[6]),
-    .img_size(img_size[6]),
+    .img_size(img_size),
     .sd_lba(sd_lba[6]),
     .sd_rd(sd_rd[6]),
     .sd_wr(sd_wr[6]),
@@ -472,7 +472,7 @@ sd_card sd_card
     .sd_buff_din(sd_buff_din[6]),
     .sd_buff_wr(sd_buff_wr),
     
-    .clk_spi(clk21m),
+    .clk_spi(clk_sdram),
     .sdhc(1),
     .sck(sdclk),
     .ss(sdss | ~vsd_sel),
