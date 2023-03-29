@@ -147,7 +147,7 @@ always @(posedge clk_sys) begin
 		csd_sdhc <= sdhc;
 		if (sdhc) begin
 			csd_size[0]     <= 0;
-			csd_size[22:1]  <= img_size[40:19]; // in 512K units
+			csd_size[22:1]  <= (img_size[40:19] - 1'b1); // in 512K units
 			csd_size[26:23] <= 0;
 		end
 		else begin
@@ -275,7 +275,7 @@ always @(posedge clk_spi) begin
 				// send data
 				RD_STATE_SEND_DATA: begin
 
-					miso <= (cmd == 9) ? CSD[{buffer_ptr[3:0],~bit_cnt} -:SZ] : (cmd == 10) ? CID[{buffer_ptr[3:0],~bit_cnt} -:SZ] : buffer_dout[~bit_cnt -:SZ];
+					miso <= (cmd == 9) ? CSD[{~buffer_ptr[3:0],~bit_cnt} -:SZ] : (cmd == 10) ? CID[{buffer_ptr[3:0],~bit_cnt} -:SZ] : buffer_dout[~bit_cnt -:SZ];
 
 					if(last_bit) begin
 
