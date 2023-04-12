@@ -55,6 +55,12 @@ module msx
    input                    sdram_ready,
    input              [7:0] sdram_dout,
    input              [1:0] sdram_size,
+   
+   output            [24:0] dw_sdram_addr,
+   output             [7:0] dw_sdram_din,
+   output                   dw_sdram_we,
+   input                    dw_sdram_ready,
+
    //SD FDC
    input              [5:0] img_mounted,
    input             [31:0] img_size,

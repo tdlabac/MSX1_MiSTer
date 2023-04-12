@@ -41,6 +41,12 @@ module msx_slots
    input                       sdram_ready,
    input                 [7:0] sdram_dout,
    input                 [1:0] sdram_size,
+
+   output               [24:0] dw_sdram_addr,
+   output                [7:0] dw_sdram_din,
+   output                      dw_sdram_we,
+   input                       dw_sdram_ready,
+
    //KBD LAYOUT
    output                [9:0] kbd_addr,
    output                [7:0] kbd_din,
@@ -127,10 +133,12 @@ assign mem_addr     = offset + (slot_typ == SLOT_TYP_RAM      ? {block_offset, c
                                 slot_typ == SLOT_TYP_CART_B   ? mem_cart_rom                     :
                                                                 {block_offset, cpu_addr[13:0]})  ;
 
-assign sdram_addr = dw_sdram_upload              ? dw_sdram_addr             : mem_addr;
-assign sdram_din  = dw_sdram_upload              ? dw_sdram_din              : cpu_dout;
-assign sdram_we   = dw_sdram_upload              ? dw_sdram_we               : cpu_we & ~mapper_en & ~sram_oe;
-assign sdram_rd   = dw_sdram_upload              ? 1'b0                      : cpu_rd & cpu_mreq;
+assign sdram_addr = mem_addr;
+assign sdram_din  = cpu_dout;
+assign sdram_we   = cpu_we & ~mapper_en & ~sram_oe;
+assign sdram_rd   = cpu_rd & cpu_mreq;
+
+
 assign cpu_din    = ~cpu_rd                      ? 8'hFF                     :
                     mapper_en                    ? ~mapper_slot[active_slot] :
                     cart_output_en               ? d_to_cpu_cart             :
@@ -263,15 +271,16 @@ nvram_backup nvram_backup
    .*
 );
 
-wire [24:0] dw_sdram_addr, dw_bram_addr;
-wire  [7:0] dw_sdram_din, dw_bram_din, ram_mapper_count;
-wire        dw_sdram_upload, dw_sdram_we, dw_bram_we, dw_bram_upload;
+wire [24:0] dw_bram_addr;
+wire  [7:0] dw_bram_din, ram_mapper_count;
+wire        dw_sdram_upload, dw_bram_we, dw_bram_upload;
 download download
 (
    .sdram_addr(dw_sdram_addr),
    .sdram_din(dw_sdram_din),
    .sdram_we(dw_sdram_we),
    .sdram_request(dw_sdram_upload),
+   .sdram_ready(dw_sdram_ready),
    .bram_addr(dw_bram_addr),
    .bram_din(dw_bram_din),
    .bram_we(dw_bram_we),

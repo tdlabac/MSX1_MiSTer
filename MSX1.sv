@@ -576,19 +576,34 @@ ddram buffer
    .*
 );
 
-wire         sdram_ready, sdram_we, sdram_rd;
-wire  [24:0] sdram_addr;
-wire   [7:0] sdram_din, sdram_dout;
+wire         sdram_ready, sdram_we, sdram_rd, dw_sdram_we, dw_sdram_ready;
+wire  [24:0] sdram_addr, dw_sdram_addr;
+wire   [7:0] sdram_din, sdram_dout, dw_sdram_din;
 sdram sdram
 (
    .init(~locked_sdram),
    .clk(clk_sdram),
-   .dout(sdram_dout),
-   .din (sdram_din),
-   .addr(sdram_addr),
-   .we(sdram_we),
-   .rd(sdram_rd),
-   .ready(sdram_ready),
+   .doRefresh(0),
+   .ch1_dout(),
+   .ch1_din(dw_sdram_din),
+   .ch1_addr(dw_sdram_addr),
+   .ch1_req(dw_sdram_we),
+   .ch1_rnw(0),
+   .ch1_ready(dw_sdram_ready),
+  
+   .ch2_dout(sdram_dout),
+   .ch2_din(sdram_din),
+   .ch2_addr(sdram_addr),
+   .ch2_req(sdram_we | sdram_rd),
+   .ch2_rnw(~sdram_we),
+   .ch2_ready(sdram_ready),
+
+   .ch3_addr(),
+   .ch3_dout(),
+   .ch3_din(),
+   .ch3_req(),
+   .ch3_rnw(),
+   .ch3_ready(),
    .*
 );    
 

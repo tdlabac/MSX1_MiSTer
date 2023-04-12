@@ -91,7 +91,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
       logic  [5:0] init;
       logic  [3:0] share_fw_id;
       logic        add_block_id;
-      sdram_we <= 1'd0;
+      if (~sdram_ready) sdram_we <= 1'd0;
       bram_we  <= 1'd0;
       kbd_we   <= 1'd0;
       if (ddr3_ready) ddr3_rd <= 1'b0;
