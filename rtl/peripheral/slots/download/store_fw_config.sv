@@ -72,9 +72,11 @@ module store_fw_config #(parameter MAX_FW_ROM = 8)
                   4'h5 : fw_store[fw_store_id].block_count[9:8] <= ddr3_dout[1:0];
                   4'h6 : begin
                      fw_store[fw_store_id].block_count[7:0] <= ddr3_dout;
-                     fw_store[fw_store_id].sram_block_count <= fw_store_id == CART_TYP_FM_PAC ? 8'd2 :
-                                                               fw_store_id == CART_TYP_GM2    ? 8'd4 :
-                                                                                                8'd0 ;
+                     fw_store[fw_store_id].sram_block_count <= fw_store_id == CART_TYP_FM_PAC ? 8'd2  :
+                                                               fw_store_id == CART_TYP_GM2    ? 8'd4  :
+                                                                                                8'd0  ;
+                     fw_store[fw_store_id].ram_block_count  <= fw_store_id == CART_TYP_MFRSD  ? 8'd32 :
+                                                                                                8'd0  ;
                      fw_store[fw_store_id].store_address    <= start_addr + addr + 5'h10;
                      addr                                   <= addr + 5'h10 + ({fw_store[fw_store_id].block_count[9:8], ddr3_dout} << 14);
                      state                                  <= STATE_PARSE;

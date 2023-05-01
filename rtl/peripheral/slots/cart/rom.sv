@@ -2,6 +2,7 @@
 module cart_rom
 (
     input                    clk,
+    input                    clk_sdram,
     input                    clk_en,
     input                    reset,
     input             [15:0] addr,
@@ -25,7 +26,26 @@ module cart_rom
     output reg               spi_ss,
     output                   spi_clk,
     input                    spi_di,
-    output                   spi_do
+    output                   spi_do,
+    output [24:0]            flash_addr,
+    output  [7:0]            flash_din,
+    output                   flash_wr,
+    input                    flash_ready,
+    input                    flash_done,
+    input             [24:0] flash_offset,
+    output [7:0]             debug_C_0,
+    output [7:0]             debug_S_0,
+    output [7:0]             debug_S_1,
+    output [7:0]             debug_S_2,
+    output [7:0]             debug_S_3,
+    output [7:0]             debug_1_0,
+    output [7:0]             debug_1_1,
+    output [7:0]             debug_1_2,
+    output [7:0]             debug_1_3,
+    output [7:0]             debug_3_0,
+    output [7:0]             debug_3_1,
+    output [7:0]             debug_3_2,
+    output [7:0]             debug_3_3
 );
 wire [24:0] mem_addr_konami, mem_addr_konami_scc, mem_addr_ascii8, mem_addr_ascii16, mem_addr_gm2, mem_addr_linear, mem_addr_none, mem_addr_fmPAC;
 wire        en_konami, en_konami_scc, en_ascii8, en_ascii16, en_gm2, en_linear, en_fmPAC, en_scc, en_scc2, en_fdc, en_none;
@@ -54,12 +74,14 @@ assign mem_addr    = sram_oe_fmPAc      ? mem_addr_fmPAC       :
 
 assign sram_oe = sram_oe_fmPAc | sram_oe_gm2 | sram_oe_ascii8 | sram_oe_ascii16 | sram_oe_konami_scc;
 assign sram_we = sram_we_fmPAc | sram_we_gm2 | sram_we_ascii8 | sram_we_ascii16 | sram_we_konami_scc;
-assign d_to_cpu    = scc_oe                      ? d_to_cpu_scc   :
+assign d_to_cpu    = scc_ack                     ? scc_d_to_cpu   :
+                     flash_request               ? flash_d_to_cpu : 
+                     scc_oe                      ? d_to_cpu_scc   :
                      fmPac_oe                    ? d_to_cpu_fmPAC :
                      mfrsd_oe                    ? ~mapper_slot   :
                      sdcard_oe                   ? d_from_sd      :
                                                    8'hFF          ; 
-assign cart_oe     = fmPac_oe | scc_oe | mfrsd_oe | sdcard_oe | (MFRSD & subSlot == 2'd2 & ~mfrsd_addr_valid) ; 
+assign cart_oe     = fmPac_oe | scc_oe | mfrsd_oe | sdcard_oe | (MFRSD & subSlot == 2'd2 & ~mfrsd_addr_valid) | (MFRSD & flash_request) | (MFRSD & scc_ack); 
 
 assign sound_A = cart_conf[0].typ == CART_TYP_FM_PAC       ? sound_fmpac[0] :
                  cart_conf[0].typ == CART_TYP_SCC          ? sound_scc[0]   :
@@ -78,9 +100,26 @@ assign sound = sound_A + sound_B;
 
 
 //Mega Flash ROM SCC+ SD
+
+assign debug_C_0 = configReg;
+assign debug_S_0 = sccBanks[0];
+assign debug_S_1 = sccBanks[1];
+assign debug_S_2 = sccBanks[2];
+assign debug_S_3 = sccBanks[3];
+assign debug_1_0 = bankRegsSubSlot1[0];
+assign debug_1_1 = bankRegsSubSlot1[1];
+assign debug_1_2 = bankRegsSubSlot1[2];
+assign debug_1_3 = bankRegsSubSlot1[3];
+assign debug_3_0 = bankRegsSubSlot3[0];
+assign debug_3_1 = bankRegsSubSlot3[1];
+assign debug_3_2 = bankRegsSubSlot3[2];
+assign debug_3_3 = bankRegsSubSlot3[3];
+
 wire MFRSD = cart_conf[slot].typ == CART_TYP_MFRSD & en;
 wire mapper_en = (addr == 16'hFFFF & MFRSD);
 logic [7:0] mapper_slot;
+logic [7:0] sccMode = 0;
+logic sccChipMode = 0;
 
 always @(posedge reset, posedge clk) begin
    if (reset) begin
@@ -98,6 +137,8 @@ logic [9:0] offsetReg;
 wire subSlot1_en = (MFRSD & subSlot == 2'd1);
 wire subSlot3_en = (MFRSD & subSlot == 2'd3);
 wire [2:0] page8kB = addr[15:13] - 2'd2;
+wire isKonamiSCCmapperConfigured  = mapperReg[7:5] == 3'b000;
+
 always @(posedge reset, posedge clk) begin
    if (reset) begin
       configReg <=  8'd03;
@@ -114,11 +155,17 @@ always @(posedge reset, posedge clk) begin
    end else begin
       if (subSlot1_en & wr & mreq) begin
          if (addr[15:2] == 14'h1FFF) begin
-            if (addr[1:0] == 2'b00 & ~configReg[7]) configReg      <= d_from_cpu;      //FC
-            if (addr[1:0] == 2'b01 & ~mapperReg[1]) offsetReg[7:0] <= d_from_cpu;      //FD
-            if (addr[1:0] == 2'b10 & ~mapperReg[1]) offsetReg[9:8] <= d_from_cpu[1:0]; //FE
-            if (addr[1:0] == 2'b11 & ~mapperReg[2]) mapperReg      <= d_from_cpu;      //FF
+            if (addr[1:0] == 2'b00 & ~configReg[7]) configReg      <= d_from_cpu;      //7FFC
+            if (addr[1:0] == 2'b01 & ~mapperReg[1]) offsetReg[7:0] <= d_from_cpu;      //7FFD
+            if (addr[1:0] == 2'b10 & ~mapperReg[1]) offsetReg[9:8] <= d_from_cpu[1:0]; //7FFE
+            if (addr[1:0] == 2'b11 & ~mapperReg[2]) mapperReg      <= d_from_cpu;      //7FFF
          end
+
+         if (isKonamiSCCmapperConfigured & addr[15:1] == 15'h5FFF) begin
+            sccMode <= d_from_cpu;
+            //TODO write SCC
+         end
+         
          if (~mapperReg[1] & page8kB < 3'd4) 
             case(mapperReg[7:5]) 
                3'd0: //Konami-SCC
@@ -185,13 +232,28 @@ wire [22:0] mfrsd_64Kaddr = 23'('h10000 + (bank << (is64Kmapper ? 'd14:'d13)) + 
 wire [22:0] mfrsd_SDaddr  = 23'('h700000 + (bankRegsSubSlot3[page8kB[1:0]][6:0] << 13) + addr[12:0]);
 wire SDrom = addr[15:14] == 2'b01 | addr[15:14] == 2'b10;
 
+
+
+wire en_ram_segment;
+assign en_ram_segment = addr[15:13] == 3'b010 ? (sccMode[4] | sccMode[0])                 :   //4000 - 5FFF
+                        addr[15:13] == 3'b011 ? (sccMode[4] | sccMode[1])                 :   //6000 - 7FFF
+                        addr[15:13] == 3'b100 ? (sccMode[4] | (sccMode[5] & sccMode[2])) :   //8000 - 9FFF
+                        addr[15:13] == 3'b101 ? (sccMode[4])                               :   //A000 - BFFF
+                                                1'd0 ; 
+
+wire mode_scc2 = sccMode[5]  & sccBanks[3][7];
+wire mode_scc  = ~sccMode[5] & sccBanks[2] == 6'b111111;
+wire scc_req   = ((mode_scc & addr[15:11] == 5'b10011) | (mode_scc2 & addr[15:11] == 5'b10111)) & subSlot1_en & mreq & (rd | (wr & ~en_ram_segment));
+
+
+
 wire [24:0] mfrsd_addr;
 wire        mfrsd_addr_valid;
-assign {mfrsd_addr, mfrsd_addr_valid} = subSlot == 2'b00 ? {addr[13:0],1'b1}                  :
+assign {mfrsd_addr, mfrsd_addr_valid} = subSlot == 2'b00 ? {addr[13:0],MFRSD}                  :
                                         subSlot == 2'b01 ? page >= 4 ? 26'd0               :
-                                                                       {mfrsd_64Kaddr,1'b1}   :
+                                                                       {mfrsd_64Kaddr,MFRSD}   :
                                         subSlot == 2'b10 ? 26'd0                              :
-                                                           SDrom     ? {mfrsd_SDaddr,1'b1} :
+                                                           SDrom     ? {mfrsd_SDaddr,MFRSD} :
                                                                        26'd0                  ;
 
 wire mfrsd_oe = mapper_en & rd & mreq;
@@ -214,6 +276,47 @@ always @(posedge clk) begin
    old_rd <= rd;
    old_wr <= wr;
 end
+
+//SCC
+wire signed [14:0] sound_scc2;
+wire scc_ack;
+wire [7:0] scc_d_to_cpu;
+
+scc_wave  k051649
+(
+   .clk21m(clk),
+   .reset(reset),
+   .clkena(clk_en),
+   .req(scc_req),
+   .ack(scc_ack),
+   .wrt(wr),
+   .adr((~addr[13] && addr[7]) ? addr[7:0] ^ 8'h20  : addr[7:0]),
+   .dbi(scc_d_to_cpu),
+   .dbo(d_from_cpu),
+   .wave(sound_scc2),
+   .sccplus(sccMode[5])
+); 
+
+//FLASH
+wire [7:0] flash_d_to_cpu;
+wire       flash_request;
+flash flash 
+(
+   .addr(mfrsd_addr),
+   .din(d_from_cpu),
+   .dout(flash_d_to_cpu),
+   .data_valid(flash_request),
+   .we_n(~(mreq & wr & configReg[0])),
+   .ce_n(~(mfrsd_addr_valid & mreq & (wr | rd) )),
+
+   .sdram_addr(flash_addr),
+   .sdram_din(flash_din),
+   .sdram_req(flash_wr),
+	.sdram_ready(flash_ready),
+   .sdram_done(flash_done),
+   .sdram_offset(flash_offset),
+   .*
+);
 
 // SPI
 wire [7:0] d_from_sd;

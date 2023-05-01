@@ -56,7 +56,8 @@ module sdram
     input       [7:0] ch3_din,
     input             ch3_req,
     input             ch3_rnw,     // 1 - read, 0 - write
-    output reg        ch3_ready
+    output reg        ch3_ready,
+	output reg        ch3_done
 );
 
 assign SDRAM_nCS  = chip;
@@ -152,6 +153,7 @@ always @(posedge clk) begin
         ch3_addr_1 <= ch3_addr;
         ch3_din_1  <= ch3_din;
     end
+	if (~ch3_req) ch3_done <= 0;
 
     refresh_count <= refresh_count+1'b1;
 
@@ -289,7 +291,7 @@ always @(posedge clk) begin
                 SDRAM_DQ <= saved_data;
                 if(ch == 0) ch1_ready  <= 1;
                 if(ch == 1) ch2_ready  <= 1;
-                if(ch == 2) ch3_ready  <= 1;
+                if(ch == 2) begin ch3_ready  <= 1; ch3_done   <= 1; end
                 state <= STATE_IDLE_2;
             end
             else begin

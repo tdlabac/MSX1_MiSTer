@@ -7,6 +7,7 @@ module msx
    input                    ce_3m58_p,
    input                    ce_3m58_n,
    input                    ce_10hz,
+   input                    clk_sdram,
    //Video
    output             [7:0] R,
    output             [7:0] G,
@@ -60,6 +61,12 @@ module msx
    output             [7:0] dw_sdram_din,
    output                   dw_sdram_we,
    input                    dw_sdram_ready,
+
+   output            [24:0] flash_addr,
+   output             [7:0] flash_din,
+   output                   flash_wr,
+   input                    flash_ready,
+   input                    flash_done,
 
    //SD FDC
    input              [5:0] img_mounted,
@@ -494,6 +501,7 @@ msx_slots msx_slots
    .kbd_din(kbd_din),
    .kbd_we(kbd_we),
    .kbd_request(kbd_request),
+	.debug_cpu_din_src(),
    .*
 );
 

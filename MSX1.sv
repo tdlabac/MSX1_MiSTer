@@ -576,9 +576,9 @@ ddram buffer
    .*
 );
 
-wire         sdram_ready, sdram_we, sdram_rd, dw_sdram_we, dw_sdram_ready;
-wire  [24:0] sdram_addr, dw_sdram_addr;
-wire   [7:0] sdram_din, sdram_dout, dw_sdram_din;
+wire         sdram_ready, sdram_we, sdram_rd, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
+wire  [24:0] sdram_addr, dw_sdram_addr, flash_addr;
+wire   [7:0] sdram_din, sdram_dout, dw_sdram_din, flash_din;
 sdram sdram
 (
    .init(~locked_sdram),
@@ -598,12 +598,13 @@ sdram sdram
    .ch2_rnw(~sdram_we),
    .ch2_ready(sdram_ready),
 
-   .ch3_addr(),
+   .ch3_addr(flash_addr),
    .ch3_dout(),
-   .ch3_din(),
-   .ch3_req(),
-   .ch3_rnw(),
-   .ch3_ready(),
+   .ch3_din(flash_din),
+   .ch3_req(flash_wr),
+   .ch3_rnw(0),
+   .ch3_ready(flash_ready),
+   .ch3_done(flash_done),
    .*
 );    
 

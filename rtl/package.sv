@@ -89,6 +89,7 @@ package MSX;
         logic [27:0] store_address;      //Store DDR3
         logic  [9:0] block_count;
         logic  [7:0] sram_block_count;
+        logic  [7:0] ram_block_count;
     } fw_rom_t;
 
 

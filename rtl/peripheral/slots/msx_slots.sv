@@ -1,6 +1,7 @@
 module msx_slots
 (
    input                       clk,
+   input                       clk_sdram,
    input                       clk_en,
    input                       reset,
    input                       rom_eject,
@@ -46,6 +47,12 @@ module msx_slots
    output                [7:0] dw_sdram_din,
    output                      dw_sdram_we,
    input                       dw_sdram_ready,
+   
+   output               [24:0] flash_addr,
+   output                [7:0] flash_din,
+   output                      flash_wr,
+   input                       flash_ready,
+   input                       flash_done,
 
    //KBD LAYOUT
    output                [9:0] kbd_addr,
@@ -70,7 +77,8 @@ module msx_slots
    output                      spi_ss,
    output                      spi_clk,
    input                       spi_di,
-   output                      spi_do
+   output                      spi_do,
+   output                [2:0] debug_cpu_din_src
 );
 
 //Unused port
@@ -138,7 +146,7 @@ assign sdram_din  = cpu_dout;
 assign sdram_we   = cpu_we & ~mapper_en & ~sram_oe;
 assign sdram_rd   = cpu_rd & cpu_mreq;
 
-
+/*
 assign cpu_din    = ~cpu_rd                      ? 8'hFF                     :
                     mapper_en                    ? ~mapper_slot[active_slot] :
                     cart_output_en               ? d_to_cpu_cart             :
@@ -149,6 +157,17 @@ assign cpu_din    = ~cpu_rd                      ? 8'hFF                     :
                     sdram_size == 0 & block_init ? bram_dout                 :
                     block_init                   ? sdram_dout                :
                                                    8'hFF                     ;
+*/
+assign {debug_cpu_din_src, cpu_din}  = ~cpu_rd                       ? {3'd07, 8'hFF                     }:
+                                       mapper_en                     ? {3'd00, ~mapper_slot[active_slot] }:
+                                       cart_output_en                ? {3'd01, d_to_cpu_cart             }:
+                                       FDC_output_en                 ? {3'd02, d_to_cpu_FDC              }:
+                                       msx2_mapper_req               ? {3'd03, msx2_mapper_dout          }:
+                                       ~cpu_mreq                     ? {3'd07, 8'hFF                     }:
+                                       sram_oe                       ? {3'd04, bram_dout                 }:
+                                       sdram_size == 0 & block_init  ? {3'd05, bram_dout                 }:
+                                       block_init                    ? {3'd06, sdram_dout                }:
+                                                                       {3'd07, 8'hFF                     };
 
 assign bram_addr = dw_bram_upload ? dw_bram_addr                                 :
                                     mem_addr                                     ;
@@ -235,6 +254,20 @@ cart_rom cart_rom
    .sram_we(sram_we),
    .cart_oe(cart_output_en),
    .sound(sound),
+   .flash_offset(offset),
+   .debug_C_0(),
+   .debug_S_0(),
+   .debug_S_1(),
+   .debug_S_2(),
+   .debug_S_3(),
+   .debug_1_0(),
+   .debug_1_1(),
+   .debug_1_2(),
+   .debug_1_3(),
+   .debug_3_0(),
+   .debug_3_1(),
+   .debug_3_2(),
+   .debug_3_3(),
    .*
 );
 

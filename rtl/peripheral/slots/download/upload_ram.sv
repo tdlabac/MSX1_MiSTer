@@ -91,6 +91,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
       logic  [5:0] init;
       logic  [3:0] share_fw_id;
       logic        add_block_id;
+      logic [23:0] rom_size, ram_size;
       if (~sdram_ready) sdram_we <= 1'd0;
       bram_we  <= 1'd0;
       kbd_we   <= 1'd0;
@@ -123,6 +124,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
             end
             STATE_FILL_SLOT: begin
                add_block_id <= 1'b0;
+               ram_size <= 24'd0;
                case (act_config_typ)
                   CONFIG_RAM,
                   CONFIG_RAM_MAPPER,
@@ -161,6 +163,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                         start_addr  <= msx_config[config_cnt].store_address;
                         addr   <= 24'd0;
                         state <= STATE_UPLOAD_RAM;
+                        rom_size <= 24'(act_block_count << 14);
                         case (act_config_typ)
                            CONFIG_RAM_MAPPER,
                            CONFIG_RAM: begin
@@ -211,6 +214,7 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               start_addr  <= act_config_typ == CONFIG_CART_A ? 28'hA00000 : 28'hF00000;
                               memory_block[act_block_id].block_count <= 10'(ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size >> 14);
                               memory_block[act_block_id].mem_offset <= sdram_addr;
+                              rom_size <= 24'(ioctl_rom[act_config_typ == CONFIG_CART_B].rom_size);
                               ddr3_rd <= 1'b1;                     
                               addr <= 24'd0;
                               state <= STATE_UPLOAD_RAM;
@@ -234,8 +238,11 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                               end else begin                                          
                                  msx_slots.mem_block[act_slot][act_subslot][act_block].block_id <= act_block_id;
                                  start_addr  <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].store_address;
-                                 memory_block[act_block_id].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count;
+                                 memory_block[act_block_id].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count + fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].ram_block_count;
+                                 //memory_block[act_block_id].block_count <= fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count;
                                  memory_block[act_block_id].mem_offset <= sdram_addr;
+                                 rom_size <= 24'((fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].block_count << 14));
+                                 ram_size <= 24'((fw_store[cart_conf[act_config_typ == CONFIG_CART_B].typ].ram_block_count << 14));
                                  share_fw_id <= act_block_id;
                                  ddr3_rd <= 1'b1;                     
                                  addr <= 24'd0;
@@ -294,14 +301,16 @@ module upload_ram #(parameter MAX_CONFIG = 16, MAX_MEM_BLOCK = 16, MAX_FW_ROM = 
                end
                if (ddr3_ready & ~ddr3_rd) begin
                   if (sdram_ready & ~sdram_we) begin
-                     if (addr[23:0] > {memory_block[act_block_id].block_count - 1'b1, 14'h3FFF} ) begin
+                     if (addr[23:0] == rom_size ) begin
                         if (act_config_typ == CONFIG_CART_A | act_config_typ == CONFIG_CART_B) begin
                            rom_info[act_config_typ == CONFIG_CART_B].offset <= detect_offset;
                            rom_info[act_config_typ == CONFIG_CART_B].size   <= detect_rom_size;
                            rom_info[act_config_typ == CONFIG_CART_B].mapper <= ioctl_rom[act_config_typ == CONFIG_CART_B].rom_mapper == 6'd0 ? detect_mapper : 
                                                                                                                                                ioctl_rom[act_config_typ == CONFIG_CART_B].rom_mapper;
+                           state <= STATE_FILL_NEXT;
                         end
-                        state <= STATE_FILL_NEXT;
+                     //end else if (addr[23:0] == (rom_size + ram_size) ) begin
+                     //   state <= STATE_FILL_NEXT;
                      end else begin
                         sdram_din <= act_slot_is_ram ? 8'h00 : ddr3_dout;
                         do_we <= 1'b1;
