@@ -12,15 +12,30 @@ EXTENSIONS  = ["ROM", "SCC", "SCC2", "FM_PAC", "MEGA_FLASH_ROM_SCC_SD", "GM2", "
 MSX_TYPES = ["MSX1", "MSX2"]
 
 
+#BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
+
+BLOCK_TYPES = {"NONE"       : 0x00,
+               "RAM"        : 0x81, 
+               "RAM MAPPER" : 0x82,
+               "ROM"        : 0xC1,
+               "FDC"        : 0xC3,
+               "SLOT A"     : 0x04,
+               "SLOT B"     : 0x05,
+               "KBD LAYOUT" : 0x06,
+               "ROM MIROR"  : 0x00,
+               "IO_MIRROR"  : 0x00,
+               "MIRROR"     : 0x00
+               }
+
 def file_hash(filename):
     """Return the SHA1 hash of the file at `filename`."""
     with open(filename, 'rb') as f:
         return hashlib.sha1(f.read()).hexdigest()
 
 
-def get_block_type_id(typ):
-    """Return the tuple of (type, id) for the given block type."""
-    return BLOCK_TYPES.index(typ)
+#def get_block_type_id(typ):
+#    """Return the tuple of (type, id) for the given block type."""
+#    return BLOCK_TYPES.index(typ)
 
 
 def get_msx_type_id(typ):
@@ -28,22 +43,60 @@ def get_msx_type_id(typ):
     return MSX_TYPES.index(typ)
 
 
-def create_MSX_block(msx_type, primary, secondary, block_id, typ, count, sha1, ref):
+def create_MSX_block(msx_type, primary, secondary, block_start, typ, size, sha1, ref):
     """Create and return a bytearray representing a block."""
-    typ = get_block_type_id(typ)
+    
+    
     ref = 0 if ref is None else int(ref)
-    count = 0 if count is None else int(count)
-
+    size = 0 if size is None else int(size)
+    block_start = int(block_start) & 3
+    slotSubslot = ((int(primary) & 3) << 4) | ((int(secondary) & 3) << 2)
+    
     head = bytearray()
     head.extend('MSX'.encode('ascii'))
-    head.append(get_msx_type_id(msx_type))
-    head.append(int(primary))
-    head.append(int(secondary))
-    head.append(int(block_id))
-    head.append(typ)
-    head.append(ref)
-    head.append(count)
-    head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00'))
+    
+    head.append(BLOCK_TYPES[typ])
+    head.append((size >> 8) & 255)
+    head.append(size & 255)
+    if typ in ["KBD LAYOUT"] :
+        None
+ 
+    if typ in ["RAM", "ROM", "FDC"] :
+        head.append(0x80 | slotSubslot | block_start)
+        head.append(0)
+        if (size > 1) :
+            head.append(0x80 | slotSubslot | ((block_start+1) & 3))
+            head.append(1)
+        if (size > 2) :
+            head.append(0x80 | slotSubslot | ((block_start+2) & 3))
+            head.append(2)
+        if (size > 3) :
+            head.append(0x80 | slotSubslot | ((block_start+3) & 3))
+            head.append(3)
+
+    if typ in ["RAM MAPPER", "SLOT A", "SLOT B"] :
+        head.append(0x80 | slotSubslot)
+        head.append(0)
+        head.append(0x80 | slotSubslot+1)
+        head.append(0)
+        head.append(0x80 | slotSubslot+2)
+        head.append(0)
+        head.append(0x80 | slotSubslot+3)
+        head.append(0)
+
+    for i in range(len(head),16) :
+        head.append(0)
+    #print(BLOCK_TYPES[typ])
+    #print(len(head))
+    
+    #head.append(get_msx_type_id(msx_type))
+    #head.append(int(primary))
+    #head.append(int(secondary))
+    #head.append(int(block_id))
+    #head.append(typ)
+    #head.append(ref)
+    #head.append(count)
+    #head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00'))
     return head
 
 def create_FW_block(type, size):
@@ -63,19 +116,25 @@ def createFWpack(root, fileHandle) :
             fw_name = fw.attrib["name"]
             fw_filename = fw.find('filename').text if fw.find('filename') is not None else None
             fw_SHA1 = fw.find('SHA1').text if fw.find('SHA1') is not None else None
+            fw_size = int(fw.find('size').text) if fw.find('size') is not None else None
             if fw_name in EXTENSIONS :
                 typ = EXTENSIONS.index(fw_name)
                 if fw_SHA1 is not None :
                     if fw_SHA1 in rom_hashes.keys() :                    
                         inFileName = rom_hashes[fw_SHA1]
-                        size = os.path.getsize(inFileName) >> 14
-                        head = create_FW_block(typ, size)
+                        fileSize = os.path.getsize(inFileName)
+                        size = fw_size if fw_size is not None else fileSize
+                        head = create_FW_block(typ, size  >> 14)
                         fileHandle.write(head)
                         infile = open(inFileName, "rb")
                         fileHandle.write(infile.read())
+                        print(size)
+                        print(fileSize)
+                        if size > fileSize :
+                            fileHandle.write(bytes([0xFF] * (size - fileSize)))
                     else :
                         fileHandle.close()
-                        raise Exception(f"Skip: {filename} Not found ROM {block_filename} SHA1:{block_SHA1}")
+                        raise Exception(f"Skip: {filename} Not found ROM {fw_filename} SHA1:{fw_SHA1}")
         fileHandle.close()
         return False
     except Exception as e:
@@ -94,13 +153,13 @@ def createMSXpack(root, fileHandle) :
             for secondary in primary.findall("./secondary"):
                 secondary_slot = secondary.attrib["slot"]
                 for block in secondary.findall("./block"):
-                    block_id = block.attrib["id"]
+                    block_start = block.attrib["start"]
                     block_type = block.find('type').text if block.find('type') is not None else None
-                    block_count = block.find('count').text if block.find('count') is not None else None
+                    block_count = block.find('block_count').text if block.find('block_count') is not None else None
                     block_filename = block.find('filename').text if block.find('filename') is not None else None
                     block_SHA1 = block.find('SHA1').text if block.find('SHA1') is not None else None
                     block_ref = block.find('ref').text if block.find('ref') is not None else None
-                    head = create_MSX_block(msx_type_value, primary_slot, secondary_slot, block_id, block_type, block_count, block_SHA1, block_ref ) 
+                    head = create_MSX_block(msx_type_value, primary_slot, secondary_slot, block_start, block_type, block_count, block_SHA1, block_ref ) 
                     if block_ref is None :
                         fileHandle.write(head)
                         if block_SHA1 is not None :
@@ -149,6 +208,7 @@ def parseDir(dir) :
                 if root.tag == "fwConfig" :
                     error = createFWpack(root, outfile)
                 if error :
+                    outfile.close()
                     os.remove(output_filename)
 
 
