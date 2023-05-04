@@ -1,5 +1,5 @@
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx_slots.sv                       ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx2_ram_mapper.sv                 ]
-set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) nvram_backup.sv                    ]
-set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) download/files.qip                 ]
-set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) cart/files.qip                     ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) memory_upload.sv                   ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mapper_detect.sv                   ]
+set_global_assignment -name VHDL_FILE          [file join $::quartus(qip_path) ram.vhd                            ]

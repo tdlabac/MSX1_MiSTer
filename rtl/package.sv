@@ -1,3 +1,10 @@
+typedef enum logic [1:0] {AUTO,PAL,NTSC} video_mode_t;
+typedef enum logic {CAS_AUDIO_FILE,CAS_AUDIO_ADC} cas_audio_src_t;
+typedef enum logic [2:0] {CART_TYP_ROM, CART_TYP_SCC, CART_TYP_SCC2, CART_TYP_FM_PAC, CART_TYP_MFRSD, CART_TYP_GM2, CART_TYP_FDC, CART_TYP_EMPTY } cart_typ_t;
+typedef enum logic [1:0] {SIZE128,SIZE64,SIZE512,SIZE256} ram_size_t;
+typedef enum logic {MSX1,MSX2} MSX_typ_t;
+
+/*
 parameter IMG_SRAM          = 4'd0;
 parameter IMG_SRAM_A        = 4'd1;
 parameter IMG_SRAM_B        = 4'd2;
@@ -38,7 +45,7 @@ package MSX;
     
     typedef struct {
         config_typ_t typ;
-        logic  [3:0] reference;
+        logic  [1:0] reference;
         logic  [7:0] block_count;
         logic  [1:0] slot;
         logic  [1:0] sub_slot;
@@ -54,7 +61,11 @@ package MSX;
     } mem_block_t;    
 
     typedef struct {
-        slot_typ_t   slot_typ[0:3];
+        slot_typ_t typ;
+    } slot_t;
+
+    typedef struct {
+        slot_t       slot[0:3];
         mem_block_t  mem_block[0:3][0:3][0:3];
     } msx_slots_t;
 
@@ -92,5 +103,48 @@ package MSX;
         logic  [7:0] ram_block_count;
     } fw_rom_t;
 
+*/
+typedef enum logic [1:0] {BLOCK_TYP_NONE, BLOCK_TYP_UNUSED3, BLOCK_TYP_UNUSED2, BLOCK_TYP_UNUSED1} block_typ_t;
+typedef enum logic [3:0] {CONFIG_NONE, CONFIG_FDC, CONFIG_SLOT_A, CONFIG_SLOT_B, CONFIG_KBD_LAYOUT, CONFIG_CONFIG} config_typ_t;
+//typedef enum logic [5:0] {MAPPER_NO_UNKNOWN, MAPPER_ASCII8, MAPPER_ASCII16, MAPPER_KONAMI, MAPPER_KONAMI_SCC, MAPPER_KOEI, MAPPER_LINEAR, MAPPER_R_TYPE, MAPPER_WIZARDRY } mapper_typ_t;
+typedef enum logic [3:0] {MAPPER_UNUSED, MAPPER_NONE, MAPPER_RAM, MAPPER_LINEAR, MAPPER_OFFSET, MAPPER_KONAMI_SCC, MAPPER_KONAMI, MAPPER_ASCII8, MAPPER_ASCII16} mapper_typ_t;
+typedef enum logic [1:0] {DEVICE_NONE, DEVICE_FDC} device_typ_t;
+package MSX;
+    
+    typedef struct {
+        MSX_typ_t       typ;
+        logic           scandoubler;
+        logic           border;
+        ram_size_t      ram_size;
+        video_mode_t    video_mode;
+        cas_audio_src_t cas_audio_src;
+    } config_t;    
 
+        typedef struct {
+        cart_typ_t   typ;
+        mapper_typ_t mapper;
+    } config_cart_t;
+    
+    
+    
+    
+//NEW    
+    typedef struct {
+        logic  [3:0] ref_ram;
+        logic  [1:0] offset_ram;
+        //logic  [3:0] ref_sram;
+        mapper_typ_t mapper;
+        device_typ_t device;
+        //logic        external;
+        //logic        cart_num;
+    } block_t;    
+    
+    typedef struct {
+        logic [26:0] addr;
+        logic [15:0] size;
+        logic        ro;
+
+    } lookup_RAM_t;
+
+        
 endpackage

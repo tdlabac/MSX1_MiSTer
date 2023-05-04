@@ -7,24 +7,23 @@ import base64
 ROM_DIR = 'ROM'
 XML_DIR_COMP = 'Computer'
 XML_DIR_FW = 'Extension'
-BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
 EXTENSIONS  = ["ROM", "SCC", "SCC2", "FM_PAC", "MEGA_FLASH_ROM_SCC_SD", "GM2", "FDC", "EMPTY" ]
-MSX_TYPES = ["MSX1", "MSX2"]
 
+CONFIG_TYPES = ["NONE", "FDC", "SLOT_A", "SLOT_B", "KBD_LAYOUT", "CONFIG"]
+MAPPER_TYPES = ["MAPPER_UNUSED", "MAPPER_NONE", "MAPPER_RAM"]
+MSX_TYPES    = ["MSX1", "MSX2"]
 
-#BLOCK_TYPES = ["NONE", "RAM", "RAM MAPPER", "ROM", "FDC", "SLOT A", "SLOT B", "KBD LAYOUT", "ROM MIROR", "IO_MIRROR", "MIRROR"]
-
-BLOCK_TYPES = {"NONE"       : 0x00,
-               "RAM"        : 0x81, 
-               "RAM MAPPER" : 0x82,
-               "ROM"        : 0xC1,
-               "FDC"        : 0xC3,
-               "SLOT A"     : 0x04,
-               "SLOT B"     : 0x05,
-               "KBD LAYOUT" : 0x06,
-               "ROM MIROR"  : 0x00,
-               "IO_MIRROR"  : 0x00,
-               "MIRROR"     : 0x00
+BLOCK_TYPES = {"NONE"       : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "NONE"       },
+               "RAM"        : {"FILL": True,  "RO": False, "MAPPER" : "MAPPER_NONE",   "CONFIG" : "NONE"       },
+               "RAM MAPPER" : {"FILL": True,  "RO": False, "MAPPER" : "MAPPER_RAM",    "CONFIG" : "NONE"       },
+               "ROM"        : {"FILL": True,  "RO": True,  "MAPPER" : "MAPPER_NONE",   "CONFIG" : "NONE"       },
+               "FDC"        : {"FILL": True,  "RO": True,  "MAPPER" : "MAPPER_NONE",   "CONFIG" : "FDC"        },
+               "SLOT A"     : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "SLOT_A"     },
+               "SLOT B"     : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "SLOT_B"     },
+               "KBD LAYOUT" : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "KBD_LAYOUT" },
+               "ROM_MIRROR" : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_NONE",   "CONFIG" : "NONE"       },
+               "IO_MIRROR"  : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "NONE"       },
+               "MIRROR"     : {"FILL": False, "RO": False, "MAPPER" : "MAPPER_NONE",   "CONFIG" : "NONE"       },
                }
 
 def file_hash(filename):
@@ -32,49 +31,45 @@ def file_hash(filename):
     with open(filename, 'rb') as f:
         return hashlib.sha1(f.read()).hexdigest()
 
-
-#def get_block_type_id(typ):
-#    """Return the tuple of (type, id) for the given block type."""
-#    return BLOCK_TYPES.index(typ)
-
-
 def get_msx_type_id(typ):
     """Return the index of the given MSX type."""
     return MSX_TYPES.index(typ)
 
 
-def create_MSX_block(msx_type, primary, secondary, block_start, typ, size, sha1, ref):
-    """Create and return a bytearray representing a block."""
-    
-    
-    ref = 0 if ref is None else int(ref)
-    size = 0 if size is None else int(size)
-    block_start = int(block_start) & 3
+def create_MSX_block(primary, secondary, values):
     slotSubslot = ((int(primary) & 3) << 4) | ((int(secondary) & 3) << 2)
     
     head = bytearray()
     head.extend('MSX'.encode('ascii'))
     
-    head.append(BLOCK_TYPES[typ])
-    head.append((size >> 8) & 255)
-    head.append(size & 255)
-    if typ in ["KBD LAYOUT"] :
+    config = BLOCK_TYPES[values["type"]]
+    value =  0x80 if config["FILL"] else 0
+    value |= 0x40 if config["RO"] else 0
+    value |= MAPPER_TYPES.index(config["MAPPER"])
+    head.append(value)
+
+    if values["type"] in ["IO_MIRROR", "MIRROR"] :
+        head.append(CONFIG_TYPES.index(BLOCK_TYPES[values["ref"]["type"]]["CONFIG"]))
+    else :
+        head.append(CONFIG_TYPES.index(config["CONFIG"]))
+    
+    head.append((values['count'] >> 8) & 255)
+    head.append(values['count'] & 255)
+    if values["type"] in ["KBD LAYOUT"] :
         None
  
-    if typ in ["RAM", "ROM", "FDC"] :
-        head.append(0x80 | slotSubslot | block_start)
-        head.append(0)
-        if (size > 1) :
-            head.append(0x80 | slotSubslot | ((block_start+1) & 3))
-            head.append(1)
-        if (size > 2) :
-            head.append(0x80 | slotSubslot | ((block_start+2) & 3))
-            head.append(2)
-        if (size > 3) :
-            head.append(0x80 | slotSubslot | ((block_start+3) & 3))
-            head.append(3)
+    if values["type"] in ["RAM", "ROM", "FDC", "IO_MIRROR"] :
+        for i in range(0,values['count']):
+            head.append(0x80 | slotSubslot | ((values["start"]+i) & 3))
+            head.append(i)
 
-    if typ in ["RAM MAPPER", "SLOT A", "SLOT B"] :
+    if values["type"] in ["MIRROR", "ROM_MIRROR"] :
+        for i in range(0,values['count']):
+            head.append(0x40 | slotSubslot | ((values["start"]+i) & 3))
+            head.append(slotSubslot | (values['ref']['start'] + i) & 3) 
+            
+
+    if values["type"] in ["RAM MAPPER", "SLOT A", "SLOT B"] :
         head.append(0x80 | slotSubslot)
         head.append(0)
         head.append(0x80 | slotSubslot+1)
@@ -83,20 +78,19 @@ def create_MSX_block(msx_type, primary, secondary, block_start, typ, size, sha1,
         head.append(0)
         head.append(0x80 | slotSubslot+3)
         head.append(0)
-
     for i in range(len(head),16) :
         head.append(0)
-    #print(BLOCK_TYPES[typ])
-    #print(len(head))
+    return head
+
+def create_MSX_config(config) :
     
-    #head.append(get_msx_type_id(msx_type))
-    #head.append(int(primary))
-    #head.append(int(secondary))
-    #head.append(int(block_id))
-    #head.append(typ)
-    #head.append(ref)
-    #head.append(count)
-    #head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00'))
+    head = bytearray()
+    head.extend('MSX'.encode('ascii'))
+    head.append(MAPPER_TYPES.index("MAPPER_UNUSED"))
+    head.append(CONFIG_TYPES.index("CONFIG"))
+    head.append(config)
+    for i in range(len(head),16) :
+        head.append(0)
     return head
 
 def create_FW_block(type, size):
@@ -141,7 +135,25 @@ def createFWpack(root, fileHandle) :
         print(e)
         return True
 
+def getRefereced(secondary, reference) :
+    block = secondary.find((f'.//block[@start="{reference}"]'))
+    return getValues(block, None)
+
+def getValues(block, secondary) :
+    values = {}
+    values['start']    = int(block.attrib["start"]) & 3
+    values['type']     = block.find('type').text if block.find('type') is not None else None
+    values['count']    = int(block.find('block_count').text) if block.find('block_count') is not None else 0
+    values['filename'] = block.find('filename').text if block.find('filename') is not None else None
+    values['SHA1']     = block.find('SHA1').text if block.find('SHA1') is not None else None  
+    
+    if secondary is not None and block.find('ref') is not None :
+        values['ref'] = getRefereced(secondary, block.find('ref').text)
+
+    return (values)
+
 def createMSXpack(root, fileHandle) :
+    config = 0x00
     try :
         heads = []
         msx_type_value = None
@@ -153,34 +165,38 @@ def createMSXpack(root, fileHandle) :
             for secondary in primary.findall("./secondary"):
                 secondary_slot = secondary.attrib["slot"]
                 for block in secondary.findall("./block"):
-                    block_start = block.attrib["start"]
-                    block_type = block.find('type').text if block.find('type') is not None else None
-                    block_count = block.find('block_count').text if block.find('block_count') is not None else None
-                    block_filename = block.find('filename').text if block.find('filename') is not None else None
-                    block_SHA1 = block.find('SHA1').text if block.find('SHA1') is not None else None
                     block_ref = block.find('ref').text if block.find('ref') is not None else None
-                    head = create_MSX_block(msx_type_value, primary_slot, secondary_slot, block_start, block_type, block_count, block_SHA1, block_ref ) 
+                    values = getValues(block, secondary)
+                    head = create_MSX_block(primary_slot, secondary_slot, values) 
+                    print(' '.join([f'{byte:02X}' for byte in head[3:15]]) + " {0}/{1} ".format(primary_slot, secondary_slot) + str(values))
                     if block_ref is None :
-                        fileHandle.write(head)
-                        if block_SHA1 is not None :
-                            if block_SHA1 in rom_hashes.keys() :
-                                infile = open(rom_hashes[block_SHA1], "rb")
+                        fileHandle.write(head)                      
+                        if values["SHA1"] is not None :
+                            if values["SHA1"] in rom_hashes.keys() :
+                                infile = open(rom_hashes[values["SHA1"]], "rb")
                                 fileHandle.write(infile.read())
                             else :
                                 fileHandle.close()
-                                raise Exception(f"Skip: {filename} Not found ROM {block_filename} SHA1:{block_SHA1}")
+                                raise Exception(f"Skip: {filename} Not found ROM {0} SHA1:{1}",values["filename"],values["SHA1"])
                     else :
                         heads.append(head)
-
+                if int(secondary_slot) > 0 :
+                    config = config | (0x1 << int(primary_slot))            
         for head in heads :             
             fileHandle.write(head)
         
         kbd_layout = root.find('kbd_layout')
         if kbd_layout is not None:
-            head = create_MSX_block(msx_type_value, 0, 0, 0, "KBD LAYOUT", 0, None, 0 ) 
+            values = {'type':"KBD LAYOUT", 'count':0}           
+            head = create_MSX_block(0,0,values) 
+            print(' '.join([f'{byte:02X}' for byte in head[3:15]]))
             fileHandle.write(head)
             fileHandle.write(base64.b64decode(kbd_layout.text))
         
+        config = config | ((get_msx_type_id(msx_type_value) & 0x3) << 4)
+        head = create_MSX_config(config)
+        print(' '.join([f'{byte:02X}' for byte in head[3:15]]))
+        fileHandle.write(head)
         fileHandle.close()
         return False
     except Exception as e:
@@ -202,6 +218,7 @@ def parseDir(dir) :
                 tree = ET.parse(filepath)
                 root = tree.getroot()
                 outfile = open(output_filename, "wb")               
+                print(output_filename)
                 error = True
                 if root.tag == "msxConfig" :
                     error = createMSXpack(root, outfile)

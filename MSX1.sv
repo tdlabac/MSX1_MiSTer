@@ -346,7 +346,7 @@ msx_config msx_config
    .clk(clk21m),
    .reset(reset),
    .reset_request(config_reset),
-   .msx_type(msx_type),
+   .msx_type(config_msx[4]),  //TODO
    .HPS_status(status),
    .scandoubler(scandoubler),
    .sdram_size(sdram_size),
@@ -378,7 +378,7 @@ clock clock
 );
 
 /////////////////    RESET   /////////////////
-wire reset = RESET | status[0] | status[10] | need_reset | config_reset;
+wire reset = RESET | status[0] | status[10] | need_reset | config_reset | reset_rq;
 
 ///////////////// Computer /////////////////
 wire  [7:0] R, G, B, cpu_din, cpu_dout;
@@ -386,7 +386,8 @@ wire [15:0] cpu_addr, audio;
 wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
 wire        msx_type, need_reset;
-
+MSX::block_t         slot_layout[64];
+MSX::lookup_RAM_t    lookup_RAM[16];
 msx MSX
 (
    .HS(hsync),
@@ -399,13 +400,13 @@ msx MSX
    .sram_save(status[38]),
    .sram_load(status[39]),
    .ioctl_addr(ioctl_addr[26:0]),
-   .ddr3_addr(ddr3_addr_download),
-   .ddr3_rd(ddr3_rd_download),
-   .ddr3_wr(ddr3_wr_download),
-   .ddr3_dout(ddr3_dout),
-   .ddr3_din(ddr3_din_download),
-   .ddr3_ready(ddr3_ready),
-   .ddr3_request(ddr3_request_download),
+   //.ddr3_addr(ddr3_addr_download),
+   //.ddr3_rd(ddr3_rd_download),
+   //.ddr3_wr(ddr3_wr_download),
+   //.ddr3_dout(ddr3_dout),
+   //.ddr3_din(ddr3_din_download),
+   //.ddr3_ready(ddr3_ready),
+   //.ddr3_request(ddr3_request_download),
    .img_mounted(img_mounted[5:0]),
    .img_size(img_size),
    .img_readonly(img_readonly),
@@ -422,6 +423,9 @@ msx MSX
 	.spi_clk(sdclk),
 	.spi_di(sdmiso),
 	.spi_do(sdmosi),
+   .slot_layout(slot_layout),
+   .lookup_RAM(lookup_RAM),
+   .msx_config(config_msx),
    .*
 );
 
@@ -553,14 +557,48 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
 );
 
 ///////////////// LOAD PACK   /////////////////
+
+wire upload_ram_ce, upload_sdram_rq, upload_ram_ready, reset_rq;
+wire [7:0] upload_ram_din, config_msx;
+wire [26:0] upload_ram_addr;
+memory_upload memory_upload(
+    .clk(clk21m),
+    .reset_rq(reset_rq),
+    .ioctl_download(ioctl_download),
+    .ioctl_index(ioctl_index),
+    .ioctl_addr(ioctl_addr),
+    .rom_eject(),
+    .ddr3_addr(ddr3_addr_download),
+    .ddr3_rd(ddr3_rd_download),
+    .ddr3_wr(),
+    .ddr3_din(),
+    .ddr3_dout(ddr3_dout),
+    .ddr3_ready(ddr3_ready),
+    .ddr3_request(ddr3_request_download),
+    .ram_addr(upload_ram_addr),
+    .ram_din(upload_ram_din),
+    .ram_dout(),
+    .ram_ce(upload_ram_ce),
+    .sdram_ready(upload_ram_ready),
+    .sdram_rq(upload_sdram_rq),
+    .bram_rq(),
+    .kbd_rq(),
+    .sdram_size(),
+    .slot_layout(slot_layout),
+    .lookup_RAM(lookup_RAM),
+    .msx_config(config_msx)
+);
+
+
+
 wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
 wire  [7:0] ddr3_dout, ddr3_din, ddr3_din_download;
 wire        ddr3_rd, ddr3_rd_download, ddr3_rd_cas, ddr3_wr, ddr3_wr_download, ddr3_ready, ddr3_request_download;
 
 assign ddr3_addr = ddr3_request_download ? ddr3_addr_download : ddr3_addr_cas ;
 assign ddr3_rd   = ddr3_request_download ? ddr3_rd_download   : ddr3_rd_cas   ;
-assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
-assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
+//assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
+//assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
 assign DDRAM_CLK = clk21m;
 
 ddram buffer
@@ -576,26 +614,28 @@ ddram buffer
    .*
 );
 
-wire         sdram_ready, sdram_we, sdram_rd, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
-wire  [24:0] sdram_addr, dw_sdram_addr, flash_addr;
+wire         sdram_ready, sdram_rnw, sdram_ce, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
+wire  [26:0] sdram_addr;
+wire  [24:0] dw_sdram_addr, flash_addr;
 wire   [7:0] sdram_din, sdram_dout, dw_sdram_din, flash_din;
 sdram sdram
 (
    .init(~locked_sdram),
    .clk(clk_sdram),
-   .doRefresh(0),
+   .doRefresh(1'd0),
+   
    .ch1_dout(),
-   .ch1_din(dw_sdram_din),
-   .ch1_addr(dw_sdram_addr),
-   .ch1_req(dw_sdram_we),
-   .ch1_rnw(0),
-   .ch1_ready(dw_sdram_ready),
+   .ch1_din(upload_ram_din),
+   .ch1_addr(upload_ram_addr),
+   .ch1_req(upload_ram_ce & upload_sdram_rq),
+   .ch1_rnw(1'd0),
+   .ch1_ready(upload_ram_ready),   
   
    .ch2_dout(sdram_dout),
    .ch2_din(sdram_din),
    .ch2_addr(sdram_addr),
-   .ch2_req(sdram_we | sdram_rd),
-   .ch2_rnw(~sdram_we),
+   .ch2_req(sdram_ce),
+   .ch2_rnw(sdram_rnw),
    .ch2_ready(sdram_ready),
 
    .ch3_addr(flash_addr),

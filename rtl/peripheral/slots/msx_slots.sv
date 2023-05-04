@@ -1,16 +1,16 @@
 module msx_slots
 (
    input                       clk,
-   input                       clk_sdram,
+   //input                       clk_sdram,
    input                       clk_en,
    input                       reset,
-   input                       rom_eject,
-   input                       cart_changed,
-   output                      need_reset,
-   input                       sram_save,
-   input                       sram_load,
-   output                      msx_type,
-   input MSX::config_cart_t    cart_conf[2],
+   //input                       rom_eject,
+   //input                       cart_changed,
+   //output                      need_reset,
+   //input                       sram_save,
+   //input                       sram_load,
+   //output                      msx_type,
+   //input MSX::config_cart_t    cart_conf[2],
    //CPU                
    input                [15:0] cpu_addr,
    input                 [7:0] cpu_dout,
@@ -21,66 +21,183 @@ module msx_slots
    input                       cpu_iorq,
    input                       cpu_m1,
 
-   output signed        [15:0] sound,
+   //output signed        [15:0] sound,
    //IOCTL
-   input                       ioctl_download,
-   input                [15:0] ioctl_index,
-   input                [26:0] ioctl_addr,
+   //input                       ioctl_download,
+   //input                [15:0] ioctl_index,
+   //input                [26:0] ioctl_addr,
    //DDR3
-   output         logic [27:0] ddr3_addr,
-   output                      ddr3_rd,
-   output                      ddr3_wr,
-   input                 [7:0] ddr3_dout,
-   output                [7:0] ddr3_din,
-   input                       ddr3_ready,
-   output                      ddr3_request,
+   //output         logic [27:0] ddr3_addr,
+   //output                      ddr3_rd,
+   //output                      ddr3_wr,
+   //input                 [7:0] ddr3_dout,
+   //output                [7:0] ddr3_din,
+   //input                       ddr3_ready,
+   //output                      ddr3_request,
    //SDRAM
-   output               [24:0] sdram_addr,
-   output                [7:0] sdram_din,
-   output                      sdram_we,
-   output                      sdram_rd,
-   input                       sdram_ready,
-   input                 [7:0] sdram_dout,
-   input                 [1:0] sdram_size,
+   output               [26:0] ram_addr,
+   output                [7:0] ram_din,
+   input                 [7:0] ram_dout,
+   output                      ram_rnw,
+   output                      ram_ce,
+   //input                       sdram_ready,
+   //input                 [1:0] sdram_size,
 
-   output               [24:0] dw_sdram_addr,
-   output                [7:0] dw_sdram_din,
-   output                      dw_sdram_we,
-   input                       dw_sdram_ready,
+   //output               [24:0] dw_sdram_addr,
+   //output                [7:0] dw_sdram_din,
+   //output                      dw_sdram_we,
+   //input                       dw_sdram_ready,
    
-   output               [24:0] flash_addr,
-   output                [7:0] flash_din,
-   output                      flash_wr,
-   input                       flash_ready,
-   input                       flash_done,
+   //output               [24:0] flash_addr,
+   //output                [7:0] flash_din,
+   //output                      flash_wr,
+   //input                       flash_ready,
+   //input                       flash_done,
 
    //KBD LAYOUT
-   output                [9:0] kbd_addr,
-   output                [7:0] kbd_din,
-   output                      kbd_we,
-   output                      kbd_request,
+   //output                [9:0] kbd_addr,
+   //output                [7:0] kbd_din,
+   //output                      kbd_we,
+   //output                      kbd_request,
    //SD FDC
-   input                 [5:0] img_mounted,
+   input                       img_mounted,
    input                [31:0] img_size,
    input                       img_readonly,
 
-   output               [31:0] sd_lba[6],
-   output                [5:0] sd_rd,
-   output                [5:0] sd_wr,
-   input                 [5:0] sd_ack,
+   output               [31:0] sd_lba,
+   output                      sd_rd,
+   output                      sd_wr,
+   input                       sd_ack,
    input                [13:0] sd_buff_addr,
    input                 [7:0] sd_buff_dout,
-   output                [7:0] sd_buff_din[6],
+   output                [7:0] sd_buff_din,
    input                       sd_buff_wr,
 
    input                 [1:0] active_slot,
-   output                      spi_ss,
-   output                      spi_clk,
-   input                       spi_di,
-   output                      spi_do,
-   output                [2:0] debug_cpu_din_src
+   input  MSX::block_t         slot_layout[64],
+   input  MSX::lookup_RAM_t    lookup_RAM[16],
+   input                 [7:0] msx_config
+   //output                      spi_ss,
+   //output                      spi_clk,
+   //input                       spi_di,
+   //output                      spi_do,
+   //output                [2:0] debug_cpu_din_src
 );
 
+
+logic [7:0] mapper_slot[4];
+wire mapper_en;
+assign mapper_en = (cpu_addr == 16'hFFFF & msx_config[3'(active_slot)] & cpu_mreq );
+
+always @(posedge reset, posedge clk) begin
+   if (reset) begin
+      mapper_slot[0] <= 8'h00;
+      mapper_slot[1] <= 8'h00;
+      mapper_slot[2] <= 8'h00;
+      mapper_slot[3] <= 8'h00;
+   end else begin
+      if (mapper_en & cpu_wr )
+         mapper_slot[active_slot] <= cpu_dout;
+   end
+end
+
+
+mapper_typ_t        mapper;
+device_typ_t        device;
+
+wire          [1:0] block      = cpu_addr[15:14];
+wire          [1:0] subslot    = mapper_slot[active_slot][(3'd2 * block) +:2];
+wire          [5:0] layout_id  = {active_slot, subslot, block};
+wire          [3:0] ref_ram    = slot_layout[layout_id].ref_ram;
+wire          [1:0] offset_ram = slot_layout[layout_id].offset_ram;
+assign              mapper     = slot_layout[layout_id].mapper;
+assign              device     = slot_layout[layout_id].device;
+wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
+wire         [15:0] size       = lookup_RAM[ref_ram].size;  //16kB * size
+wire                ram_ro     = lookup_RAM[ref_ram].ro;
+
+
+assign ram_addr = base_ram + mapper_addr;
+
+wire [26:0] mapper_addr = mapper == MAPPER_NONE   ? 27'(mapper_none_addr)     :
+                          mapper == MAPPER_RAM    ? 27'(mapper_ram_addr)      :
+                          mapper == MAPPER_LINEAR ? 27'(mapper_linear_addr)   :
+                          mapper == MAPPER_OFFSET ? 27'(mapper_offset_addr)   :
+                                                    27'hDEAD                  ;
+
+
+assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
+                          mapper_en & cpu_rd      ? ~mapper_slot[active_slot] :
+                          FDC_req                 ? d_to_cpu_FDC              :
+                          mapper == MAPPER_UNUSED ? 8'hFF                     :
+                                                    ram_dout                  ;                                                               
+
+
+assign ram_ce   = cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro));
+assign ram_rnw  = cpu_rd;
+assign ram_din  = cpu_dout;
+
+
+//MAPPER NONE
+wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
+
+//MAPPER LINEAR
+wire [26:0] mapper_linear_addr = 27'(cpu_addr[15:0]) & ((27'(size) << 14)-27'd1);
+
+//NONE 
+//wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - 27'h2000;
+wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - {11'd0,4'd4,12'd0};
+
+//MAPPER MSX RAM
+
+wire [21:0] mapper_ram_addr;
+wire  [7:0] mapper_ram_dout;
+wire mapper_ram_req;
+msx2_ram_mapper msx2_ram_mapper
+(
+   .clk(clk),
+   .reset(reset),
+   .cpu_iorq(cpu_iorq),
+   .cpu_m1(cpu_m1),
+   .cpu_wr(cpu_wr),
+   .cpu_rd(cpu_rd),
+   .cpu_addr(cpu_addr),
+   .cpu_dout(cpu_dout),
+   .ram_block_count(size[7:0]),
+   .mapper_dout(mapper_ram_dout),
+   .mapper_req(mapper_ram_req),
+   .mapper_addr(mapper_ram_addr)
+);
+
+wire        FDC_req;
+wire  [7:0] d_to_cpu_FDC;
+fdc fdc
+(
+   .clk(clk),
+   .reset(reset),
+   .clk_en(clk_en),
+   .cs(device == DEVICE_FDC),
+   .addr(cpu_addr[13:0]),
+   .d_from_cpu(cpu_dout),
+   .d_to_cpu(d_to_cpu_FDC),
+   .output_en(FDC_req),
+   .rd(cpu_rd & cpu_mreq),
+   .wr(cpu_wr & cpu_mreq),
+   .img_mounted(img_mounted),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
+   
+   .sd_lba(sd_lba),
+   .sd_rd(sd_rd),
+   .sd_wr(sd_wr),
+   .sd_ack(sd_ack),
+   .sd_buff_addr(sd_buff_addr[8:0]),
+   .sd_buff_dout(sd_buff_dout),
+   .sd_buff_din(sd_buff_din),
+   .sd_buff_wr(sd_buff_wr)
+);
+
+/*
 //Unused port
 assign sd_lba[0]      = 0;
 assign sd_rd[0]       = 1'b0;
@@ -118,8 +235,8 @@ wire [24:0] mem_addr, offset;
 wire        slot_id, block_init, cpu_we;
 slot_typ_t  slot_typ;
 
-assign {active_subslot, active_block}  = msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_A ? 4'd0                                                 :
-                                         msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_B ? 4'd0                                                 :
+assign {active_subslot, active_block}  = msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_A ? 4'd0                                             :
+                                         msx_slots.slot_typ[active_slot] == SLOT_TYP_CART_B ? 4'd0                                             :
                                          msx_slots.slot_typ[active_slot] != SLOT_TYP_MAPPER ? {2'd0, cpu_addr[15:14]}                          :
                                          cpu_addr[15:14] == 2'b00                           ? {mapper_slot[active_slot][1:0], cpu_addr[15:14]} :
                                          cpu_addr[15:14] == 2'b01                           ? {mapper_slot[active_slot][3:2], cpu_addr[15:14]} :
@@ -146,18 +263,7 @@ assign sdram_din  = cpu_dout;
 assign sdram_we   = cpu_we & ~mapper_en & ~sram_oe;
 assign sdram_rd   = cpu_rd & cpu_mreq;
 
-/*
-assign cpu_din    = ~cpu_rd                      ? 8'hFF                     :
-                    mapper_en                    ? ~mapper_slot[active_slot] :
-                    cart_output_en               ? d_to_cpu_cart             :
-                    FDC_output_en                ? d_to_cpu_FDC              :
-                    msx2_mapper_req              ? msx2_mapper_dout          :
-                    ~cpu_mreq                    ? 8'hFF                     :                    
-                    sram_oe                      ? bram_dout                 :
-                    sdram_size == 0 & block_init ? bram_dout                 :
-                    block_init                   ? sdram_dout                :
-                                                   8'hFF                     ;
-*/
+
 assign {debug_cpu_din_src, cpu_din}  = ~cpu_rd                       ? {3'd07, 8'hFF                     }:
                                        mapper_en                     ? {3'd00, ~mapper_slot[active_slot] }:
                                        cart_output_en                ? {3'd01, d_to_cpu_cart             }:
@@ -320,5 +426,5 @@ download download
    .bram_request(dw_bram_upload),
    .*
 );
-
+*/
 endmodule
