@@ -28,9 +28,9 @@ module msx
    input                    cas_audio_in,
    //MSX config
    input             [64:0] rtc_time,
-   input MSX::config_t      MSXconf,
+   input MSX::bios_config_t bios_config,
+   input MSX::user_config_t msxConfig,
    input MSX::config_cart_t cart_conf[2],
-   output                   msx_type,
    input                    rom_eject,
    input                    sram_save,
    input                    sram_load,
@@ -60,8 +60,7 @@ module msx
    input              [1:0] sdram_size,
    input  MSX::block_t      slot_layout[64],
    input  MSX::lookup_RAM_t lookup_RAM[16],
-   input              [7:0] msx_config,
-   /*
+/*
    output            [24:0] dw_sdram_addr,
    output             [7:0] dw_sdram_din,
    output                   dw_sdram_we,
@@ -180,7 +179,7 @@ assign slot =    ~map_valid         ? 2'b00         :
 wire psg_n  = ~((a[7:3] == 5'b10100)   & ~iorq_n & m1_n);
 wire ppi_n  = ~((a[7:3] == 5'b10101)   & ~iorq_n & m1_n);
 wire vdp_en =   (a[7:3] == 5'b10011)   & ~iorq_n & m1_n ;
-wire rtc_en =   (a[7:1] == 7'b1011010) & ~iorq_n & m1_n & MSXconf.typ == MSX2;
+wire rtc_en =   (a[7:1] == 7'b1011010) & ~iorq_n & m1_n & bios_config.MSX_typ == MSX2;
 
 //  -----------------------------------------------------------------------------
 //  -- 82C55 PPI
@@ -310,8 +309,8 @@ wire       VRAM_we_lo_vdp, VRAM_we_hi_vdp, vdp18, vdp ;
 wire       vdp_int_n;
 wire [7:0] d_to_cpu_vdp;
 
-assign vdp18          = MSXconf.typ == MSX1;
-assign vdp            = MSXconf.typ == MSX2;
+assign vdp18          = bios_config.MSX_typ == MSX1;
+assign vdp            = bios_config.MSX_typ == MSX2;
 
 //CPU access
 assign d_to_cpu_vdp   = vdp18 ? d_from_vdp18                : d_from_vdp;
@@ -371,7 +370,7 @@ vdp18_core #(.compat_rgb_g(0)) vdp_vdp18
    .vram_a_o(VRAM_address_vdp18),
    .vram_d_o(VRAM_do_vdp18),
    .vram_d_i(VRAM_di_lo),
-   .border_i(MSXconf.border),
+   .border_i(msxConfig.border),
    .rgb_r_o(R_vdp18),
    .rgb_g_o(G_vdp18),
    .rgb_b_o(B_vdp18),
@@ -380,7 +379,7 @@ vdp18_core #(.compat_rgb_g(0)) vdp_vdp18
    .hblank_o(hblank_vdp18),
    .vblank_o(vblank_vdp18),
    .blank_n_o(DE_vdp18),
-   .is_pal_i(MSXconf.video_mode == PAL)
+   .is_pal_i(msxConfig.video_mode == PAL)
 );
 
 wire        int_n_vdp;
@@ -418,11 +417,11 @@ vdp vdp_vdp
    .PVIDEOCS_N(),
    .PVIDEODHCLK(),
    .PVIDEODLCLK(DLClk_vdp),
-   .DISPRESO(MSXconf.scandoubler),
+   .DISPRESO(msxConfig.scandoubler),
    .LEGACY_VGA(1),
    .RATIOMODE(3'b000),
-   .NTSC_PAL_TYPE(MSXconf.video_mode == AUTO),
-   .FORCED_V_MODE(MSXconf.video_mode == PAL)
+   .NTSC_PAL_TYPE(msxConfig.video_mode == AUTO),
+   .FORCED_V_MODE(msxConfig.video_mode == PAL)
 );
 
 wire [15:0] VRAM_address;
@@ -504,7 +503,7 @@ msx_slots msx_slots
    .active_slot(slot),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
-   .msx_config(msx_config)
+   .bios_config(bios_config)
    //.kbd_addr(kbd_addr),
    //.kbd_din(kbd_din),
    //.kbd_we(kbd_we),

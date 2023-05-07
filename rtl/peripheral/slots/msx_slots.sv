@@ -76,7 +76,7 @@ module msx_slots
    input                 [1:0] active_slot,
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
-   input                 [7:0] msx_config
+   input  MSX::bios_config_t   bios_config
    //output                      spi_ss,
    //output                      spi_clk,
    //input                       spi_di,
@@ -87,7 +87,7 @@ module msx_slots
 
 logic [7:0] mapper_slot[4];
 wire mapper_en;
-assign mapper_en = (cpu_addr == 16'hFFFF & msx_config[3'(active_slot)] & cpu_mreq );
+assign mapper_en = (cpu_addr == 16'hFFFF & bios_config.slot_expander_en[active_slot] & cpu_mreq );
 
 always @(posedge reset, posedge clk) begin
    if (reset) begin

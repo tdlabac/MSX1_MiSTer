@@ -92,11 +92,6 @@ package MSX;
     } ioctl_rom_t;
 
     typedef struct {
-        cart_typ_t   typ;
-        mapper_typ_t mapper;
-    } config_cart_t;
-
-    typedef struct {
         logic [27:0] store_address;      //Store DDR3
         logic  [9:0] block_count;
         logic  [7:0] sram_block_count;
@@ -118,15 +113,13 @@ package MSX;
         ram_size_t      ram_size;
         video_mode_t    video_mode;
         cas_audio_src_t cas_audio_src;
-    } config_t;    
+    } user_config_t;    
+    
 
-        typedef struct {
-        cart_typ_t   typ;
-        mapper_typ_t mapper;
-    } config_cart_t;
-    
-    
-    
+    typedef struct {
+        logic     [3:0] slot_expander_en;   
+        MSX_typ_t       MSX_typ;
+    } bios_config_t;    
     
 //NEW    
     typedef struct {
@@ -143,8 +136,13 @@ package MSX;
         logic [26:0] addr;
         logic [15:0] size;
         logic        ro;
-
     } lookup_RAM_t;
+
+    typedef struct {
+        cart_typ_t   typ;
+        mapper_typ_t mapper;
+    } config_cart_t;
+
 
         
 endpackage

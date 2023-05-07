@@ -25,7 +25,7 @@ module memory_upload
    input                 [1:0] sdram_size,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
-   output logic          [7:0] msx_config
+   output MSX::bios_config_t   bios_config
 );
 
    logic [26:0] ioctl_size [4];
@@ -123,7 +123,7 @@ module memory_upload
                      CONFIG_FDC: device <= DEVICE_FDC;
                      default:    device <= DEVICE_NONE;
                   endcase
-                  counter <= {conf[5][2:0], conf[6],14'h0} - 1;
+                  counter <= {conf[5][2:0], conf[6],14'h0} - 25'd1;
                   ddr3_rd <= config_read_en;                                     //Prefetch
                   if (conf[3][7]) begin                                          //Fill ?
                      lookup_RAM[ref_ram].addr <= ram_addr;
@@ -155,7 +155,7 @@ module memory_upload
             end
             STATE_FILL_RAM: begin
                if (sdram_ready & ~ram_ce) begin
-                  ddr3_rd  <= save_addr > 0 ? 1 : conf[3][6] & config_read_en;
+                  ddr3_rd  <= save_addr > 1'b0 ? 1'b1 : conf[3][6] & config_read_en;
                   counter  <= counter - 25'd1;
                   ram_ce   <= 1;
                   if (counter == 0) begin
@@ -175,7 +175,8 @@ module memory_upload
                //case( config_typ_t'(conf[3][$bits(config_typ_t)-1:0]))
                case( config_typ_t'(conf[4]))
                   CONFIG_CONFIG: begin
-                     msx_config <= conf[5];
+                     bios_config.slot_expander_en <= conf[5][3:0];
+                     bios_config.MSX_typ          <= MSX_typ_t'(conf[5][5:4]);
                      ddr3_rd <= config_read_en;
                   end
                   CONFIG_KBD_LAYOUT: begin

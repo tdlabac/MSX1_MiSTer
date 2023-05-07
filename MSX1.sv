@@ -193,7 +193,8 @@ assign BUTTONS = 0;
 
 localparam VDNUM = 7;
 
-MSX::config_t    MSXconf;
+MSX::user_config_t msxConfig;
+MSX::bios_config_t bios_config;
 MSX::config_cart_t cart_conf[2];
 wire             forced_scandoubler;
 wire      [21:0] gamma_bus;
@@ -293,9 +294,9 @@ localparam CONF_STR = {
 
 wire [7:0] status_menumask;
 wire [1:0] sdram_size;
-assign status_menumask[0] = MSXconf.cas_audio_src == CAS_AUDIO_ADC;
+assign status_menumask[0] = msxConfig.cas_audio_src == CAS_AUDIO_ADC;
 assign status_menumask[1] = fdc_enabled;
-assign status_menumask[2] = MSXconf.typ == MSX1;
+assign status_menumask[2] = bios_config.MSX_typ == MSX1;
 assign status_menumask[3] = ROM_A_load_hide;
 assign status_menumask[4] = ROM_B_load_hide;
 assign status_menumask[5] = sram_A_select_hide;
@@ -346,7 +347,7 @@ msx_config msx_config
    .clk(clk21m),
    .reset(reset),
    .reset_request(config_reset),
-   .msx_type(config_msx[4]),  //TODO
+   .msx_type(bios_config.MSX_typ),
    .HPS_status(status),
    .scandoubler(scandoubler),
    .sdram_size(sdram_size),
@@ -357,7 +358,7 @@ msx_config msx_config
    .ROM_A_load_hide(ROM_A_load_hide),
    .ROM_B_load_hide(ROM_B_load_hide),
    .fdc_enabled(fdc_enabled),
-   .MSXconf(MSXconf)
+   .msxConfig(msxConfig)
 );
 
 /////////////////   CLOCKS   /////////////////
@@ -385,7 +386,7 @@ wire  [7:0] R, G, B, cpu_din, cpu_dout;
 wire [15:0] cpu_addr, audio;
 wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
-wire        msx_type, need_reset;
+wire        need_reset;
 MSX::block_t         slot_layout[64];
 MSX::lookup_RAM_t    lookup_RAM[16];
 msx MSX
@@ -394,7 +395,7 @@ msx MSX
    .DE(blank_n),
    .VS(vsync),
    .cas_motor(motor),
-   .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
+   .cas_audio_in(msxConfig.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
    .rom_eject(status[10]),
    .sram_save(status[38]),
@@ -425,7 +426,12 @@ msx MSX
 	.spi_do(sdmosi),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
-   .msx_config(config_msx),
+   .bios_config(bios_config),
+   .flash_addr(),
+   .flash_din(),
+   .flash_wr(),
+   .flash_ready(),
+   .flash_done(),
    .*
 );
 
@@ -586,7 +592,7 @@ memory_upload memory_upload(
     .sdram_size(),
     .slot_layout(slot_layout),
     .lookup_RAM(lookup_RAM),
-    .msx_config(config_msx)
+    .bios_config(bios_config)
 );
 
 
