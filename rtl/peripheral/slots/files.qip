@@ -4,3 +4,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) m
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mapper_detect.sv                   ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) fdc.sv                             ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) fm_pac.sv                          ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) konami.sv                          ]

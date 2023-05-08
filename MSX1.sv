@@ -592,7 +592,8 @@ memory_upload memory_upload(
     .sdram_size(),
     .slot_layout(slot_layout),
     .lookup_RAM(lookup_RAM),
-    .bios_config(bios_config)
+    .bios_config(bios_config),
+    .cart_conf(cart_conf)
 );
 
 

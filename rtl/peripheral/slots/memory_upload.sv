@@ -25,7 +25,8 @@ module memory_upload
    input                 [1:0] sdram_size,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
-   output MSX::bios_config_t   bios_config
+   output MSX::bios_config_t   bios_config,
+   input  MSX::config_cart_t   cart_conf[2]
 );
 
    logic [26:0] ioctl_size [4];
@@ -56,12 +57,14 @@ module memory_upload
    typedef enum logic [2:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_STORE_CONFIG} state_t;
    state_t state;
    logic  [7:0] conf[16];
+   logic  [1:0] pattern;
    
    assign reset_rq = state != STATE_IDLE;
-   assign ram_din = save_addr > 28'd0 ? ddr3_dout                   :  
-                    conf[3][6]        ? ddr3_dout                   :
-                    ram_addr[8]       ? ram_addr[1] ? 8'hff : 8'h00 :
-                                        ram_addr[1] ? 8'h00 : 8'hff ; 
+   assign ram_din = pattern == 2'd0 ? ddr3_dout :
+                    pattern == 2'd1 ? 8'hFF     :
+                    pattern == 2'd2 ? 8'h00     :
+                    ram_addr[8]     ? ram_addr[1] ? 8'hff : 8'h00 :
+                                      ram_addr[1] ? 8'h00 : 8'hff ; 
    
    wire config_read_en = ddr3_addr < 28'(ioctl_size[0]);
    always @(posedge clk) begin
@@ -130,32 +133,38 @@ module memory_upload
                      lookup_RAM[ref_ram].size <= {conf[5], conf[6]};
                      lookup_RAM[ref_ram].ro   <= conf[3][6];                     //RO
                      state                    <= STATE_FILL_RAM;
-                     sdram_rq                 <= 1;
+                     sdram_rq                 <= 1'b1;
+                     pattern                  <= conf[3][6] ? 2'd0 : 2'd3;       //DRAM or RAM pattern;
                   end
-                  if (config_typ_t'(conf[4][$bits(config_typ_t)-1:0]) == CONFIG_SLOT_A /*| config_typ_t'(conf[3][$bits(config_typ_t)-1:0]) == CONFIG_CART_B*/) begin
-                     //TADY zjistime co je nastavene pro DANY SLOT a PRIPADNE TO POSLEME DO RAM
-                     //BACHA NA READ EN
-                     //30A00000 je addr ROM A
-                     if (ioctl_size[2] > 0) begin
-                        save_addr <= ddr3_addr; //Backup addr
-                        ddr3_addr <= 28'hA00000;  //ROM A addr
-                        counter   <= ioctl_size[2][24:0] - 25'd1;
-                        state                    <= STATE_FILL_RAM;
-                        ddr3_rd                  <= 1'b1;
-                        sdram_rq                 <= 1;
-                        mapper                   <= MAPPER_OFFSET;
-                        lookup_RAM[ref_ram].addr <= ram_addr;
-                        lookup_RAM[ref_ram].size <= 16'(ioctl_size[2] >> 14);
-                        lookup_RAM[ref_ram].ro   <= 1'd1;
-                     end else begin                // no ROM SKIP
-                         state <= STATE_READ_CONF;
-                     end
+                  if (config_typ_t'(conf[4]) == CONFIG_SLOT_A | config_typ_t'(conf[4]) == CONFIG_SLOT_B) begin
+                     case (cart_conf[config_typ_t'(conf[4]) == CONFIG_SLOT_B].typ)
+                        CART_TYP_ROM: begin
+                           if (ioctl_size[config_typ_t'(conf[4]) == CONFIG_SLOT_A ? 2 : 3] > 0) begin
+                              lookup_RAM[ref_ram].addr <= ram_addr;
+                              lookup_RAM[ref_ram].size <= 16'(ioctl_size[config_typ_t'(conf[4]) == CONFIG_SLOT_A ? 2 : 3] >> 14);
+                              lookup_RAM[ref_ram].ro   <= 1'd1;
+                              save_addr <= ddr3_addr;                                                             //Backup addr
+                              ddr3_addr <= config_typ_t'(conf[4]) == CONFIG_SLOT_A ? 28'hA00000 : 28'hF00000 ;    //ROM Store
+                              counter   <= ioctl_size[config_typ_t'(conf[4]) == CONFIG_SLOT_A ? 2 : 3][24:0] - 25'd1;
+                              state                    <= STATE_FILL_RAM;
+                              ddr3_rd                  <= 1'b1;
+                              sdram_rq                 <= 1;
+                              mapper                   <= cart_conf[config_typ_t'(conf[4]) == CONFIG_SLOT_B].mapper;
+                              pattern                  <= 2'd0;                              
+                           end else begin                // no ROM SKIP
+                              state <= STATE_READ_CONF;
+                           end
+                        end
+
+                        
+                        default: state <= STATE_READ_CONF;
+                     endcase                   
                   end
                end
             end
             STATE_FILL_RAM: begin
                if (sdram_ready & ~ram_ce) begin
-                  ddr3_rd  <= save_addr > 1'b0 ? 1'b1 : conf[3][6] & config_read_en;
+                  ddr3_rd  <= save_addr > 28'd0 ? 1'b1 : conf[3][6] & config_read_en;
                   counter  <= counter - 25'd1;
                   ram_ce   <= 1;
                   if (counter == 0) begin
@@ -165,14 +174,12 @@ module memory_upload
                         save_addr <= 28'd0;
                         ddr3_rd  <= 1'd1;       //Prefetch
                      end
-                     
                   end
                end
             end
             STATE_STORE_CONFIG: begin
                state   <= STATE_READ_CONF;
                sdram_rq <= 0;
-               //case( config_typ_t'(conf[3][$bits(config_typ_t)-1:0]))
                case( config_typ_t'(conf[4]))
                   CONFIG_CONFIG: begin
                      bios_config.slot_expander_en <= conf[5][3:0];
@@ -183,13 +190,10 @@ module memory_upload
                      ddr3_addr <= ddr3_addr + 28'h1ff;
                      ddr3_rd   <= config_read_en;
                      ;
-                  end
-                  CONFIG_SLOT_B: begin
-                     ;
-                     //ddr3_rd <= config_read_en;
-                  end               
+                  end            
                   CONFIG_NONE,
                   CONFIG_SLOT_A,
+                  CONFIG_SLOT_B,
                   CONFIG_FDC: begin
                      ref_ram <= ref_ram + 1'd1;
                      if (conf[7][7:6] > 2'd0) begin                       
@@ -200,8 +204,9 @@ module memory_upload
                            slot_layout[conf[7][5:0]].ref_ram     <= slot_layout[conf[8][5:0]].ref_ram;
                            slot_layout[conf[7][5:0]].offset_ram  <= slot_layout[conf[8][5:0]].offset_ram;
                         end
-                        slot_layout[conf[7][5:0]].mapper      <= mapper;
+                        slot_layout[conf[7][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
                         slot_layout[conf[7][5:0]].device      <= device;
+                        slot_layout[conf[7][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
                      end
                      if (conf[9][7:6] > 2'd0) begin                       
                         if (conf[9][7]) begin
@@ -211,8 +216,9 @@ module memory_upload
                            slot_layout[conf[9][5:0]].ref_ram     <= slot_layout[conf[10][5:0]].ref_ram;
                            slot_layout[conf[9][5:0]].offset_ram  <= slot_layout[conf[10][5:0]].offset_ram;
                         end
-                        slot_layout[conf[9][5:0]].mapper      <= mapper;
+                        slot_layout[conf[9][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
                         slot_layout[conf[9][5:0]].device      <= device;
+                        slot_layout[conf[9][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
                      end
                      if (conf[11][7:6] > 2'd0) begin                       
                         if (conf[11][7]) begin
@@ -222,8 +228,9 @@ module memory_upload
                            slot_layout[conf[11][5:0]].ref_ram     <= slot_layout[conf[12][5:0]].ref_ram;
                            slot_layout[conf[11][5:0]].offset_ram  <= slot_layout[conf[12][5:0]].offset_ram;
                         end
-                        slot_layout[conf[11][5:0]].mapper     <= mapper;
+                        slot_layout[conf[11][5:0]].mapper     <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
                         slot_layout[conf[11][5:0]].device     <= device;
+                        slot_layout[conf[11][5:0]].cart_num   <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
                      end
                      if (conf[13][7:6] > 2'd0) begin                       
                         if (conf[13][7]) begin
@@ -233,8 +240,9 @@ module memory_upload
                            slot_layout[conf[13][5:0]].ref_ram     <= slot_layout[conf[14][5:0]].ref_ram;
                            slot_layout[conf[13][5:0]].offset_ram  <= slot_layout[conf[14][5:0]].offset_ram;
                         end
-                        slot_layout[conf[13][5:0]].mapper     <= mapper;
+                        slot_layout[conf[13][5:0]].mapper     <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
                         slot_layout[conf[13][5:0]].device     <= device;
+                        slot_layout[conf[13][5:0]].cart_num   <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
                      end
                   end
                   default: state <= STATE_IDLE;
@@ -246,6 +254,7 @@ module memory_upload
       end
    end
 
+mapper_typ_t detect_mapper;
 mapper_detect mapper_detect 
 (
    .clk(clk),
@@ -253,7 +262,7 @@ mapper_detect mapper_detect
    .data(ddr3_dout),
    .wr(ram_ce),
    .rom_size(ioctl_size[2]),
-   .mapper(),
+   .mapper(detect_mapper),
    .offset()
 );
 

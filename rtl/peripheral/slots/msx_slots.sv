@@ -76,7 +76,12 @@ module msx_slots
    input                 [1:0] active_slot,
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
-   input  MSX::bios_config_t   bios_config
+   input  MSX::bios_config_t   bios_config,
+   output MSX::mapper_typ_t    debug_act_mapper,
+   output [5:0] debug_layout_id,
+   output debug_cart_num,
+   output [3:0] debug_ref_ram 
+
    //output                      spi_ss,
    //output                      spi_clk,
    //input                       spi_di,
@@ -110,6 +115,7 @@ wire          [1:0] subslot    = mapper_slot[active_slot][(3'd2 * block) +:2];
 wire          [5:0] layout_id  = {active_slot, subslot, block};
 wire          [3:0] ref_ram    = slot_layout[layout_id].ref_ram;
 wire          [1:0] offset_ram = slot_layout[layout_id].offset_ram;
+wire                cart_num   = slot_layout[layout_id].cart_num;
 assign              mapper     = slot_layout[layout_id].mapper;
 assign              device     = slot_layout[layout_id].device;
 wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
@@ -119,10 +125,12 @@ wire                ram_ro     = lookup_RAM[ref_ram].ro;
 
 assign ram_addr = base_ram + mapper_addr;
 
-wire [26:0] mapper_addr = mapper == MAPPER_NONE   ? 27'(mapper_none_addr)     :
+wire [26:0] mapper_addr = mem_unmaped             ? 27'hDEAD                  :
+                          mapper == MAPPER_NONE   ? 27'(mapper_none_addr)     :
                           mapper == MAPPER_RAM    ? 27'(mapper_ram_addr)      :
                           mapper == MAPPER_LINEAR ? 27'(mapper_linear_addr)   :
                           mapper == MAPPER_OFFSET ? 27'(mapper_offset_addr)   :
+                          mapper == MAPPER_KONAMI ? 27'(mapper_konami_addr)   :
                                                     27'hDEAD                  ;
 
 
@@ -130,13 +138,21 @@ assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
                           mapper_en & cpu_rd      ? ~mapper_slot[active_slot] :
                           FDC_req                 ? d_to_cpu_FDC              :
                           mapper == MAPPER_UNUSED ? 8'hFF                     :
+                          mem_unmaped             ? 8'hFF                     :
                                                     ram_dout                  ;                                                               
 
-
-assign ram_ce   = cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro));
+assign debug_act_mapper = mapper;
+assign debug_layout_id = layout_id;
+assign debug_cart_num = cart_num;
+assign debug_ref_ram  = ref_ram;
+assign ram_ce   = cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
 assign ram_rnw  = cpu_rd;
 assign ram_din  = cpu_dout;
 
+wire mem_unmaped = mapper_konami_unmaped;
+
+
+wire debug_tick = mapper_none_addr == 27'(16'h8000) & active_slot == 2'd3 & cpu_mreq;
 
 //MAPPER NONE
 wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
@@ -168,6 +184,24 @@ msx2_ram_mapper msx2_ram_mapper
    .mapper_req(mapper_ram_req),
    .mapper_addr(mapper_ram_addr)
 );
+
+wire [24:0] mapper_konami_addr;
+wire        mapper_konami_unmaped;
+cart_konami konami
+(
+   .clk(clk),
+   .reset(reset),
+   .rom_size(25'(size) << 14),
+   .addr(cpu_addr),
+   .d_from_cpu(cpu_dout),
+   .wr(cpu_mreq & cpu_wr),
+   .cs(mapper == MAPPER_KONAMI),
+   .slot(cart_num),
+   .mem_unmaped(mapper_konami_unmaped),
+   .mem_addr(mapper_konami_addr)
+);
+
+
 
 wire        FDC_req;
 wire  [7:0] d_to_cpu_FDC;

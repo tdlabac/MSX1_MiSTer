@@ -61,8 +61,8 @@ assign cart_conf[0].typ = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_sel
                                                                       CART_TYP_EMPTY );
 
 assign cart_conf[1].typ    = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
-assign cart_conf[0].mapper = mapper_A_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_A_select);
-assign cart_conf[1].mapper = mapper_B_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_B_select);
+assign cart_conf[0].mapper = mapper_A_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_A_select + 4'd1);
+assign cart_conf[1].mapper = mapper_B_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_B_select + 4'd1);
 
 assign sram_A_select_hide = cart_conf[0].typ != CART_TYP_ROM | mapper_A_select == 4'd0; 
 assign sram_size[0] = cart_conf[0].typ == CART_TYP_FM_PAC ? 3'd4                  :
