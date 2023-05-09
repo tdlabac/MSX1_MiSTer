@@ -266,7 +266,7 @@ jt49_bus PSG
 (
    .rst_n(~reset),
    .clk(clk21m),
-   .clk_en(ce_3m58_n),
+   .clk_en( ),
    .bdir(psg_bdir),
    .bc1(psg_bc),
    .din(d_from_cpu),
@@ -461,7 +461,7 @@ msx_slots msx_slots
    .cpu_mreq(~mreq_n),
    .cpu_rd(~rd_n),
    .cpu_wr(~wr_n),
-   //.sound(cart_sound),
+   .sound(cart_sound),
    //.rom_eject(rom_eject),
    //.cart_changed(cart_changed),
    //.need_reset(need_reset),
@@ -503,7 +503,8 @@ msx_slots msx_slots
    .active_slot(slot),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
-   .bios_config(bios_config)
+   .bios_config(bios_config),
+   .cart_conf(cart_conf)
    //.kbd_addr(kbd_addr),
    //.kbd_din(kbd_din),
    //.kbd_we(kbd_we),

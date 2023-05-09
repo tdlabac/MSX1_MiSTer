@@ -54,24 +54,28 @@ module memory_upload
       ioctl_download_last <= ioctl_download;
    end 
 
-   typedef enum logic [2:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_STORE_CONFIG} state_t;
+   typedef enum logic [2:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_STORE_CONFIG, STATE_FILL_1, STATE_ERROR} state_t;
    state_t state;
    logic  [7:0] conf[16];
+   logic  [7:0] fw_conf[8];
    logic  [1:0] pattern;
    
-   assign reset_rq = state != STATE_IDLE;
+   assign reset_rq = ! (state == STATE_IDLE | state == STATE_ERROR);
    assign ram_din = pattern == 2'd0 ? ddr3_dout :
                     pattern == 2'd1 ? 8'hFF     :
                     pattern == 2'd2 ? 8'h00     :
                     ram_addr[8]     ? ram_addr[1] ? 8'hff : 8'h00 :
                                       ram_addr[1] ? 8'h00 : 8'hff ; 
    
-   wire config_read_en = ddr3_addr < 28'(ioctl_size[0]);
+   wire config_read_en    = ddr3_addr < 28'(ioctl_size[0]);
+   wire config_read_fw_en = (ddr3_addr - 28'h100000) < 28'(ioctl_size[1]);
+
    always @(posedge clk) begin
       logic  [5:0] block_num;
       logic  [3:0] config_head_addr;
       logic [24:0] counter;
       logic  [3:0] ref_ram;
+      logic        fw_find;
       mapper_typ_t mapper;
       device_typ_t device;
 
@@ -90,32 +94,35 @@ module memory_upload
       end
       if (ddr3_ready & ~ddr3_rd) begin
          case(state)
-         STATE_IDLE: begin
-            ddr3_request     <= 1'd0;
-         end
-         STATE_CLEAN: begin
-            ddr3_request  <= 1'd1;
-            slot_layout[block_num].mapper <= MAPPER_UNUSED;
-            block_num                  <= block_num + 1'd1;
-            if (block_num == 63) begin
-               if (ddr3_ready) begin
-                  state         <= STATE_READ_CONF;
-                  ddr3_rd       <= config_read_en;
-                  block_num     <= 0;
+            STATE_ERROR,
+            STATE_IDLE: begin
+               ddr3_request     <= 1'd0;
+            end
+            STATE_CLEAN: begin
+               ddr3_request  <= 1'd1;
+               slot_layout[block_num].mapper <= MAPPER_UNUSED;
+               slot_layout[block_num].device <= DEVICE_NONE;
+               block_num                  <= block_num + 1'd1;
+               if (block_num == 63) begin
+                  if (ddr3_ready) begin
+                     state         <= STATE_READ_CONF;
+                     ddr3_rd       <= config_read_en;
+                     block_num     <= 0;
+                  end
+               end else begin
+                  block_num  <= block_num + 1'd1;
                end
-            end else begin
-               block_num  <= block_num + 1'd1;
             end
-         end
-         STATE_READ_CONF: begin
-            config_head_addr <= config_head_addr + 1'd1;              
-            ddr3_rd          <= config_read_en;
-            conf[config_head_addr] <= ddr3_dout;         
-            if (config_head_addr == 4'b1111) begin
-               state <= STATE_CHECK_CONFIG;
-               ddr3_rd          <= 1'd0;
-               config_head_addr <= 4'd0;
-            end
+            STATE_READ_CONF: begin
+               config_head_addr <= config_head_addr + 1'd1;              
+               ddr3_rd          <= config_read_en;
+               conf[config_head_addr] <= ddr3_dout;         
+               if (config_head_addr == 4'b1111) begin
+                  state <= STATE_CHECK_CONFIG;
+                  ddr3_rd          <= 1'd0;
+                  config_head_addr <= 4'd0;
+                  fw_find          <= 1'd0;
+               end
             end
             STATE_CHECK_CONFIG: begin
                state <= STATE_IDLE;
@@ -138,6 +145,61 @@ module memory_upload
                   end
                   if (config_typ_t'(conf[4]) == CONFIG_SLOT_A | config_typ_t'(conf[4]) == CONFIG_SLOT_B) begin
                      case (cart_conf[config_typ_t'(conf[4]) == CONFIG_SLOT_B].typ)
+                        CART_TYP_FDC: begin
+                           if (fw_find) begin
+                              lookup_RAM[ref_ram].addr <= ram_addr;
+                              lookup_RAM[ref_ram].size <= {fw_conf[5],fw_conf[6]};
+                              lookup_RAM[ref_ram].ro   <= 1'd1;
+                              counter                  <= (25'({fw_conf[5],fw_conf[6]}) << 14) - 25'd1;
+                              state                    <= STATE_FILL_RAM;
+                              sdram_rq                 <= 1;
+                              mapper                   <= MAPPER_NONE;
+                              pattern                  <= 2'd0;  
+                              device                   <= DEVICE_FDC;
+                              conf[7][7:6]             <= 2'd3; //Only device
+                              conf[9][7:6]             <= 2'd2; //Standart
+                              conf[11][7:6]            <= 2'd3; //Only device
+                              conf[13][7:6]            <= 2'd3; //Only device
+                           end else begin 
+                              if (ioctl_size[1] > 0) begin
+                                 save_addr <= ddr3_addr;                                                             //Backup addr
+                                 ddr3_addr <= 28'h100000;                                                            //FW area
+                                 ddr3_rd   <= 1'b1;                                                                  //Prefetch
+                                 state     <= STATE_FILL_1;                                                          //seek fw
+                                 device <= DEVICE_FDC;                                                               //search fw
+                              end else begin
+                                 state <= STATE_READ_CONF;  //NO FW ROM SKIP
+                              end
+                           end
+                        end
+                        CART_TYP_FM_PAC: begin
+                           if (fw_find) begin
+                              lookup_RAM[ref_ram].addr <= ram_addr;
+                              lookup_RAM[ref_ram].size <= {fw_conf[5],fw_conf[6]};
+                              lookup_RAM[ref_ram].ro   <= 1'd1;
+                              counter                  <= (25'({fw_conf[5],fw_conf[6]}) << 14) - 25'd1;
+                              state                    <= STATE_FILL_RAM;
+                              sdram_rq                 <= 1;
+                              mapper                   <= MAPPER_DEVICE;
+                              pattern                  <= 2'd0;  
+                              device                   <= DEVICE_FMPAC;
+                              conf[7][7:6]             <= 2'd2; //Standart
+                              conf[9][7:6]             <= 2'd2; //Standart
+                              conf[11][7:6]            <= 2'd2; //Standart
+                              conf[13][7:6]            <= 2'd2; //Standart
+                           end else begin
+                              if (ioctl_size[1] > 0) begin
+                                 save_addr <= ddr3_addr;                                                             //Backup addr
+                                 ddr3_addr <= 28'h100000;                                                            //FW area
+                                 ddr3_rd   <= 1'b1;                                                                  //Prefetch
+                                 state     <= STATE_FILL_1;                                                          //seek fw
+                                 device <= DEVICE_FMPAC;                                                             //search fw
+                              end else begin
+                                 state <= STATE_READ_CONF;  //NO FW ROM SKIP
+                              end
+                           end
+                        end
+                        
                         CART_TYP_ROM: begin
                            if (ioctl_size[config_typ_t'(conf[4]) == CONFIG_SLOT_A ? 2 : 3] > 0) begin
                               lookup_RAM[ref_ram].addr <= ram_addr;
@@ -155,11 +217,37 @@ module memory_upload
                               state <= STATE_READ_CONF;
                            end
                         end
-
-                        
                         default: state <= STATE_READ_CONF;
                      endcase                   
                   end
+               end
+            end
+            STATE_FILL_1: begin
+               config_head_addr <= config_head_addr + 1'd1;              
+               ddr3_rd          <= config_read_fw_en;
+               fw_conf[config_head_addr[2:0]] <= ddr3_dout;         
+               if (config_head_addr == 4'd7) begin
+                  config_head_addr <= 4'd0;
+                  if ({fw_conf[0],fw_conf[1],fw_conf[2]} == {"M","S","X"}) begin
+                     if (device_typ_t'(fw_conf[4]) == device) begin  
+                        ddr3_addr <= ddr3_addr + 8;
+                        fw_find <= 1'd1;                 //Nalezeno pokracujeme
+                        state <= STATE_CHECK_CONFIG;
+                     end else begin          
+                        if ((ddr3_addr - 28'h100000 + (28'({fw_conf[5],fw_conf[6]}) << 14) + 28'd8) >= 28'(ioctl_size[1])) begin
+                           ddr3_addr <= save_addr;
+                           ddr3_rd          <= config_read_en; //prefetch
+                           state <= STATE_READ_CONF; //not find skip load
+                        end else begin
+                           ddr3_addr <= ddr3_addr + (28'({fw_conf[5],fw_conf[6]}) << 14) + 28'd8;
+                           //not usable next header
+                        end
+                     end
+                  end else begin
+                     // Havarie. sem jsme se dostali chybou
+                     state <= STATE_ERROR;
+                  end
+                     //TODO konec FW jak budeme resit 
                end
             end
             STATE_FILL_RAM: begin
@@ -196,54 +284,78 @@ module memory_upload
                   CONFIG_SLOT_B,
                   CONFIG_FDC: begin
                      ref_ram <= ref_ram + 1'd1;
-                     if (conf[7][7:6] > 2'd0) begin                       
-                        if (conf[7][7]) begin
-                           slot_layout[conf[7][5:0]].ref_ram     <= ref_ram;
-                           slot_layout[conf[7][5:0]].offset_ram  <= conf[8][1:0];
-                        end else begin
+                     case(conf[7][7:6])
+                        2'b00: ;
+                        2'b01: begin  //Reference RAM
                            slot_layout[conf[7][5:0]].ref_ram     <= slot_layout[conf[8][5:0]].ref_ram;
                            slot_layout[conf[7][5:0]].offset_ram  <= slot_layout[conf[8][5:0]].offset_ram;
+                           slot_layout[conf[7][5:0]].mapper      <= slot_layout[conf[8][5:0]].mapper;
+                           slot_layout[conf[7][5:0]].device      <= device;
                         end
-                        slot_layout[conf[7][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
-                        slot_layout[conf[7][5:0]].device      <= device;
-                        slot_layout[conf[7][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
-                     end
-                     if (conf[9][7:6] > 2'd0) begin                       
-                        if (conf[9][7]) begin
-                           slot_layout[conf[9][5:0]].ref_ram     <= ref_ram;
-                           slot_layout[conf[9][5:0]].offset_ram  <= conf[10][1:0];
-                        end else begin
+                        2'b10: begin  //Filed RAM
+                           slot_layout[conf[7][5:0]].ref_ram     <= ref_ram;
+                           slot_layout[conf[7][5:0]].offset_ram  <= conf[8][1:0];
+                           slot_layout[conf[7][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
+                           slot_layout[conf[7][5:0]].device      <= device;
+                        end
+                        2'b11:
+                           slot_layout[conf[7][5:0]].device      <= device;
+                     endcase
+                     slot_layout[conf[7][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
+                     case(conf[9][7:6])
+                        2'b00: ;
+                        2'b01: begin  //Reference RAM
                            slot_layout[conf[9][5:0]].ref_ram     <= slot_layout[conf[10][5:0]].ref_ram;
                            slot_layout[conf[9][5:0]].offset_ram  <= slot_layout[conf[10][5:0]].offset_ram;
+                           slot_layout[conf[9][5:0]].mapper      <= slot_layout[conf[10][5:0]].mapper;
+                           slot_layout[conf[9][5:0]].device      <= device;
                         end
-                        slot_layout[conf[9][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
-                        slot_layout[conf[9][5:0]].device      <= device;
-                        slot_layout[conf[9][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
-                     end
-                     if (conf[11][7:6] > 2'd0) begin                       
-                        if (conf[11][7]) begin
-                           slot_layout[conf[11][5:0]].ref_ram    <= ref_ram;
-                           slot_layout[conf[11][5:0]].offset_ram <= conf[12][1:0];
-                        end else begin
+                        2'b10: begin  //Filed RAM
+                           slot_layout[conf[9][5:0]].ref_ram     <= ref_ram;
+                           slot_layout[conf[9][5:0]].offset_ram  <= conf[10][1:0];
+                           slot_layout[conf[9][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
+                           slot_layout[conf[9][5:0]].device      <= device;
+                        end
+                        2'b11:
+                           slot_layout[conf[9][5:0]].device      <= device;
+                     endcase
+                     slot_layout[conf[9][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
+                     case(conf[11][7:6])
+                        2'b00: ;
+                        2'b01: begin  //Reference RAM
                            slot_layout[conf[11][5:0]].ref_ram     <= slot_layout[conf[12][5:0]].ref_ram;
                            slot_layout[conf[11][5:0]].offset_ram  <= slot_layout[conf[12][5:0]].offset_ram;
+                           slot_layout[conf[11][5:0]].mapper      <= slot_layout[conf[12][5:0]].mapper;
+                           slot_layout[conf[11][5:0]].device      <= device;
                         end
-                        slot_layout[conf[11][5:0]].mapper     <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
-                        slot_layout[conf[11][5:0]].device     <= device;
-                        slot_layout[conf[11][5:0]].cart_num   <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
-                     end
-                     if (conf[13][7:6] > 2'd0) begin                       
-                        if (conf[13][7]) begin
-                           slot_layout[conf[13][5:0]].ref_ram    <= ref_ram;
-                           slot_layout[conf[13][5:0]].offset_ram <= conf[14][1:0];
-                        end else begin
+                        2'b10: begin  //Filed RAM
+                           slot_layout[conf[11][5:0]].ref_ram     <= ref_ram;
+                           slot_layout[conf[11][5:0]].offset_ram  <= conf[12][1:0];
+                           slot_layout[conf[11][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
+                           slot_layout[conf[11][5:0]].device      <= device;
+                        end
+                        2'b11:
+                           slot_layout[conf[11][5:0]].device      <= device;
+                     endcase
+                     slot_layout[conf[11][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
+                     case(conf[13][7:6])
+                        2'b00: ;
+                        2'b01: begin  //Reference RAM
                            slot_layout[conf[13][5:0]].ref_ram     <= slot_layout[conf[14][5:0]].ref_ram;
                            slot_layout[conf[13][5:0]].offset_ram  <= slot_layout[conf[14][5:0]].offset_ram;
+                           slot_layout[conf[13][5:0]].mapper      <= slot_layout[conf[14][5:0]].mapper;
+                           slot_layout[conf[13][5:0]].device      <= device;
                         end
-                        slot_layout[conf[13][5:0]].mapper     <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
-                        slot_layout[conf[13][5:0]].device     <= device;
-                        slot_layout[conf[13][5:0]].cart_num   <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
-                     end
+                        2'b10: begin  //Filed RAM
+                           slot_layout[conf[13][5:0]].ref_ram     <= ref_ram;
+                           slot_layout[conf[13][5:0]].offset_ram  <= conf[14][1:0];
+                           slot_layout[conf[13][5:0]].mapper      <= mapper == MAPPER_AUTO ? detect_mapper : mapper;
+                           slot_layout[conf[13][5:0]].device      <= device;
+                        end
+                        2'b11:
+                           slot_layout[conf[13][5:0]].device      <= device;
+                     endcase
+                     slot_layout[conf[13][5:0]].cart_num    <= config_typ_t'(conf[4]) == CONFIG_SLOT_B;
                   end
                   default: state <= STATE_IDLE;
                endcase

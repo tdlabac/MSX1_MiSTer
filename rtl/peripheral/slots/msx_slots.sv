@@ -21,7 +21,7 @@ module msx_slots
    input                       cpu_iorq,
    input                       cpu_m1,
 
-   //output signed        [15:0] sound,
+   output signed        [15:0] sound,
    //IOCTL
    //input                       ioctl_download,
    //input                [15:0] ioctl_index,
@@ -77,10 +77,7 @@ module msx_slots
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
    input  MSX::bios_config_t   bios_config,
-   output MSX::mapper_typ_t    debug_act_mapper,
-   output [5:0] debug_layout_id,
-   output debug_cart_num,
-   output [3:0] debug_ref_ram 
+   input  MSX::config_cart_t   cart_conf[2]
 
    //output                      spi_ss,
    //output                      spi_clk,
@@ -89,6 +86,14 @@ module msx_slots
    //output                [2:0] debug_cpu_din_src
 );
 
+wire signed [15:0] sound_A, sound_B;
+assign sound = sound_A + sound_B;
+
+assign sound_A = cart_conf[0].typ == CART_TYP_FM_PAC       ? fmpac_sound[0] :
+                                                             16'd0;
+
+assign sound_B = cart_conf[1].typ == CART_TYP_FM_PAC       ? fmpac_sound[1] :
+                                                             16'd0;                                                             
 
 logic [7:0] mapper_slot[4];
 wire mapper_en;
@@ -131,25 +136,26 @@ wire [26:0] mapper_addr = mem_unmaped             ? 27'hDEAD                  :
                           mapper == MAPPER_LINEAR ? 27'(mapper_linear_addr)   :
                           mapper == MAPPER_OFFSET ? 27'(mapper_offset_addr)   :
                           mapper == MAPPER_KONAMI ? 27'(mapper_konami_addr)   :
+                          device == DEVICE_FMPAC  ? 27'(fmpac_addr)           :
                                                     27'hDEAD                  ;
 
 
 assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
                           mapper_en & cpu_rd      ? ~mapper_slot[active_slot] :
                           FDC_req                 ? d_to_cpu_FDC              :
+                          fmpac_req               ? fm_pac_dout               :
                           mapper == MAPPER_UNUSED ? 8'hFF                     :
                           mem_unmaped             ? 8'hFF                     :
-                                                    ram_dout                  ;                                                               
+                          device == DEVICE_FMPAC  ? ram_dout                  :
+                                                    ram_dout                  ;  
 
-assign debug_act_mapper = mapper;
-assign debug_layout_id = layout_id;
-assign debug_cart_num = cart_num;
-assign debug_ref_ram  = ref_ram;
+
+
 assign ram_ce   = cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
 assign ram_rnw  = cpu_rd;
 assign ram_din  = cpu_dout;
 
-wire mem_unmaped = mapper_konami_unmaped;
+wire mem_unmaped = mapper_konami_unmaped | fmpac_mem_unmaped;
 
 
 wire debug_tick = mapper_none_addr == 27'(16'h8000) & active_slot == 2'd3 & cpu_mreq;
@@ -201,7 +207,33 @@ cart_konami konami
    .mem_addr(mapper_konami_addr)
 );
 
+wire  [7:0] fm_pac_dout;
+wire [24:0] fmpac_addr;
+wire        fmpac_req, fmpac_mem_unmaped;
+wire signed [15:0] fmpac_sound[2];
 
+cart_fm_pac fm_pac
+(
+   .clk(clk),
+   .clk_en(clk_en),
+   .reset(reset),
+   .addr(cpu_addr),
+   .d_from_cpu(cpu_dout),
+   .d_to_cpu(fm_pac_dout),  
+   .cs(device == DEVICE_FMPAC),
+   .slot(cart_num),
+   .wr(cpu_wr),
+   .rd(cpu_rd),
+   .iorq(cpu_iorq),
+   .mreq(cpu_mreq),
+   .m1(cpu_m1),
+   .sound(fmpac_sound),
+   .cart_oe(fmpac_req),  
+   .sram_we(),
+   .sram_oe(),
+   .mem_unmaped(fmpac_mem_unmaped),
+   .mem_addr(fmpac_addr)
+);
 
 wire        FDC_req;
 wire  [7:0] d_to_cpu_FDC;
