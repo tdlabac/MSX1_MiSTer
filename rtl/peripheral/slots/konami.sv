@@ -12,7 +12,7 @@ module cart_konami
     output    [24:0] mem_addr
 );
 reg  [7:0] bank1[2], bank2[2], bank3[2];
-
+/*verilator tracing_off*/
 always @(posedge reset, posedge clk) begin
     if (reset) begin
         bank1 <= '{'h01,'h01};

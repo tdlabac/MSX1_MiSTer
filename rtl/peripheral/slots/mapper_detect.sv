@@ -8,7 +8,7 @@ module mapper_detect
     output mapper_typ_t mapper,
     output        [3:0] offset
 );
-
+/*verilator tracing_off*/
 
 logic [7:0]  head  [0:7];
 logic [7:0]  head2 [0:7];

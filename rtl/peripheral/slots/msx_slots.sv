@@ -86,14 +86,7 @@ module msx_slots
    //output                [2:0] debug_cpu_din_src
 );
 
-wire signed [15:0] sound_A, sound_B;
-assign sound = sound_A + sound_B;
-
-assign sound_A = cart_conf[0].typ == CART_TYP_FM_PAC       ? fmpac_sound[0] :
-                                                             16'd0;
-
-assign sound_B = cart_conf[1].typ == CART_TYP_FM_PAC       ? fmpac_sound[1] :
-                                                             16'd0;                                                             
+assign sound = sound_opll;
 
 logic [7:0] mapper_slot[4];
 wire mapper_en;
@@ -136,7 +129,7 @@ wire [26:0] mapper_addr = mem_unmaped             ? 27'hDEAD                  :
                           mapper == MAPPER_LINEAR ? 27'(mapper_linear_addr)   :
                           mapper == MAPPER_OFFSET ? 27'(mapper_offset_addr)   :
                           mapper == MAPPER_KONAMI ? 27'(mapper_konami_addr)   :
-                          device == DEVICE_FMPAC  ? 27'(fmpac_addr)           :
+                          mapper == MAPPER_FMPAC  ? 27'(fmpac_addr)           :
                                                     27'hDEAD                  ;
 
 
@@ -146,7 +139,6 @@ assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
                           fmpac_req               ? fm_pac_dout               :
                           mapper == MAPPER_UNUSED ? 8'hFF                     :
                           mem_unmaped             ? 8'hFF                     :
-                          device == DEVICE_FMPAC  ? ram_dout                  :
                                                     ram_dout                  ;  
 
 
@@ -166,9 +158,9 @@ wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
 //MAPPER LINEAR
 wire [26:0] mapper_linear_addr = 27'(cpu_addr[15:0]) & ((27'(size) << 14)-27'd1);
 
-//NONE 
+//MAPPER OFFSET 
 //wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - 27'h2000;
-wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - {11'd0,4'd4,12'd0};
+wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - {11'd0,4'd4,12'd0}; //TODO offset
 
 //MAPPER MSX RAM
 
@@ -210,30 +202,48 @@ cart_konami konami
 wire  [7:0] fm_pac_dout;
 wire [24:0] fmpac_addr;
 wire        fmpac_req, fmpac_mem_unmaped;
-wire signed [15:0] fmpac_sound[2];
-
+wire  [1:0] fmpac_opll_io_enable, fmpac_opll_wr; 
 cart_fm_pac fm_pac
 (
    .clk(clk),
-   .clk_en(clk_en),
    .reset(reset),
    .addr(cpu_addr),
    .d_from_cpu(cpu_dout),
    .d_to_cpu(fm_pac_dout),  
-   .cs(device == DEVICE_FMPAC),
+   .cs(mapper == MAPPER_FMPAC),
    .slot(cart_num),
    .wr(cpu_wr),
    .rd(cpu_rd),
-   .iorq(cpu_iorq),
    .mreq(cpu_mreq),
-   .m1(cpu_m1),
-   .sound(fmpac_sound),
    .cart_oe(fmpac_req),  
    .sram_we(),
    .sram_oe(),
    .mem_unmaped(fmpac_mem_unmaped),
-   .mem_addr(fmpac_addr)
+   .mem_addr(fmpac_addr),
+   .opll_wr(fmpac_opll_wr),
+   .opll_io_enable(fmpac_opll_io_enable)
 );
+
+wire opll_io_wr  = cpu_addr[7:1] == 7'b0111110 & cpu_iorq & ~cpu_m1 & cpu_wr; //7C - 7D
+
+//IO operace jsou blokovány signálem (FM_PAC)
+//IO operace nejsou blokovány v případě, že se jedná o interní modul.
+
+wire signed [15:0] sound_opll;
+opll opll
+(
+   .rst(reset),
+   .clk(clk),
+   .cen(clk_en),
+   .din(cpu_dout),
+   .addr(cpu_addr[0]),
+   .wr({1'b0, (opll_io_wr & fmpac_opll_io_enable[1]) | fmpac_opll_wr[1] , (opll_io_wr & fmpac_opll_io_enable[0]) | fmpac_opll_wr[0]}),
+   .cs({1'b0, cart_conf[1].io_device == DEVICE_OPL3, cart_conf[0].io_device == DEVICE_OPL3}),
+   .sound(sound_opll)
+);
+
+wire signed [15:0] sound_OPL_int, sound_OPL_EXT[2];
+
 
 wire        FDC_req;
 wire  [7:0] d_to_cpu_FDC;
@@ -493,4 +503,62 @@ download download
    .*
 );
 */
+endmodule
+
+module opll
+(
+   input clk,
+   input cen,
+   input rst,
+   input [7:0] din,
+   input addr,
+   input [2:0] wr,
+   input [2:0] cs,
+   output signed [15:0] sound
+);
+
+assign sound = (cs[0] ? sound_OPL_A   : 16'd0) +
+               (cs[1] ? sound_OPL_B   : 16'd0) +
+               (cs[2] ? sound_OPL_int : 16'd0) ;
+
+wire signed [15:0] sound_OPL_int, sound_OPL_A, sound_OPL_B;
+jt2413 opll_int
+(
+   .rst(rst),
+   .clk(clk),
+   .cen(cen),
+   .din(din),
+   .addr(addr),
+   .cs_n(~cs[2]),
+   .wr_n(~wr[2]),
+   .snd(sound_OPL_int),
+   .sample()
+);
+
+jt2413 opll_A
+(
+   .rst(rst),
+   .clk(clk),
+   .cen(cen),
+   .din(din),
+   .addr(addr),
+   .cs_n(~cs[0]),
+   .wr_n(~wr[0]),
+   .snd(sound_OPL_A),
+   .sample()
+);
+
+jt2413 opll_B
+(
+   .rst(rst),
+   .clk(clk),
+   .cen(cen),
+   .din(din),
+   .addr(addr),
+   .cs_n(~cs[1]),
+   .wr_n(~wr[1]),
+   .snd(sound_OPL_B),
+   .sample()
+);
+
 endmodule

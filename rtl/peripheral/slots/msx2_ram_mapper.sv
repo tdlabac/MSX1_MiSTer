@@ -13,7 +13,7 @@ module msx2_ram_mapper
    output                  mapper_req,
    output           [21:0] mapper_addr
 );
-
+/*verilator tracing_off*/
    wire mpr_wr, mpr_rq;
    logic [7:0] mem_seg [0:3];
 
