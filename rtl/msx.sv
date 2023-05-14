@@ -61,6 +61,7 @@ module msx
    input              [1:0] sdram_size,
    input  MSX::block_t      slot_layout[64],
    input  MSX::lookup_RAM_t lookup_RAM[16],
+   input  MSX::lookup_RAM_t lookup_SRAM[4],
 /*
    output            [24:0] dw_sdram_addr,
    output             [7:0] dw_sdram_din,
@@ -505,6 +506,7 @@ msx_slots msx_slots
    .active_slot(slot),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
+   .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
    .cart_conf(cart_conf)
    //.kbd_addr(kbd_addr),

@@ -92,15 +92,16 @@ module memory_upload
       if (ddr3_ready & ddr3_rd) begin ddr3_rd <= 1'b0; ddr3_addr <= ddr3_addr + 1'd1; end
       if (load) begin
          state <= STATE_CLEAN;
+         ddr3_addr        <= 0;
+         ram_addr         <= 27'd0;
+         sram_addr        <= 27'd0;
+         save_ram_addr    <= 27'd0;
          block_num        <= 6'd0;
          config_head_addr <= 4'd0;
-         ram_addr         <= 27'd0;
          ref_ram          <= 4'd0;
-         ddr3_rd          <= 1'd0;
-         ddr3_addr        <= 0;
+         ddr3_rd          <= 1'd0;        
          save_addr        <= 0;
-         refAdd           <= 1'b0;
-         sram_addr        <= 27'd0;
+         refAdd           <= 1'b0;         
       end
       if (ddr3_ready & ~ddr3_rd) begin
          case(state)
@@ -230,40 +231,42 @@ module memory_upload
                end
             end
             STATE_FILL_RAM: begin
-               state <= STATE_FILL_RAM2;
-               if (bram_rq) sram_addr <= ram_addr;
-               sdram_rq <= 0;
-               bram_rq  <= 0;
-               if (save_ram_addr != 27'd0) ram_addr <= save_ram_addr;
-               if (data_size != 25'd0) begin
-                  refAdd                   <= 1'b1; // Add reference po ulozeni
-                  lookup_RAM[ref_ram].addr <= ram_addr;
-                  lookup_RAM[ref_ram].size <= 16'(data_size >> 14);               
-                  case(data_id)
-                     ROM_RAM: begin
-                        lookup_RAM[ref_ram].ro   <= 1'd0;
-                        pattern                  <= 2'd3;       
-                     end
-                     default: begin
-                        lookup_RAM[ref_ram].ro   <= 1'd1;
-                        pattern                  <= 2'd0; 
-                        ddr3_rd                  <= 1'd1;       //Prefetch
-                     end
-                  endcase
-                  sdram_rq                 <= sdram_size != 0;
-                  bram_rq                  <= sdram_size == 0;
-               end else 
-                  if (sram_size != 25'd0) begin
-                     lookup_SRAM[ref_sram].addr <= sram_addr;
-                     lookup_SRAM[ref_sram].size <= 16'(sram_size >> 14);
-                     pattern       <= 2'd1; 
-                     data_size     <= sram_size;
-                     sram_size     <= 25'd0;
-                     bram_rq       <= 1'b1;
-                     data_id       <= ROM_RAM;
-                     if (~bram_rq) ram_addr <= sram_addr;
-                     if (sdram_size != 0) save_ram_addr <= ram_addr;
-                  end else state <= STATE_STORE_SLOT_CONFIG;
+               if (~ram_ce) begin
+                  state <= STATE_FILL_RAM2;
+                  if (bram_rq) sram_addr <= ram_addr;
+                  sdram_rq <= 0;
+                  bram_rq  <= 0;
+                  if (save_ram_addr != 27'd0) ram_addr <= save_ram_addr;
+                  if (data_size != 25'd0) begin
+                     refAdd                   <= 1'b1; // Add reference po ulozeni
+                     lookup_RAM[ref_ram].addr <= ram_addr;
+                     lookup_RAM[ref_ram].size <= 16'(data_size >> 14);               
+                     case(data_id)
+                        ROM_RAM: begin
+                           lookup_RAM[ref_ram].ro   <= 1'd0;
+                           pattern                  <= 2'd3;       
+                        end
+                        default: begin
+                           lookup_RAM[ref_ram].ro   <= 1'd1;
+                           pattern                  <= 2'd0; 
+                           ddr3_rd                  <= 1'd1;       //Prefetch
+                        end
+                     endcase
+                     sdram_rq                 <= sdram_size != 0;
+                     bram_rq                  <= sdram_size == 0;
+                  end else 
+                     if (sram_size != 25'd0) begin
+                        lookup_SRAM[ref_sram].addr <= sram_addr;
+                        lookup_SRAM[ref_sram].size <= 16'(sram_size >> 14);
+                        pattern       <= 2'd1; 
+                        data_size     <= sram_size;
+                        sram_size     <= 25'd0;
+                        bram_rq       <= 1'b1;
+                        data_id       <= ROM_RAM;
+                        if (~bram_rq) ram_addr <= sram_addr;
+                        if (sdram_size != 0) save_ram_addr <= ram_addr;
+                     end else state <= STATE_STORE_SLOT_CONFIG;
+               end
             end
             STATE_FILL_RAM2: begin
                if (sdram_ready & ~ram_ce) begin

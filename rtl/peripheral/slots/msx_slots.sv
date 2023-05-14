@@ -77,6 +77,7 @@ module msx_slots
    input                 [1:0] active_slot,
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
+   input  MSX::lookup_RAM_t    lookup_SRAM[4],
    input  MSX::bios_config_t   bios_config,
    input  MSX::config_cart_t   cart_conf[2]
 
@@ -120,9 +121,9 @@ assign              device     = slot_layout[layout_id].device;
 wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
 wire         [15:0] size       = lookup_RAM[ref_ram].size;  //16kB * size
 wire                ram_ro     = lookup_RAM[ref_ram].ro;
+wire         [26:0] base_sram  = lookup_SRAM[cart_num ? 2'd3 :2'd2].addr;
 
-
-assign ram_addr = base_ram + mapper_addr;
+assign ram_addr = (sram_cs ? base_sram : base_ram) + mapper_addr;
 
 wire [26:0] mapper_addr = mem_unmaped             ? 27'hDEAD                  :
                           mapper == MAPPER_NONE   ? 27'(mapper_none_addr)     :
@@ -144,13 +145,13 @@ assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
 
 
 
-assign sdram_ce = sdram_size != 2'd0 & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
-assign bram_ce  = sdram_size == 2'd0 & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
+assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
+assign bram_ce  = (sdram_size == 2'd0 | sram_cs)  & cpu_mreq & (cpu_rd | (cpu_wr & (~ram_ro | sram_cs))) & mapper != MAPPER_UNUSED;
 assign ram_rnw  = cpu_rd;
 assign ram_din  = cpu_dout;
 
 wire mem_unmaped = mapper_konami_unmaped | fmpac_mem_unmaped;
-
+wire sram_cs     = fmpac_sram_cs;
 
 wire debug_tick = mapper_none_addr == 27'(16'h8000) & active_slot == 2'd3 & cpu_mreq;
 
@@ -203,7 +204,7 @@ cart_konami konami
 
 wire  [7:0] fm_pac_dout;
 wire [24:0] fmpac_addr;
-wire        fmpac_req, fmpac_mem_unmaped;
+wire        fmpac_req, fmpac_mem_unmaped, fmpac_sram_cs, fmpac_sram_wr;
 wire  [1:0] fmpac_opll_io_enable, fmpac_opll_wr; 
 cart_fm_pac fm_pac
 (
@@ -218,8 +219,8 @@ cart_fm_pac fm_pac
    .rd(cpu_rd),
    .mreq(cpu_mreq),
    .cart_oe(fmpac_req),  
-   .sram_we(),
-   .sram_oe(),
+   .sram_we(fmpac_sram_wr),
+   .sram_cs(fmpac_sram_cs),
    .mem_unmaped(fmpac_mem_unmaped),
    .mem_addr(fmpac_addr),
    .opll_wr(fmpac_opll_wr),
@@ -517,6 +518,8 @@ module opll
    input [2:0] cs,
    output signed [15:0] sound
 );
+
+/*verilator tracing_off*/
 
 assign sound = (cs[0] ? sound_OPL_A   : 16'd0) +
                (cs[1] ? sound_OPL_B   : 16'd0) +

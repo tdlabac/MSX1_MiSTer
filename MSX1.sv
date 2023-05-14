@@ -393,6 +393,7 @@ wire        ram_rnw, sdram_ce, bram_ce;
 
 MSX::block_t         slot_layout[64];
 MSX::lookup_RAM_t    lookup_RAM[16];
+MSX::lookup_RAM_t    lookup_SRAM[4];
 msx MSX
 (
    .HS(hsync),
@@ -430,6 +431,7 @@ msx MSX
 	.spi_do(sdmosi),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
+   .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
    .flash_addr(),
    .flash_din(),
@@ -596,6 +598,7 @@ memory_upload memory_upload(
     .sdram_size(sdram_size),
     .slot_layout(slot_layout),
     .lookup_RAM(lookup_RAM),
+    .lookup_SRAM(lookup_SRAM),
     .bios_config(bios_config),
     .cart_conf(cart_conf)
 );
