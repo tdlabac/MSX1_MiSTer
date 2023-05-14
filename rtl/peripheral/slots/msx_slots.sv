@@ -39,9 +39,10 @@ module msx_slots
    output                [7:0] ram_din,
    input                 [7:0] ram_dout,
    output                      ram_rnw,
-   output                      ram_ce,
+   output                      sdram_ce,
+   output                      bram_ce,
    //input                       sdram_ready,
-   //input                 [1:0] sdram_size,
+   input                 [1:0] sdram_size,
 
    //output               [24:0] dw_sdram_addr,
    //output                [7:0] dw_sdram_din,
@@ -143,7 +144,8 @@ assign cpu_din          = mapper_ram_req          ? mapper_ram_dout           :
 
 
 
-assign ram_ce   = cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
+assign sdram_ce = sdram_size != 2'd0 & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
+assign bram_ce  = sdram_size == 2'd0 & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED;
 assign ram_rnw  = cpu_rd;
 assign ram_din  = cpu_dout;
 
@@ -158,9 +160,9 @@ wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
 //MAPPER LINEAR
 wire [26:0] mapper_linear_addr = 27'(cpu_addr[15:0]) & ((27'(size) << 14)-27'd1);
 
-//MAPPER OFFSET 
+//NONE 
 //wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - 27'h2000;
-wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - {11'd0,4'd4,12'd0}; //TODO offset
+wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - {11'd0,4'd4,12'd0};
 
 //MAPPER MSX RAM
 
@@ -224,11 +226,10 @@ cart_fm_pac fm_pac
    .opll_io_enable(fmpac_opll_io_enable)
 );
 
-wire opll_io_wr  = cpu_addr[7:1] == 7'b0111110 & cpu_iorq & ~cpu_m1 & cpu_wr; //7C - 7D
-
 //IO operace jsou blokovány signálem (FM_PAC)
 //IO operace nejsou blokovány v případě, že se jedná o interní modul.
 
+wire opll_io_wr  = cpu_addr[7:1] == 7'b0111110 & cpu_iorq & ~cpu_m1 & cpu_wr; //7C - 7D
 wire signed [15:0] sound_opll;
 opll opll
 (

@@ -387,6 +387,10 @@ wire [15:0] cpu_addr, audio;
 wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
 wire        need_reset;
+wire [26:0] ram_addr;
+wire  [7:0] ram_din, ram_dout;
+wire        ram_rnw, sdram_ce, bram_ce;
+
 MSX::block_t         slot_layout[64];
 MSX::lookup_RAM_t    lookup_RAM[16];
 msx MSX
@@ -564,7 +568,7 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
 
 ///////////////// LOAD PACK   /////////////////
 
-wire upload_ram_ce, upload_sdram_rq, upload_ram_ready, reset_rq;
+wire upload_ram_ce, upload_sdram_rq, upload_bram_rq, upload_ram_ready, reset_rq;
 wire [7:0] upload_ram_din, config_msx;
 wire [26:0] upload_ram_addr;
 memory_upload memory_upload(
@@ -587,9 +591,9 @@ memory_upload memory_upload(
     .ram_ce(upload_ram_ce),
     .sdram_ready(upload_ram_ready),
     .sdram_rq(upload_sdram_rq),
-    .bram_rq(),
+    .bram_rq(upload_bram_rq),
     .kbd_rq(),
-    .sdram_size(),
+    .sdram_size(sdram_size),
     .slot_layout(slot_layout),
     .lookup_RAM(lookup_RAM),
     .bios_config(bios_config),
@@ -621,10 +625,14 @@ ddram buffer
    .*
 );
 
-wire         sdram_ready, sdram_rnw, sdram_ce, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
+assign ram_dout = sdram_ce ? sdram_dout :
+                  bram_ce  ? bram_dout  :
+                             8'hFF;
+
+wire         sdram_ready, sdram_rnw, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
 wire  [26:0] sdram_addr;
 wire  [24:0] dw_sdram_addr, flash_addr;
-wire   [7:0] sdram_din, sdram_dout, dw_sdram_din, flash_din;
+wire   [7:0] sdram_dout, bram_dout, dw_sdram_din, flash_din;
 sdram sdram
 (
    .init(~locked_sdram),
@@ -639,10 +647,10 @@ sdram sdram
    .ch1_ready(upload_ram_ready),   
   
    .ch2_dout(sdram_dout),
-   .ch2_din(sdram_din),
-   .ch2_addr(sdram_addr),
+   .ch2_din(ram_din),
+   .ch2_addr(ram_addr),
    .ch2_req(sdram_ce),
-   .ch2_rnw(sdram_rnw),
+   .ch2_rnw(ram_rnw),
    .ch2_ready(sdram_ready),
 
    .ch3_addr(flash_addr),
@@ -654,6 +662,26 @@ sdram sdram
    .ch3_done(flash_done),
    .*
 );    
+
+
+spram #(.addr_width(18),.mem_name("RAM")) systemRAM
+(
+   .clock( clk21m),
+	.address(18'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
+   .wren( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
+   .data( upload_bram_rq ? upload_ram_din  : ram_din           ),
+   .q(bram_dout)
+/*	
+   .address_a(19'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
+   .wren_a( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
+   .data_a( upload_bram_rq ? upload_ram_din  : ram_din           ),
+   .q_a(bram_dout),
+   .address_b(),
+   .wren_b(),
+   .data_b(),
+   .q_b()*/
+);
+
 
 ///////////////// CAS EMULATE /////////////////
 wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;

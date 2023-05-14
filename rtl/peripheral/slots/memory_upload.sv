@@ -71,6 +71,7 @@ module memory_upload
       logic  [5:0] block_num;
       logic  [3:0] config_head_addr;
       logic [24:0] data_size;
+      logic  [7:0] sram_size;
       logic  [3:0] ref_ram;
       logic        rom_find;
       mapper_typ_t mapper;
@@ -235,7 +236,8 @@ module memory_upload
                   end
                endcase
                state                    <= STATE_FILL_RAM2;
-               sdram_rq                 <= 1;
+               sdram_rq                 <= sdram_size != 0;
+               bram_rq                  <= sdram_size == 0;
             end
             STATE_FILL_RAM2: begin
                if (sdram_ready & ~ram_ce) begin
@@ -256,6 +258,7 @@ module memory_upload
             end
             STATE_STORE_SLOT_CONFIG: begin
                sdram_rq <= 0;
+               bram_rq  <= 0;
 
                if (mode[1:0] != 2'd0) begin
                   slot_layout[{slotSubslot,2'd0}].mapper      <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].mapper  :
