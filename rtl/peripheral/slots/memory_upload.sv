@@ -81,7 +81,8 @@ module memory_upload
       logic [7:0]  param;
       logic [3:0]  slotSubslot;
       logic        refAdd;
-
+      logic [26:0] sram_addr;
+      
       ddr3_wr <= 1'd0;
       
       if (ram_ce)               begin ram_ce  <= 1'b0; ram_addr  <= ram_addr + 1'd1; end
@@ -96,6 +97,7 @@ module memory_upload
          ddr3_addr        <= 0;
          save_addr        <= 0;
          refAdd           <= 1'b0;
+         sram_addr        <= 27'd0;
       end
       if (ddr3_ready & ~ddr3_rd) begin
          case(state)
@@ -257,6 +259,7 @@ module memory_upload
                end
             end
             STATE_STORE_SLOT_CONFIG: begin
+               if (bram_rq) sram_addr <= ram_addr;
                sdram_rq <= 0;
                bram_rq  <= 0;
 
