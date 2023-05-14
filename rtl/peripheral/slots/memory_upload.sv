@@ -25,6 +25,7 @@ module memory_upload
    input                 [1:0] sdram_size,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
+   output MSX::lookup_RAM_t    lookup_SRAM[4],
    output MSX::bios_config_t   bios_config,
    input  MSX::config_cart_t   cart_conf[2]
 );
@@ -71,8 +72,9 @@ module memory_upload
       logic  [5:0] block_num;
       logic  [3:0] config_head_addr;
       logic [24:0] data_size;
-      logic  [7:0] sram_size;
+      logic [24:0] sram_size;
       logic  [3:0] ref_ram;
+      logic  [1:0] ref_sram;
       logic        rom_find;
       mapper_typ_t mapper;
       device_typ_t device;
@@ -82,6 +84,7 @@ module memory_upload
       logic [3:0]  slotSubslot;
       logic        refAdd;
       logic [26:0] sram_addr;
+      logic [26:0] save_ram_addr;
       
       ddr3_wr <= 1'd0;
       
@@ -142,8 +145,10 @@ module memory_upload
             end
             STATE_CHECK_CONFIG: begin
                state <= STATE_IDLE;
+               data_size <= 25'd0;
+               sram_size <= 25'd0;
                if ({conf[0],conf[1],conf[2]} == {"M","S","X"}) begin
-                  state <= STATE_STORE_SLOT_CONFIG;
+                  state <= STATE_FILL_RAM;
                   slotSubslot <= conf[3][3:0];
                   case(config_typ_t'(conf[3][7:4]))
                      CONFIG_SLOT_A,
@@ -153,6 +158,8 @@ module memory_upload
                         mode        <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].mode;
                         param       <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].param;
                         data_id     <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].rom_id;
+                        sram_size   <= 25'({cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].sram_size, 10'd0});
+                        ref_sram    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2'd2 : 2'd3;
                         case(cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].rom_id)
                            ROM_NONE: ;                          
                            ROM_ROM: begin
@@ -160,7 +167,6 @@ module memory_upload
                                  save_addr <= ddr3_addr;   
                                  ddr3_addr <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 28'hA00000 : 28'hF00000 ;    //ROM Store
                                  data_size <= ioctl_size[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2 : 3][24:0];
-                                 state     <= STATE_FILL_RAM;
                               end else begin
                                  state     <= STATE_READ_CONF;
                               end
@@ -187,6 +193,7 @@ module memory_upload
                         mapper      <= mapper_typ_t'(conf[8]);
                         device      <= device_typ_t'(conf[7]);
                         data_size   <= {conf[5][2:0], conf[6],14'h0};
+                        sram_size   <= 25'd0;
                         data_id     <= data_ID_t'(conf[4]);
                         mode        <= conf[9];
                         param       <= conf[10];
@@ -223,30 +230,47 @@ module memory_upload
                end
             end
             STATE_FILL_RAM: begin
-               refAdd                   <= 1'b1; // Add reference po ulozeni
-               lookup_RAM[ref_ram].addr <= ram_addr;
-               lookup_RAM[ref_ram].size <= 16'(data_size >> 14);               
-               case(data_id)
-                  ROM_RAM: begin
-                     lookup_RAM[ref_ram].ro   <= 1'd0;
-                     pattern                  <= 2'd3;       
-                  end
-                  default: begin
-                     lookup_RAM[ref_ram].ro   <= 1'd1;
-                     pattern                  <= 2'd0; 
-                     ddr3_rd                  <= 1'd1;       //Prefetch
-                  end
-               endcase
-               state                    <= STATE_FILL_RAM2;
-               sdram_rq                 <= sdram_size != 0;
-               bram_rq                  <= sdram_size == 0;
+               state <= STATE_FILL_RAM2;
+               if (bram_rq) sram_addr <= ram_addr;
+               sdram_rq <= 0;
+               bram_rq  <= 0;
+               if (save_ram_addr != 27'd0) ram_addr <= save_ram_addr;
+               if (data_size != 25'd0) begin
+                  refAdd                   <= 1'b1; // Add reference po ulozeni
+                  lookup_RAM[ref_ram].addr <= ram_addr;
+                  lookup_RAM[ref_ram].size <= 16'(data_size >> 14);               
+                  case(data_id)
+                     ROM_RAM: begin
+                        lookup_RAM[ref_ram].ro   <= 1'd0;
+                        pattern                  <= 2'd3;       
+                     end
+                     default: begin
+                        lookup_RAM[ref_ram].ro   <= 1'd1;
+                        pattern                  <= 2'd0; 
+                        ddr3_rd                  <= 1'd1;       //Prefetch
+                     end
+                  endcase
+                  sdram_rq                 <= sdram_size != 0;
+                  bram_rq                  <= sdram_size == 0;
+               end else 
+                  if (sram_size != 25'd0) begin
+                     lookup_SRAM[ref_sram].addr <= sram_addr;
+                     lookup_SRAM[ref_sram].size <= 16'(sram_size >> 14);
+                     pattern       <= 2'd1; 
+                     data_size     <= sram_size;
+                     sram_size     <= 25'd0;
+                     bram_rq       <= 1'b1;
+                     data_id       <= ROM_RAM;
+                     if (~bram_rq) ram_addr <= sram_addr;
+                     if (sdram_size != 0) save_ram_addr <= ram_addr;
+                  end else state <= STATE_STORE_SLOT_CONFIG;
             end
             STATE_FILL_RAM2: begin
                if (sdram_ready & ~ram_ce) begin
                   data_size  <= data_size - 25'd1;
                   ram_ce     <= 1;
                   if (data_size == 25'd1) begin
-                     state    <= STATE_STORE_SLOT_CONFIG;
+                     state    <= STATE_FILL_RAM;
                      if (save_addr > 0) begin
                         ddr3_addr <= save_addr; //restore
                         save_addr <= 28'd0;
@@ -255,14 +279,9 @@ module memory_upload
                   end else begin
                      if (data_id != ROM_RAM) ddr3_rd <= 1'b1;
                   end
-
                end
             end
             STATE_STORE_SLOT_CONFIG: begin
-               if (bram_rq) sram_addr <= ram_addr;
-               sdram_rq <= 0;
-               bram_rq  <= 0;
-
                if (mode[1:0] != 2'd0) begin
                   slot_layout[{slotSubslot,2'd0}].mapper      <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].mapper  :
                                                                  mode[1:0] == 2'd2 ? mapper                                        :
