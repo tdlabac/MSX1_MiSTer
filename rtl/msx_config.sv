@@ -58,15 +58,16 @@ wire [2:0] sram_A_select   = HPS_status[28:26];
 wire [3:0] mapper_A_select = HPS_status[23:20];
 wire [3:0] mapper_B_select = HPS_status[35:32]; 
 
-assign cart_typ_A           = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
+assign cart_conf[0].typ     = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
                               msx_type == MSX2                          ? CART_TYP_EMPTY  :
                               slot_A_select == CART_TYP_FDC             ? CART_TYP_FDC    :
                                                                           CART_TYP_EMPTY );
 
-assign cart_typ_B           = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
-assign selected_mapper_A    = mapper_A_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_A_select + 4'd1);
-assign selected_mapper_B    = mapper_B_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_B_select + 4'd1);
-assign selected_sram_size_A = sram_A_select_hide ? 8'd0 : 8'd0; // TODO dopočti
+assign cart_conf[1].typ     = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
+assign cart_conf[0].selected_mapper    = mapper_A_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_A_select + 4'd1);
+assign cart_conf[1].selected_mapper    = mapper_B_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_B_select + 4'd1);
+assign cart_conf[0].selected_sram_size = sram_A_select_hide ? 8'd0 : 8'd0; // TODO dopočti
+assign cart_conf[1].selected_sram_size = 8'd0;
 
 //assign MSXconf.typ = MSX_typ_t'(HPS_status[11]);
 assign msxConfig.typ = msx_type;
@@ -98,6 +99,7 @@ assign reset_request = lastConfig != act_config;
 assign cart_changed = last_cart_type[5:0] != act_cart_type[5:0];
 //assign rom_eject = {cart_conf[1].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0, cart_conf[0].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0};
 
+/*
 cart_conf conf_A
 (
    .typ(cart_typ_A),
@@ -112,10 +114,10 @@ cart_conf conf_B
    .selected_mapper(selected_mapper_B),
    .selected_sram_size(8'd0),
    .config_cart(cart_conf[1])
-);
+); */
 
 endmodule
-
+/*
 module cart_conf
 (
    input  cart_typ_t         typ,
@@ -134,6 +136,6 @@ assign                           {config_cart.mapper, config_cart.mem_device, co
       typ == CART_TYP_MFRSD    ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } :
       typ == CART_TYP_GM2      ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd8               } :
       typ == CART_TYP_FDC      ? {MAPPER_NONE       , DEVICE_FDC            , DEVICE_NONE          , ROM_FDC           , 8'h08           , 8'h00            , 8'd0               } :
-      /*typ == CART_TYP_EMPTY*/  {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } ;
+      typ == CART_TYP_EMPTY    {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } ;
          
-endmodule
+endmodule */

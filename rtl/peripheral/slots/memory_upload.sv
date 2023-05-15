@@ -154,14 +154,14 @@ module memory_upload
                   case(config_typ_t'(conf[3][7:4]))
                      CONFIG_SLOT_A,
                      CONFIG_SLOT_B: begin
-                        mapper      <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].mapper;
-                        device      <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].mem_device;
-                        mode        <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].mode;
-                        param       <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].param;
-                        data_id     <= cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].rom_id;
-                        sram_size   <= 25'({cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].sram_size, 10'd0});
+                        mapper      <= cart_mapper;;
+                        device      <= cart_mem_device;
+                        mode        <= cart_mode;
+                        param       <= cart_param;
+                        data_id     <= cart_rom_id;
+                        sram_size   <= 25'({cart_sram_size, 10'd0});
                         ref_sram    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2'd2 : 2'd3;
-                        case(cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].rom_id)
+                        case(cart_rom_id)
                            ROM_NONE: ;                          
                            ROM_ROM: begin
                               if (ioctl_size[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2 : 3] > 0) begin                           
@@ -240,7 +240,7 @@ module memory_upload
                   if (data_size != 25'd0) begin
                      refAdd                   <= 1'b1; // Add reference po ulozeni
                      lookup_RAM[ref_ram].addr <= ram_addr;
-                     lookup_RAM[ref_ram].size <= 16'(data_size >> 14);               
+                     lookup_RAM[ref_ram].size <= 16'(data_size[24:14]);               
                      case(data_id)
                         ROM_RAM: begin
                            lookup_RAM[ref_ram].ro   <= 1'd0;
@@ -257,7 +257,7 @@ module memory_upload
                   end else 
                      if (sram_size != 25'd0) begin
                         lookup_SRAM[ref_sram].addr <= sram_addr;
-                        lookup_SRAM[ref_sram].size <= 16'(sram_size >> 14);
+                        lookup_SRAM[ref_sram].size <= 16'(sram_size[24:10]);
                         pattern       <= 2'd1; 
                         data_size     <= sram_size;
                         sram_size     <= 25'd0;
@@ -358,5 +358,53 @@ mapper_detect mapper_detect
    .mapper(detect_mapper),
    .offset()
 );
+
+mapper_typ_t cart_mapper;
+device_typ_t cart_mem_device;
+data_ID_t    cart_rom_id;
+logic  [7:0] cart_sram_size, cart_mode, cart_param;
+
+cart_confDecoder cart_decoder
+(
+   .typ(cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].typ),
+   .selected_mapper(cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].selected_mapper),
+   .selected_sram_size(cart_conf[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B].selected_sram_size),
+   .subslot(2'd0),
+   .mapper(cart_mapper), 
+   .mem_device(cart_mem_device),
+   .rom_id(cart_rom_id),
+   .sram_size(cart_sram_size),
+   .mode(cart_mode),
+   .param(cart_param)
+);
+
+endmodule
+
+module cart_confDecoder
+(
+   input  cart_typ_t   typ,
+   input  mapper_typ_t selected_mapper,
+   input  logic  [7:0] selected_sram_size,
+   input         [1:0] subslot,
+   output mapper_typ_t mapper, 
+   output device_typ_t mem_device,
+   output data_ID_t    rom_id,
+   output logic  [7:0] sram_size,
+   output logic  [7:0] mode,
+   output logic  [7:0] param
+);
+
+assign                                        {mapper          , mem_device  , rom_id    , mode  , param , sram_size          } = 
+   typ == CART_TYP_ROM    & subslot == 2'd0 ? {selected_mapper , DEVICE_NONE , ROM_ROM   , 8'hAA , 8'hE4 , selected_sram_size } :
+   typ == CART_TYP_SCC    & subslot == 2'd0 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_SCC2   & subslot == 2'd0 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_FM_PAC & subslot == 2'd0 ? {MAPPER_FMPAC    , DEVICE_NONE , ROM_FMPAC , 8'h08 , 8'h00 , 8'd8               } : //4000 - 7FFF
+   typ == CART_TYP_MFRSD  & subslot == 2'd0 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd1 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd2 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd3 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } :
+   typ == CART_TYP_GM2    & subslot == 2'd0 ? {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd8               } :
+   typ == CART_TYP_FDC    & subslot == 2'd0 ? {MAPPER_NONE     , DEVICE_FDC  , ROM_FDC   , 8'h08 , 8'h00 , 8'd0               } :
+   /*typ == CART_TYP_EMPTY*/                  {MAPPER_UNUSED   , DEVICE_NONE , ROM_NONE  , 8'h00 , 8'h00 , 8'd0               } ;
 
 endmodule

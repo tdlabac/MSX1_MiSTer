@@ -140,14 +140,16 @@ package MSX;
     } lookup_RAM_t;
 
     typedef struct {
-        // cart_typ_t   typ;
-        mapper_typ_t mapper;
+        cart_typ_t   typ;
+        mapper_typ_t selected_mapper;
+        logic [7:0]  selected_sram_size;
+        //mapper_typ_t mapper;
         device_typ_t io_device;
-        device_typ_t mem_device;
-        data_ID_t    rom_id;
-        logic [7:0]  sram_size;
-        logic [7:0]  mode; //00-NONE, 01-MEM-REFERENCE + DEV, 02-MEM + DEV, 03-DEVICE
-        logic [7:0]  param; //offset or block ref 
+        //device_typ_t mem_device;
+        //data_ID_t    rom_id;
+        //logic [7:0]  sram_size;
+        //logic [7:0]  mode; //00-NONE, 01-MEM-REFERENCE + DEV, 02-MEM + DEV, 03-DEVICE
+        //logic [7:0]  param; //offset or block ref 
     } config_cart_t;
 
 //MSX CONFIG typ + slot/subsllot  DATA_ID, SIZE, MEM_DEV,  MEM_MAP, MODE, PARAM
