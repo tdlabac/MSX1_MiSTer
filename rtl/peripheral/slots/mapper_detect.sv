@@ -6,9 +6,11 @@ module mapper_detect
     input               wr,
     input        [26:0] rom_size,
     output mapper_typ_t mapper,
-    output        [3:0] offset
+    output        [3:0] offset,
+    output        [7:0] mode,
+    output        [7:0] param
 );
-/*verilator tracing_off*/
+/*averilator tracing_off*/
 
 logic [7:0]  head  [0:7];
 logic [7:0]  head2 [0:7];
@@ -85,8 +87,8 @@ end
 
 assign kon    = kon4 > kon5  ? kon4 : kon5;
 assign ascii  = asc8 > asc16 ? asc8 : asc16;
-assign mapper = rom_size < 27'h2000                        ? MAPPER_UNUSED                 :
-                rom_size < 27'h10000                       ? MAPPER_UNUSED                 :
+assign mapper = rom_size < 27'h1000                        ? MAPPER_UNUSED                 :
+                rom_size < 27'h10000                       ? MAPPER_NONE                   :
                 kon >= ascii                               ? (kon5 > kon4  ? MAPPER_KONAMI_SCC : 
                                                                              MAPPER_KONAMI)    :
                                                              (asc8 > asc16 ? MAPPER_ASCII8     : 
@@ -105,5 +107,17 @@ assign offset  = rom_size == 27'h1000 ? start_1 :
                  rom_size == 27'h8000 ? start_2 :
                  rom_size == 27'hC000 ? start_3 :
                                         4'h0;
-                                        
+wire [15:0] size =  rom_size[15:0] - 16'd1;
+wire [1:0] rsize = size[15:14];
+
+assign {mode,param} = {rsize,offset[3:2]} == {2'd0,2'd0} ? {8'h02, 8'h00}:
+                      {rsize,offset[3:2]} == {2'd0,2'd1} ? {8'h08, 8'h00} :
+                      {rsize,offset[3:2]} == {2'd0,2'd2} ? {8'h20, 8'h00} :
+                      {rsize,offset[3:2]} == {2'd1,2'd0} ? {8'h0A, 8'h04} :
+                      {rsize,offset[3:2]} == {2'd1,2'd1} ? {8'hAA, 8'h11} :
+                      {rsize,offset[3:2]} == {2'd1,2'd2} ? {8'hA0, 8'h40} :
+                      {rsize,offset[3:2]} == {2'd2,2'd0} ? {8'h2A, 8'h24} :
+                      {rsize,offset[3:2]} == {2'd2,2'd1} ? {8'hA8, 8'h90} :
+                      {rsize,offset[3:2]} == {2'd3,2'd0} ? {8'hAA, 8'hE4} :
+                                                           {8'h00, 8'h00} ;                                        
 endmodule

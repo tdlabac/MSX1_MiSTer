@@ -297,7 +297,13 @@ module memory_upload
                      if (save_addr > 0) begin
                         ddr3_addr <= save_addr; //restore
                         save_addr <= 28'd0;
-                        if (mapper == MAPPER_AUTO) mapper <= detect_mapper;
+                        if (mapper == MAPPER_AUTO) begin
+                            mapper <= detect_mapper;
+                            if (detect_mapper == MAPPER_NONE) begin
+                              param <= detect_param;
+                              mode  <= detect_mode;
+                            end
+                        end
                      end
                   end else begin
                      if (data_id != ROM_RAM) ddr3_rd <= 1'b1;
@@ -377,6 +383,8 @@ module memory_upload
    end
 
 mapper_typ_t detect_mapper;
+wire [3:0] detect_offset;
+wire [7:0] detect_mode, detect_param;
 mapper_detect mapper_detect 
 (
    .clk(clk),
@@ -385,7 +393,9 @@ mapper_detect mapper_detect
    .wr(ram_ce),
    .rom_size(ioctl_size[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2'd2 : 2'd3]),
    .mapper(detect_mapper),
-   .offset()
+   .offset(detect_offset),
+   .mode(detect_mode),
+   .param(detect_param)
 );
 
 mapper_typ_t cart_mapper;
