@@ -383,7 +383,7 @@ mapper_detect mapper_detect
    .rst(state == STATE_READ_CONF),
    .data(ddr3_dout),
    .wr(ram_ce),
-   .rom_size(ioctl_size[2]),
+   .rom_size(ioctl_size[config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2'd2 : 2'd3]),
    .mapper(detect_mapper),
    .offset()
 );
