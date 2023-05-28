@@ -12,21 +12,25 @@
     <filename>VY010.ROM</filename>
     <SHA1>8924e3e11eb1c8c1edcb7efa63c26d2bdc142473</SHA1>
   </fw> 
-  <fw name="MEGA_FLASH_ROM_SCC_SD_RECOVERY">
+  <fw name="MEGA_FLASH_ROM">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+  </fw>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_RECOVERY">
     <filename>mfrsd.ROM</filename>
     <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
     <size>16384</size>
-  </fw>  
-  <fw name="MEGA_FLASH_ROM_SCC_SD_ROM">
+  </fwa>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_ROM">
     <filename>mfrsd.ROM</filename>
     <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
     <skip>65536</skip>
     <size>7274496</size>
-  </fw>  
-    <fw name="MEGA_FLASH_ROM_SCC_SD_MEGASD">
+  </fwa>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_MEGASD">
     <filename>mfrsd.ROM</filename>
     <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
     <skip>7340032</skip>
     <size>1048576</size>
-  </fw>  
+  </fwa>  
 </fwConfig>

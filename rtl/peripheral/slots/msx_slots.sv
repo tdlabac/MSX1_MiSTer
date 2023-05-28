@@ -1,7 +1,7 @@
 module msx_slots
 (
    input                       clk,
-   //input                       clk_sdram,
+   input                       clk_sdram,
    input                       clk_en,
    input                       reset,
    //input                       rom_eject,
@@ -192,9 +192,31 @@ wire [26:0] mapper_offset_addr  = 27'({(cpu_addr[15:14] - offset_ram),cpu_addr[1
 wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podm9nit mapperem
 
 
-wire [19:0] mapper_mfrsd3_addr;
+wire [26:0] mapper_mfrsd3_addr;
 wire        mapper_mfrsd3_unmaped, mfrsd3_oe;
 wire  [7:0] mapper_mfrsd3_dout;
+
+/*
+wire flash_rq;
+wire [7:0] flash_dout;
+flash flash 
+(
+   .clk(clk),
+   .clk_sdram(clk_sdram),
+   .addr(23'(mem_addr)),
+   .din(din),
+   .dout(flash_dout),
+   .data_valid(flash_rq),
+   .we_n(~(wr & configReg[0])),
+   //.ce_n(~(mfrsd_addr_valid & mreq & (wr | rd) )),
+   .ce_n(),
+   .sdram_addr(),
+   .sdram_din(),
+   .sdram_req(),
+	.sdram_ready(),
+   .sdram_done(),
+   .sdram_offset()
+); */
 
 mapper_mfrsd3 mfrsd3
 (
@@ -210,13 +232,27 @@ mapper_mfrsd3 mfrsd3
    .sd_tx(sd_tx),
    .sd_rx(sd_rx),
    .d_from_sd(d_from_sd),
+   .mfrsd_base_ram(mfrsd_base_ram[0]),
+   .configReg(mfrsd_configReg),
    //.oe(mfrsd3_oe),
    .mapper_dout(mapper_mfrsd3_dout)
 );
 
-wire [3:0] mapper_mfrd_mask;
+wire [26:0] mfrsd_base_ram[2];
+mapper_mfrsd0 mfrsd0
+(
+   .clk(clk),
+   .reset(reset),
+   .cs(device == DEVICE_MFRSD0),
+   .slot(cart_num),
+   .base_ram(base_ram),
+   .mfrsd_base_ram(mfrsd_base_ram)
+);
+
+wire  [3:0] mapper_mfrd_mask;
 wire [19:0] mapper_mfrsd1_addr;
 wire        mapper_mfrsd1_unmaped;
+wire  [7:0] mfrsd_configReg; 
 mapper_mfrsd1 mfrsd1
 (
    .clk(clk),
@@ -226,6 +262,8 @@ mapper_mfrsd1 mfrsd1
    .din(cpu_dout),
    .wr(cpu_wr & cpu_mreq),
    .addr(cpu_addr),
+   .configReg(mfrsd_configReg),
+   .mfrsd_base_ram(mfrsd_base_ram[0]),
    .mapper_mask(mapper_mfrd_mask),
    .mem_addr(mapper_mfrsd1_addr),
    .mem_unmaped(mapper_mfrsd1_unmaped)
@@ -393,6 +431,7 @@ opll opll
    .cs({1'b0, |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
    .sound(sound_opll)
 );
+
 
 
 wire        FDC_req;

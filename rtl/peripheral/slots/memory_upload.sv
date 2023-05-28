@@ -29,7 +29,7 @@ module memory_upload
    input  MSX::config_cart_t   cart_conf[2],
    output dev_typ_t            cart_device[2]
 );
-   /*verilator tracing_off*/
+
    logic [26:0] ioctl_size [4];
    logic        load;
    logic [27:0] save_addr;
@@ -351,7 +351,7 @@ module memory_upload
                                                                  mode[1:0] == 2'd3 ? device                                        :
                                                                                      DEVICE_NONE                                   ;
 
-                  slot_layout[{slotSubslot,2'd0}].ref_ram     <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].ref_ram : ref_ram;
+                  slot_layout[{slotSubslot,2'd0}].ref_ram     <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd0}].offset_ram  <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].offset_ram : param[1:0];
                   slot_layout[{slotSubslot,2'd0}].cart_num    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B;
                end
@@ -365,7 +365,7 @@ module memory_upload
                                                                  mode[3:2] == 2'd3 ? device                                        :
                                                                                      DEVICE_NONE                                   ;
 
-                  slot_layout[{slotSubslot,2'd1}].ref_ram     <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].ref_ram : ref_ram;
+                  slot_layout[{slotSubslot,2'd1}].ref_ram     <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd1}].offset_ram  <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].offset_ram : param[3:2];
                   slot_layout[{slotSubslot,2'd1}].cart_num    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B;
                end
@@ -379,7 +379,7 @@ module memory_upload
                                                                  mode[5:4] == 2'd3 ? device                                        :
                                                                                      DEVICE_NONE                                   ;
 
-                  slot_layout[{slotSubslot,2'd2}].ref_ram     <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].ref_ram : ref_ram;
+                  slot_layout[{slotSubslot,2'd2}].ref_ram     <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd2}].offset_ram  <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].offset_ram : param[5:4];
                   slot_layout[{slotSubslot,2'd2}].cart_num    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B;
                end
@@ -393,7 +393,7 @@ module memory_upload
                                                                  mode[7:6] == 2'd3 ? device                                        :
                                                                                      DEVICE_NONE                                   ;
 
-                  slot_layout[{slotSubslot,2'd3}].ref_ram     <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].ref_ram : ref_ram;
+                  slot_layout[{slotSubslot,2'd3}].ref_ram     <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd3}].offset_ram  <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].offset_ram : param[7:6];
                   slot_layout[{slotSubslot,2'd3}].cart_num    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_B;
                end
@@ -479,20 +479,20 @@ dev_typ_t rom_device;
 assign rom_mapper = selected_mapper  == MAPPER_AUTO ? detected_mapper : selected_mapper;
 
 assign rom_device = rom_mapper == MAPPER_KONAMI_SCC ? DEV_SCC  :
-                                                      DEVICE_NONE ;     
+                                                      DEV_NONE ;     
 
 
-assign                                        {mapper             , mem_device  , rom_id             , mode  , param , sram_size          , ram_size, device        } = 
-   typ == CART_TYP_ROM    & subslot == 2'd0 ? {rom_mapper         , DEVICE_NONE , ROM_ROM            , 8'hAA , 8'hE4 , selected_sram_size , 8'd0  ,   rom_device    } :
-   typ == CART_TYP_SCC    & subslot == 2'd0 ? {MAPPER_KONAMI_SCC  , DEVICE_NONE , ROM_ROM            , 8'hAA , 8'h00 , 8'd0               , 8'd0  ,   DEV_SCC    } :
-   typ == CART_TYP_SCC2   & subslot == 2'd0 ? {MAPPER_KONAMI_SCC  , DEVICE_NONE , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd8  ,   DEV_SCC2   } :
-   typ == CART_TYP_FM_PAC & subslot == 2'd0 ? {MAPPER_FMPAC       , DEVICE_NONE , ROM_FMPAC          , 8'h08 , 8'h00 , 8'd8               , 8'd0  ,   DEV_OPL3   } : //4000 - 7FFF
-   typ == CART_TYP_MFRSD  & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_NONE , ROM_MFRSD_RECOVERY , 8'hAA , 8'h00 , 8'd0               , 8'd0  ,   DEVICE_NONE   } :
-   typ == CART_TYP_MFRSD  & subslot == 2'd1 ? {MAPPER_MFRSD1      , DEVICE_NONE , ROM_NONE           , 8'hAA , 8'h00 , 8'd0               , 8'd0  ,   DEVICE_NONE   } :
-   typ == CART_TYP_MFRSD  & subslot == 2'd2 ? {MAPPER_MFRSD2      , DEVICE_NONE , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd32 ,   DEV_MFRSD2 } :
-   typ == CART_TYP_MFRSD  & subslot == 2'd3 ? {MAPPER_MFRSD3      , DEVICE_NONE , ROM_MFRSD_MEGASD   , 8'hAA , 8'h00 , 8'd0               , 8'd0  ,   DEVICE_NONE   } :
-   typ == CART_TYP_GM2    & subslot == 2'd0 ? {MAPPER_UNUSED      , DEVICE_NONE , ROM_NONE           , 8'h00 , 8'h00 , 8'd8               , 8'd0  ,   DEVICE_NONE   } :
-   typ == CART_TYP_FDC    & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_FDC  , ROM_FDC            , 8'h08 , 8'h00 , 8'd0               , 8'd0  ,   DEVICE_NONE   } :
-   /*typ == CART_TYP_EMPTY*/                  {MAPPER_UNUSED      , DEVICE_NONE , ROM_NONE           , 8'h00 , 8'h00 , 8'd0               , 8'd0  ,   DEVICE_NONE   } ;
+assign                                        {mapper             , mem_device    , rom_id             , mode  , param , sram_size          , ram_size, device       } = 
+   typ == CART_TYP_ROM    & subslot == 2'd0 ? {rom_mapper         , DEVICE_NONE   , ROM_ROM            , 8'hAA , 8'hE4 , selected_sram_size , 8'd0    ,   rom_device } :
+   typ == CART_TYP_SCC    & subslot == 2'd0 ? {MAPPER_KONAMI_SCC  , DEVICE_NONE   , ROM_ROM            , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_SCC    } :
+   typ == CART_TYP_SCC2   & subslot == 2'd0 ? {MAPPER_KONAMI_SCC  , DEVICE_NONE   , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd8    ,   DEV_SCC2   } :
+   typ == CART_TYP_FM_PAC & subslot == 2'd0 ? {MAPPER_FMPAC       , DEVICE_NONE   , ROM_FMPAC          , 8'h08 , 8'h00 , 8'd8               , 8'd0    ,   DEV_OPL3   } : //4000 - 7FFF
+   typ == CART_TYP_MFRSD  & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_MFRSD0 , ROM_MFRSD          , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE   } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd1 ? {MAPPER_MFRSD1      , DEVICE_NONE   , ROM_NONE           , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE   } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd2 ? {MAPPER_MFRSD2      , DEVICE_NONE   , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd32   ,   DEV_MFRSD2 } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd3 ? {MAPPER_MFRSD3      , DEVICE_NONE   , ROM_NONE           , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE   } :
+   typ == CART_TYP_GM2    & subslot == 2'd0 ? {MAPPER_UNUSED      , DEVICE_NONE   , ROM_NONE           , 8'h00 , 8'h00 , 8'd8               , 8'd0    ,   DEV_NONE   } :
+   typ == CART_TYP_FDC    & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_FDC    , ROM_FDC            , 8'h08 , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE   } :
+   /*typ == CART_TYP_EMPTY*/                  {MAPPER_UNUSED      , DEVICE_NONE   , ROM_NONE           , 8'h00 , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE   } ;
 
 endmodule

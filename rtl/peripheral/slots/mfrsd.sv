@@ -1,3 +1,24 @@
+module mapper_mfrsd0
+(
+   input               clk,
+   input               reset,
+   input               cs,
+   input               slot,
+   input        [26:0] base_ram,
+   output logic [26:0] mfrsd_base_ram[2]
+);
+
+always @(posedge clk) begin
+   if (reset) begin
+      mfrsd_base_ram <= '{27'd0,27'd0};
+   end else begin
+      if (cs) mfrsd_base_ram[slot] <= base_ram;
+   end
+
+end
+endmodule
+
+
 module mapper_mfrsd1
 (
    input clk,
@@ -7,12 +28,14 @@ module mapper_mfrsd1
    input [15:0] addr,
    input [7:0] din,
    input wr,
+   input       [26:0] mfrsd_base_ram,
+   output logic [7:0] configReg,
    output logic [3:0] mapper_mask,
    output [19:0] mem_addr,
    output mem_unmaped
 );
 
-logic [7:0] configReg, mapperReg, sccMode;
+logic [7:0] mapperReg, sccMode;
 logic [9:0] offsetReg;
 logic sccChip;
 
@@ -102,8 +125,10 @@ module mapper_mfrsd3
    output [7:0] mapper_dout,
    input wr,
    input rd,
+   input       [26:0] mfrsd_base_ram,
+   input [7:0] configReg,
    // output oe,
-   output [19:0] mem_addr,
+   output [26:0] mem_addr,
    output mem_unmaped,
    output logic sd_rx,
    output logic sd_tx,
@@ -132,13 +157,14 @@ end
 wire SDrom = addr[15:14] == 2'b01 | addr[15:14] == 2'b10;
 
 wire  [1:0] page       = {addr[15] ^ addr[14] ? addr[15] : ~addr[15], addr[13]};
-assign mem_addr        = {bank[page][6:0],13'd0} + 20'(addr[12:0]);
+
+assign mem_addr        = mfrsd_base_ram + 27'h700000 + 27'({bank[page][6:0],13'd0}) + 27'(addr[12:0]);
 wire   mem_valid       = (addr[15:14] == 2'b01 | addr[15:14] == 2'b10);
 wire   sd_card_en      = cs & bank[0][7:6] == 2'b01 & addr[15:13] == 3'b010; // 4000 - 5FFF
 wire   sd_card_data_en = sd_card_en & rd;
 assign mem_unmaped     = cs & (~mem_valid | sd_card_data_en);
 
-assign mapper_dout = sd_card_data_en &  ~addr[12] ? d_from_sd : 8'hFF;
+assign mapper_dout = sd_card_data_en & ~addr[12] ? d_from_sd  : 8'hFF;
 
 always @(posedge clk) begin
    logic old_wr, old_rd, select_sd;
