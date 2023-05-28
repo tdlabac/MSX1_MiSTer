@@ -237,8 +237,8 @@ wire SDrom = addr[15:14] == 2'b01 | addr[15:14] == 2'b10;
 wire en_ram_segment;
 assign en_ram_segment = addr[15:13] == 3'b010 ? (sccMode[4] | sccMode[0])                 :   //4000 - 5FFF
                         addr[15:13] == 3'b011 ? (sccMode[4] | sccMode[1])                 :   //6000 - 7FFF
-                        addr[15:13] == 3'b100 ? (sccMode[4] | (sccMode[5] & sccMode[2])) :   //8000 - 9FFF
-                        addr[15:13] == 3'b101 ? (sccMode[4])                               :   //A000 - BFFF
+                        addr[15:13] == 3'b100 ? (sccMode[4] | (sccMode[5] & sccMode[2]))  :   //8000 - 9FFF
+                        addr[15:13] == 3'b101 ? (sccMode[4])                              :   //A000 - BFFF
                                                 1'd0 ; 
 
 wire mode_scc2 = sccMode[5]  & sccBanks[3][7];

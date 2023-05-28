@@ -8,11 +8,11 @@ ROM_DIR = 'ROM'
 XML_DIR_COMP = 'Computer'
 XML_DIR_FW = 'Extension'
 #{ROM_NONE, ROM_ROM, ROM_RAM, ROM_FDC, ROM_FMPAC} data_ID_t;
-EXTENSIONS  = ["NONE", "ROM", "RAM", "FDC", "FM_PAC", "SCC", "SCC2", "MEGA_FLASH_ROM_SCC_SD", "GM2", "EMPTY" ]
+EXTENSIONS  = ["NONE", "ROM", "RAM", "FDC", "FM_PAC", "MEGA_FLASH_ROM_SCC_SD_RECOVERY", "MEGA_FLASH_ROM_SCC_SD_ROM", "MEGA_FLASH_ROM_SCC_SD_MEGASD", "GM2", "EMPTY" ]
 #{DEVICE_NONE, DEVICE_FDC, DEVICE_OPL3}
 DEVICE_TYPES = ["NONE", "FDC","OPL3"]
 CONFIG_TYPES = ["NONE", "FDC", "SLOT_A", "SLOT_B", "SLOT_INTERNAL", "KBD_LAYOUT", "CONFIG"]
-MAPPER_TYPES = ["MAPPER_UNUSED", "MAPPER_AUTO", "MAPPER_NONE", "MAPPER_RAM"]
+MAPPER_TYPES = ["MAPPER_UNUSED", "MAPPER_RAM", "MAPPER_AUTO", "MAPPER_NONE"]
 MSX_TYPES    = ["MSX1", "MSX2"]
 
 BLOCK_TYPES = {"NONE"       : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "NONE"          },
@@ -40,16 +40,20 @@ def get_msx_type_id(typ):
 
 def create_MSX_block(primary, secondary, values):
     slotSubslot = ((int(primary) & 3) << 2) | ((int(secondary) & 3))
-    #MSX CONFIG typ + slot/subsllot  DATA_ID, SIZE, MEM_DEV,  MEM_MAP, MODE, PARAM
-    #    3                           4        56    7         8        9     10
+    #MSX CONFIG typ + slot/subsllot  DATA_ID, SIZE, MEM_DEV,  MEM_MAP, MODE, PARAM, PATTERN
+    #    3                           4        56    7         8        9     10     11
     head = bytearray()
     head.extend('MSX'.encode('ascii'))
     
     config = BLOCK_TYPES[values["type"]]
     head.append(CONFIG_TYPES.index(config['CONFIG']) << 4 | slotSubslot)
     head.append(EXTENSIONS.index(config['MEMORY']))
-    head.append((int(values['count']) >> 8) & 255)
-    head.append(int(values['count']) & 255)
+    if config['MEMORY'] == "NONE" :
+        head.append(0x00)
+        head.append(0x00)
+    else :
+        head.append((int(values['count']) >> 8) & 255)
+        head.append(int(values['count']) & 255)
     if values["type"] in ["IO_MIRROR", "MIRROR"] :
         head.append(DEVICE_TYPES.index(BLOCK_TYPES[values['ref']['type']]["DEVICE"])) 
     else :
@@ -79,6 +83,7 @@ def create_MSX_block(primary, secondary, values):
             offset = (offset + 1) & 3
         head.append(mode)
         head.append(param)
+        head.append(values["pattern"])
 
     for i in range(len(head),16) :
         head.append(0)
@@ -106,12 +111,13 @@ def create_FW_block(type, size):
     return head
 
 def createFWpack(root, fileHandle) :
-    try :
+    #try :
         for fw in root.findall("./fw"):
             fw_name = fw.attrib["name"]
             fw_filename = fw.find('filename').text if fw.find('filename') is not None else None
             fw_SHA1 = fw.find('SHA1').text if fw.find('SHA1') is not None else None
             fw_size = int(fw.find('size').text) if fw.find('size') is not None else None
+            fw_skip = int(fw.find('skip').text) if fw.find('skip') is not None else None
             if fw_name in EXTENSIONS :
                 typ = EXTENSIONS.index(fw_name)
                 if fw_SHA1 is not None :
@@ -122,7 +128,12 @@ def createFWpack(root, fileHandle) :
                         head = create_FW_block(typ, size  >> 14)
                         fileHandle.write(head)
                         infile = open(inFileName, "rb")
-                        fileHandle.write(infile.read())
+                        if fw_skip is not None :
+                            infile.seek(fw_skip, os.SEEK_SET)
+                        if fw_size is not None :
+                            fileHandle.write(infile.read(size))
+                        else :
+                            fileHandle.write(infile.read())
                         print(size)
                         print(fileSize)
                         if size > fileSize :
@@ -132,9 +143,9 @@ def createFWpack(root, fileHandle) :
                         raise Exception(f"Skip: {filename} Not found ROM {fw_filename} SHA1:{fw_SHA1}")
         fileHandle.close()
         return False
-    except Exception as e:
-        print(e)
-        return True
+    #except Exception as e:
+    #    print(e)
+    #    return True
 
 def getRefereced(secondary, reference) :
     block = secondary.find((f'.//block[@start="{reference}"]'))
@@ -147,7 +158,7 @@ def getValues(block, secondary) :
     values['count']    = int(block.find('block_count').text) if block.find('block_count') is not None else 0
     values['filename'] = block.find('filename').text if block.find('filename') is not None else None
     values['SHA1']     = block.find('SHA1').text if block.find('SHA1') is not None else None  
-    
+    values['pattern']  = int(block.find('pattern').text) if block.find('pattern') is not None else 3  
     if secondary is not None and block.find('ref') is not None :
         values['ref'] = getRefereced(secondary, block.find('ref').text)
 

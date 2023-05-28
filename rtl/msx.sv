@@ -30,7 +30,8 @@ module msx
    input             [64:0] rtc_time,
    input MSX::bios_config_t bios_config,
    input MSX::user_config_t msxConfig,
-   input MSX::config_cart_t cart_conf[2],
+   //input MSX::config_cart_t cart_conf[2],
+   input  dev_typ_t         cart_device[2],
    input                    rom_eject,
    input                    sram_save,
    input                    sram_load,
@@ -86,10 +87,15 @@ module msx
    input              [7:0] sd_buff_dout,
    output             [7:0] sd_buff_din[6],
    input                    sd_buff_wr,
-   output                   spi_ss,
-   output                   spi_clk,
-   input                    spi_di,
-   output                   spi_do
+   output             [7:0] d_to_sd,
+   input              [7:0] d_from_sd,
+   output                   sd_tx,
+   output                   sd_rx
+
+   //output                   spi_ss,
+   //output                   spi_clk,
+   //input                    spi_di,
+   //output                   spi_do
 );
 
 //  -----------------------------------------------------------------------------
@@ -268,7 +274,7 @@ jt49_bus PSG
 (
    .rst_n(~reset),
    .clk(clk21m),
-   .clk_en( ),
+   .clk_en(ce_3m58_n),
    .bdir(psg_bdir),
    .bc1(psg_bc),
    .din(d_from_cpu),
@@ -508,7 +514,11 @@ msx_slots msx_slots
    .lookup_RAM(lookup_RAM),
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
-   .cart_conf(cart_conf)
+   .cart_device(cart_device),
+   .sd_tx(sd_tx),
+   .sd_rx(sd_rx),
+   .d_to_sd(d_to_sd),
+   .d_from_sd(d_from_sd)
    //.kbd_addr(kbd_addr),
    //.kbd_din(kbd_din),
    //.kbd_we(kbd_we),

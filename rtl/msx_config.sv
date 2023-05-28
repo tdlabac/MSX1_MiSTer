@@ -6,10 +6,10 @@ parameter CONF_STR_SLOT_B = {
     "O[31:29],SLOT B,ROM,SCC,SCC+,FM-PAC,Empty;"
 };
 parameter CONF_STR_MAPPER_A = {
-    "H3O[23:20],Mapper type,auto,ASCII8,ASCII16,Konami,KonamiSCC,KOEI,linear64,R-TYPE,WIZARDRY,none;"
+    "H3O[23:20],Mapper type,auto,none,ASCII8,ASCII16,Konami,KonamiSCC,KOEI,linear64,R-TYPE,WIZARDRY;"
 };
 parameter CONF_STR_MAPPER_B = {
-    "H4O[35:32],Mapper type,auto,ASCII8,ASCII16,Konami,KonamiSCC,KOEI,linear64,R-TYPE,WIZARDRY,none;"
+    "H4O[35:32],Mapper type,auto,none,ASCII8,ASCII16,Konami,KonamiSCC,KOEI,linear64,R-TYPE,WIZARDRY;"
 };
 parameter CONF_STR_SRAM_SIZE_A = {
     "H7H5O[28:26],SRAM size,auto,1kB,2kB,4kB,8kB,16kB,32kB,none;",
@@ -47,7 +47,7 @@ module msx_config
     output                    cart_changed
     //output         [1:0] rom_eject
 );
-
+/*verilator tracing_off*/
 cart_typ_t   cart_typ_A, cart_typ_B;
 mapper_typ_t selected_mapper_A, selected_mapper_B;
 logic  [7:0] selected_sram_size_A;
@@ -64,8 +64,11 @@ assign cart_conf[0].typ     = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A
                                                                           CART_TYP_EMPTY );
 
 assign cart_conf[1].typ     = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
-assign cart_conf[0].selected_mapper    = mapper_A_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_A_select + 4'd1);
-assign cart_conf[1].selected_mapper    = mapper_B_select == 4'd9 ? MAPPER_UNUSED : mapper_typ_t'(mapper_B_select + 4'd1);
+// 0-auto 1-ASCII8 2-ASCII16 3-Konami 4-KonamiSCC 5-KOEI 6-linear64 7-R-TYPE 8-WIZARDRY 9-none
+//{MAPPER_AUTO, MAPPER_NONE, MAPPER_LINEAR, MAPPER_OFFSET, MAPPER_KONAMI_SCC, MAPPER_KONAMI, MAPPER_ASCII8, MAPPER_ASCII16, MAPPER_FMPAC, MAPPER_MFRSD1,MAPPER_MFRSD2, MAPPER_MFRSD3, MAPPER_UNUSED, MAPPER_RAM} mapper_typ_t;
+
+assign cart_conf[0].selected_mapper    = mapper_typ_t'(mapper_A_select + 4'd2);
+assign cart_conf[1].selected_mapper    = mapper_typ_t'(mapper_B_select + 4'd2);
 assign cart_conf[0].selected_sram_size = sram_A_select_hide ? 8'd0 : 8'd0; // TODO dopočti
 assign cart_conf[1].selected_sram_size = 8'd0;
 
@@ -136,6 +139,6 @@ assign                           {config_cart.mapper, config_cart.mem_device, co
       typ == CART_TYP_MFRSD    ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } :
       typ == CART_TYP_GM2      ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd8               } :
       typ == CART_TYP_FDC      ? {MAPPER_NONE       , DEVICE_FDC            , DEVICE_NONE          , ROM_FDC           , 8'h08           , 8'h00            , 8'd0               } :
-      typ == CART_TYP_EMPTY    {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } ;
+      typ == CART_TYP_EMPTY      {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } ;
          
 endmodule */

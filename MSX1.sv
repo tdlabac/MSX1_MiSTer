@@ -390,10 +390,13 @@ wire        need_reset;
 wire [26:0] ram_addr;
 wire  [7:0] ram_din, ram_dout;
 wire        ram_rnw, sdram_ce, bram_ce;
+wire        sd_tx, sd_rx;
+wire  [7:0] d_to_sd, d_from_sd;
 
 MSX::block_t         slot_layout[64];
 MSX::lookup_RAM_t    lookup_RAM[16];
 MSX::lookup_RAM_t    lookup_SRAM[4];
+dev_typ_t            cart_device[2];
 msx MSX
 (
    .HS(hsync),
@@ -425,19 +428,24 @@ msx MSX
    .sd_buff_din(sd_buff_din[0:5]),
    .sd_buff_wr(sd_buff_wr),
    //SD CARD
-	.spi_ss(sdss),
-	.spi_clk(sdclk),
-	.spi_di(sdmiso),
-	.spi_do(sdmosi),
+	//.spi_ss(sdss),
+	//.spi_clk(sdclk),
+	//.spi_di(sdmiso),
+	//.spi_do(sdmosi),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
+   .cart_device(cart_device),
    .flash_addr(),
    .flash_din(),
    .flash_wr(),
    .flash_ready(),
    .flash_done(),
+   .d_to_sd(d_to_sd),
+   .d_from_sd(d_from_sd),
+   .sd_tx(sd_tx),
+   .sd_rx(sd_rx),
    .*
 );
 
@@ -449,7 +457,7 @@ wire sdmiso = vsd_sel ? vsdmiso : SD_MISO;
 wire sdss;
 
 reg vsd_sel = 0;
-always @(posedge clk21m) if(img_mounted) vsd_sel <= |img_size;
+always @(posedge clk21m) if(img_mounted[6]) vsd_sel <= |img_size;
 
 assign SD_CS   = sdss   |  vsd_sel;
 assign SD_SCK  = sdclk  & ~vsd_sel;
@@ -472,6 +480,23 @@ always @(posedge clk21m) begin
 
     if((old_mosi ^ sdmosi) || (old_miso ^ sdmiso)) timeout <= 0;
 end
+
+
+// SPI
+spi_divmmc spi
+(
+   .clk_sys(clk21m),
+   .tx(sd_tx),
+   .rx(sd_rx),
+   .din(d_to_sd),
+   .dout(d_from_sd),
+   .ready(),
+
+   .spi_ce(1'b1),
+   .spi_clk(sdclk),
+   .spi_di(sdmiso),
+   .spi_do(sdmosi)
+);
 
 sd_card sd_card
 (
@@ -583,7 +608,6 @@ memory_upload memory_upload(
     .ddr3_addr(ddr3_addr_download),
     .ddr3_rd(ddr3_rd_download),
     .ddr3_wr(),
-    .ddr3_din(),
     .ddr3_dout(ddr3_dout),
     .ddr3_ready(ddr3_ready),
     .ddr3_request(ddr3_request_download),
@@ -600,7 +624,8 @@ memory_upload memory_upload(
     .lookup_RAM(lookup_RAM),
     .lookup_SRAM(lookup_SRAM),
     .bios_config(bios_config),
-    .cart_conf(cart_conf)
+    .cart_conf(cart_conf), 
+    .cart_device(cart_device)
 );
 
 
@@ -705,5 +730,46 @@ tape cass
    .play(play),
    .rewind(rewind)
 );
+
+endmodule
+
+// SPI module
+module spi_divmmc
+(
+	input        clk_sys,
+	output       ready,
+
+	input        tx,        // Byte ready to be transmitted
+	input        rx,        // request to read one byte
+	input  [7:0] din,
+	output [7:0] dout,
+
+	input        spi_ce,
+	output       spi_clk,
+	input        spi_di,
+	output       spi_do
+);
+
+assign    ready   = counter[4];
+assign    spi_clk = counter[0];
+assign    spi_do  = io_byte[7]; // data is shifted up during transfer
+assign    dout    = data;
+
+reg [4:0] counter = 5'b10000;  // tx/rx counter is idle
+reg [7:0] io_byte, data;
+
+always @(posedge clk_sys) begin
+	if(counter[4]) begin
+		if(rx | tx) begin
+			counter <= 0;
+			data    <= io_byte;
+			io_byte <= tx ? din : 8'hff;
+		end
+	end
+	else if (spi_ce) begin
+		if(spi_clk) io_byte <= { io_byte[6:0], spi_di };
+		counter <= counter + 2'd1;
+	end
+end
 
 endmodule
