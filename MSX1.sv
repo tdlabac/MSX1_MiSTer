@@ -340,7 +340,7 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
 
 /////////////////   CONFIG   /////////////////
 wire [5:0] mapper_A, mapper_B;
-wire       cart_changed, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
+wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
 
 msx_config msx_config 
 (
@@ -351,8 +351,8 @@ msx_config msx_config
    .HPS_status(status),
    .scandoubler(scandoubler),
    .sdram_size(sdram_size),
-   .cart_changed(cart_changed),
    .cart_conf(cart_conf),
+   .reload(reload),
    .sram_A_select_hide(sram_A_select_hide),
    .sram_loadsave_hide(sram_loadsave_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
@@ -604,7 +604,8 @@ memory_upload memory_upload(
     .ioctl_download(ioctl_download),
     .ioctl_index(ioctl_index),
     .ioctl_addr(ioctl_addr),
-    .rom_eject(),
+    .rom_eject(status[10]),
+    .reload(reload),
     .ddr3_addr(ddr3_addr_download),
     .ddr3_rd(ddr3_rd_download),
     .ddr3_wr(),

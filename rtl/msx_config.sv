@@ -39,17 +39,15 @@ module msx_config
     //output         [5:0] mapper_B,
     output                    sram_A_select_hide,
     output                    sram_loadsave_hide,
-    output                    ROM_A_load_hide,
+    output                    ROM_A_load_hide, //3 
     output                    ROM_B_load_hide, //4
     output                    fdc_enabled,
     output MSX::user_config_t msxConfig,
     output                    reset_request,
-    output                    cart_changed
+    output                    reload
     //output         [1:0] rom_eject
 );
 /*verilator tracing_off*/
-cart_typ_t   cart_typ_A, cart_typ_B;
-mapper_typ_t selected_mapper_A, selected_mapper_B;
 logic  [7:0] selected_sram_size_A;
 
 wire [2:0] slot_A_select   = HPS_status[19:17];
@@ -81,64 +79,26 @@ assign msxConfig.cas_audio_src = cas_audio_src_t'(HPS_status[8]);
 assign msxConfig.border = HPS_status[38];
 
 assign sram_loadsave_hide = sram_size[0] == 0 & sram_size[1] == 0;
-assign ROM_A_load_hide    = cart_typ_A != CART_TYP_ROM;
-assign ROM_B_load_hide    = cart_typ_B != CART_TYP_ROM;
-assign sram_A_select_hide = cart_typ_A != CART_TYP_ROM | mapper_A_select == 4'd0; 
-assign fdc_enabled = msx_type == MSX2 | cart_typ_A == CART_TYP_FDC;
+assign ROM_A_load_hide    = cart_conf[0].typ != CART_TYP_ROM;
+assign ROM_B_load_hide    = cart_conf[1].typ != CART_TYP_ROM;
+assign sram_A_select_hide = cart_conf[0].typ != CART_TYP_ROM | mapper_A_select == 4'd0; 
+assign fdc_enabled = msx_type == MSX2 | cart_conf[0].typ == CART_TYP_FDC;
 
 
-reg  [16:0] lastConfig;
-reg  [5:0]  last_cart_type;
+logic  [18:0] lastConfig;
+//reg  [5:0]  last_cart_type;
 
-wire [16:0] act_config = {cart_typ_B, cart_typ_A, mapper_A_select, mapper_B_select, sram_A_select};
-wire [5:0]  act_cart_type = {cart_typ_B, cart_typ_A};
+wire [18:0] act_config = {cart_conf[1].typ, cart_conf[0].typ, cart_conf[0].selected_mapper, cart_conf[1].selected_mapper, sram_A_select};
+//wire [5:0]  act_cart_type = {cart_typ_B, cart_typ_A};
 
 always @(posedge clk) begin
     if (reset) lastConfig <= act_config;
-    last_cart_type <= act_cart_type;
+//    last_cart_type <= act_cart_type;
 end
 
-assign reset_request = lastConfig != act_config;
-assign cart_changed = last_cart_type[5:0] != act_cart_type[5:0];
+assign reload = lastConfig != act_config;
+//assign cart_changed = last_cart_type[5:0] != act_cart_type[5:0];
 //assign rom_eject = {cart_conf[1].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0, cart_conf[0].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0};
 
-/*
-cart_conf conf_A
-(
-   .typ(cart_typ_A),
-   .selected_mapper(selected_mapper_A),
-   .selected_sram_size(selected_sram_size_A),
-   .config_cart(cart_conf[0])
-);
-
-cart_conf conf_B
-(
-   .typ(cart_typ_B),
-   .selected_mapper(selected_mapper_B),
-   .selected_sram_size(8'd0),
-   .config_cart(cart_conf[1])
-); */
 
 endmodule
-/*
-module cart_conf
-(
-   input  cart_typ_t         typ,
-   input  mapper_typ_t       selected_mapper,
-   input  logic [       7:0] selected_sram_size,
-   output MSX::config_cart_t config_cart
-   
-);
-
-
-assign                           {config_cart.mapper, config_cart.mem_device, config_cart.io_device, config_cart.rom_id, config_cart.mode, config_cart.param, config_cart.sram_size} = 
-      typ == CART_TYP_ROM      ? {selected_mapper   , DEVICE_NONE           , DEVICE_NONE          , ROM_ROM           , 8'hAA           , 8'b11100100      , selected_sram_size } :
-      typ == CART_TYP_SCC      ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } :
-      typ == CART_TYP_SCC2     ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } :
-      typ == CART_TYP_FM_PAC   ? {MAPPER_FMPAC      , DEVICE_NONE           , DEVICE_OPL3          , ROM_FMPAC         , 8'h08           , 8'h00            , 8'd8               } : //4000 - 7FFF
-      typ == CART_TYP_MFRSD    ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } :
-      typ == CART_TYP_GM2      ? {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd8               } :
-      typ == CART_TYP_FDC      ? {MAPPER_NONE       , DEVICE_FDC            , DEVICE_NONE          , ROM_FDC           , 8'h08           , 8'h00            , 8'd0               } :
-      typ == CART_TYP_EMPTY      {MAPPER_UNUSED     , DEVICE_NONE           , DEVICE_NONE          , ROM_NONE          , 8'h00           , 8'h00            , 8'd0               } ;
-         
-endmodule */

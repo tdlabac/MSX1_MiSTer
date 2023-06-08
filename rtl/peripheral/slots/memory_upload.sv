@@ -6,6 +6,7 @@ module memory_upload
    input                [15:0] ioctl_index,
    input                [26:0] ioctl_addr,
    input                       rom_eject,
+   input                       reload,
    output logic         [27:0] ddr3_addr,
    output logic                ddr3_rd,
    output logic                ddr3_wr,
@@ -52,6 +53,7 @@ module memory_upload
          ioctl_size[3] <= 0; 
          load <= 1;
       end
+      if (reload) load <= 1;
       ioctl_download_last <= ioctl_download;
    end 
 

@@ -35,7 +35,7 @@ module msx
    input                    rom_eject,
    input                    sram_save,
    input                    sram_load,
-   input                    cart_changed,
+   //input                    cart_changed,
    output                   need_reset,
    //IOCTL
    input                    ioctl_download,

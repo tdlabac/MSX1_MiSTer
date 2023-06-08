@@ -215,7 +215,6 @@ flash flash
    .dout(flash_dout),
    .data_valid(flash_rq),
    .we(cpu_mreq & cpu_wr),
-   //.ce_n(~(mfrsd_addr_valid & mreq & (wr | rd) )),
    .ce((mapper_mfrsd3_flash_rq | mapper_mfrsd1_flash_rq | mapper_mfrsd0_flash_rq) & |(cart_device[cart_num] & DEV_FLASH)),
    .sdram_addr(flash_addr),
    .sdram_din(flash_din),
