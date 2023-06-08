@@ -39,6 +39,7 @@
       <block start="0">
         <type>RAM MAPPER</type>
         <block_count>8</block_count>
+        <pattern>4</pattern>
       </block>
     </secondary>
     <secondary slot="3">
