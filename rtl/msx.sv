@@ -63,6 +63,11 @@ module msx
    input  MSX::block_t      slot_layout[64],
    input  MSX::lookup_RAM_t lookup_RAM[16],
    input  MSX::lookup_RAM_t lookup_SRAM[4],
+   //KBD
+   input                    kbd_request,
+   input              [8:0] kbd_addr,
+   input              [7:0] kbd_din,
+   input                    kbd_we,
 /*
    output            [24:0] dw_sdram_addr,
    output             [7:0] dw_sdram_din,
@@ -452,10 +457,8 @@ spram #(.addr_width(16),.mem_name("VRA3")) vram_hi
    .q(VRAM_di_hi)
 );
 
-wire         [7:0] d_from_slots, kbd_din;
-wire         [8:0] kbd_addr;
+wire         [7:0] d_from_slots;
 wire signed [15:0] cart_sound;
-wire               kbd_we, kbd_request;
 msx_slots msx_slots
 (
    .clk(clk21m),
@@ -524,12 +527,6 @@ msx_slots msx_slots
    .sd_rx(sd_rx),
    .d_to_sd(d_to_sd),
    .d_from_sd(d_from_sd)
-   //.kbd_addr(kbd_addr),
-   //.kbd_din(kbd_din),
-   //.kbd_we(kbd_we),
-   //.kbd_request(kbd_request),
-	//.debug_cpu_din_src(),
-   //.*
 );
 
 endmodule

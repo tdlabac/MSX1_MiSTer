@@ -21,7 +21,10 @@ module memory_upload
    input                       sdram_ready,
    output                      sdram_rq,
    output                      bram_rq,
-   output                      kbd_rq,
+   output logic                kbd_request,
+   output logic          [8:0] kbd_addr,
+   output logic          [7:0] kbd_din,
+   output logic                kbd_we,
    input                 [1:0] sdram_size,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
@@ -57,7 +60,7 @@ module memory_upload
       ioctl_download_last <= ioctl_download;
    end 
 
-   typedef enum logic [3:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_READ_CONF2, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_FILL_RAM2, STATE_STORE_SLOT_CONFIG, STATE_FIND_ROM, STATE_ERROR} state_t;
+   typedef enum logic [3:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_READ_CONF2, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_FILL_RAM2, STATE_STORE_SLOT_CONFIG, STATE_FIND_ROM, STATE_FILL_KBD, STATE_ERROR} state_t;
    state_t state;
    logic  [7:0] conf[16];
    logic  [7:0] fw_conf[8];
@@ -214,8 +217,11 @@ module memory_upload
                         end
                      end
                      CONFIG_KBD_LAYOUT: begin
-                         ddr3_addr <= ddr3_addr + 28'h200;
-                         state     <= STATE_READ_CONF;
+                         kbd_addr <= 9'h0;
+                         kbd_request <= 1'd1;
+                         ddr3_rd   <= 1'b1;
+                         //ddr3_addr <= ddr3_addr + 28'h200;
+                         state     <= STATE_FILL_KBD;
                      end
                      CONFIG_CONFIG: begin
                         bios_config.slot_expander_en <= conf[4][3:0] | cart_slot_expander_en;
@@ -240,6 +246,22 @@ module memory_upload
                      end
                      default: ;
                   endcase
+               end
+            end
+            STATE_FILL_KBD: begin
+               if (kbd_we) begin
+                  kbd_we <= 1'b0;
+                  kbd_addr <= kbd_addr + 9'd1;
+                  if (kbd_addr == 9'h1FF) begin
+                     kbd_request <= 0;
+                     state <= STATE_READ_CONF;
+                  end
+               end else begin
+                  kbd_din <= ddr3_dout;
+                  kbd_we  <= 1'b1;
+                  if (kbd_addr != 9'h1FF) begin
+                     ddr3_rd <= 1'b1;
+                  end
                end
             end
             STATE_FIND_ROM: begin

@@ -596,8 +596,11 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
 ///////////////// LOAD PACK   /////////////////
 
 wire upload_ram_ce, upload_sdram_rq, upload_bram_rq, upload_ram_ready, reset_rq;
-wire [7:0] upload_ram_din, config_msx;
+wire  [7:0] upload_ram_din, config_msx;
 wire [26:0] upload_ram_addr;
+wire  [7:0] kbd_din;
+wire  [8:0] kbd_addr;
+wire        kbd_request, kbd_we;
 memory_upload memory_upload(
     .clk(clk21m),
     .reset_rq(reset_rq),
@@ -619,7 +622,10 @@ memory_upload memory_upload(
     .sdram_ready(upload_ram_ready),
     .sdram_rq(upload_sdram_rq),
     .bram_rq(upload_bram_rq),
-    .kbd_rq(),
+    .kbd_request(kbd_request),
+    .kbd_addr(kbd_addr),
+    .kbd_din(kbd_din),
+    .kbd_we(kbd_we),
     .sdram_size(sdram_size),
     .slot_layout(slot_layout),
     .lookup_RAM(lookup_RAM),
@@ -628,8 +634,6 @@ memory_upload memory_upload(
     .cart_conf(cart_conf), 
     .cart_device(cart_device)
 );
-
-
 
 wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
 wire  [7:0] ddr3_dout, ddr3_din, ddr3_din_download;
