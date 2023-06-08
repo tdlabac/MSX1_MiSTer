@@ -80,7 +80,6 @@ always @(posedge clk) begin
       ff_req_dl    <= 1'd0;
    end else begin
       if (req & ~ff_req_dl & adr[7:5] == {2'b10, mode} & wrt) begin
-         $display("SCC reg WR %x val %x",adr,dbo);
          case(adr[3:0])
             4'b0000: begin reg_freq[0][7:0]  <= dbo[7:0]; ff_rst[0] <= reg_mode_sel[5]; end
             4'b0001: begin reg_freq[0][11:8] <= dbo[3:0]; ff_rst[0] <= reg_mode_sel[5]; end
@@ -106,7 +105,6 @@ always @(posedge clk) begin
       end
       if (req & adr[7:5] == {2'b11, ~sccPlusChip} & wrt) begin
          reg_mode_sel <= dbo;
-         $display("SCC regMode WR %x val %x",adr,dbo);
       end
       ff_req_dl <= req;
    end
@@ -260,24 +258,8 @@ always @(posedge clk) begin
    old_reset <= reset;
 end
 
-always @(posedge clk) begin
-   logic old_we;
-   if (ram_we & ~old_we) begin
-      $display("SCC WR RAM %x (%x) val %x",adr, ram_adr,dbo);
-   end
-   old_we = ram_we;
-end
-
-always @(posedge clk) begin
-   logic old_ce;
-   if (ram_ce & ~old_ce & ~wrt) begin
-      $display("SCC RD RAM %x (%x) val %x",adr, ram_adr,ram_dbi);
-   end
-   old_ce = ram_ce;
-end
-
 wire [7:0] wave_dbi, ram_dbi;
-ram2 wavemem
+wave_ram wavemem
 (
    .adr_a(clear_wave ? clear_cnt : ram_adr),
    .adr_b(w_wave_adr), 
@@ -297,7 +279,7 @@ scc_wave_mul u_mul
 );
 endmodule
 
-module ram2
+module wave_ram
 (
    input  [7:0] adr_a,
    input  [7:0] adr_b,

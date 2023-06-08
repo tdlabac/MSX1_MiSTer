@@ -90,7 +90,8 @@ module msx_slots
    output                   sd_tx,
    output                   sd_rx,
    output                   debug_FDC_req,
-   output                   debug_sd_card
+   output                   debug_sd_card,
+   output                   debug_erase
 
 
    //output                      spi_ss,
@@ -221,7 +222,8 @@ flash flash
    .sdram_req(flash_req),
 	.sdram_ready(flash_ready),
    .sdram_done(flash_done),
-   .sdram_offset(mfrsd_base_ram[0])
+   .sdram_offset(mfrsd_base_ram[0]),
+   .debug_erase(debug_erase)
 );
 
 
@@ -230,16 +232,11 @@ wire [22:0] flash_mfrsd0_addr;
 wire        mapper_mfrsd0_flash_rq;
 mapper_mfrsd0 mfrsd0
 (
-   .clk(clk),
-   .reset(reset),
    .cs(device == DEVICE_MFRSD0),
-   .addr(cpu_addr),
-   .wr(cpu_mreq & cpu_wr),
-   .slot(cart_num),
-   .base_ram(base_ram),
    .mfrsd_base_ram(mfrsd_base_ram),
    .flash_addr(flash_mfrsd0_addr),
-   .flash_rq(mapper_mfrsd0_flash_rq)
+   .flash_rq(mapper_mfrsd0_flash_rq),
+   .*
 );
 
 wire  [3:0] mapper_mfrd_mask;
@@ -251,14 +248,9 @@ wire        mapper_mfrsd1_flash_rq;
 wire        mapper_mfrdsd1_sccMode, mapper_mfrdsd1_sccReq;
 mapper_mfrsd1 mfrsd1
 (
-   .clk(clk),
-   .reset(reset),
    .slot(active_slot),
    .cs(mapper == MAPPER_MFRSD1), 
    .din(cpu_dout),
-   .wr(cpu_wr & cpu_mreq),
-	.rd(cpu_rd & cpu_mreq),
-   .addr(cpu_addr),
    .configReg(mfrsd_configReg),
    .mfrsd_base_ram(mfrsd_base_ram[0]),
    .mapper_mask(mapper_mfrd_mask),
@@ -267,7 +259,8 @@ mapper_mfrsd1 mfrsd1
    .flash_addr(flash_mfrsd1_addr),
    .flash_rq(mapper_mfrsd1_flash_rq),
    .scc_mode(mapper_mfrdsd1_sccMode),
-   .scc_req(mapper_mfrdsd1_sccReq)
+   .scc_req(mapper_mfrdsd1_sccReq),
+   .*
 );
 
 wire [21:0] mapper_mfrsd2_addr;
@@ -277,7 +270,6 @@ mapper_mfrsd2 mfrsd2
    .mapper_dout(mapper_mfrsd2_dout),
    .mem_addr(mapper_mfrsd2_addr),
    .en(|(cart_device[cart_num] & DEV_MFRSD2)),
-   //.ram_block_count(size[7:0]),
    .*
 );
 
@@ -288,13 +280,8 @@ wire  [7:0] mapper_mfrsd3_dout;
 wire        mapper_mfrsd3_flash_rq;
 mapper_mfrsd3 mfrsd3
 (
-   .clk(clk),
-   .reset(reset), 
    .cs(mapper == MAPPER_MFRSD3), 
    .din(cpu_dout),
-   .wr(cpu_wr & cpu_mreq),
-   .rd(cpu_rd & cpu_mreq),
-   .addr(cpu_addr),
    .mem_addr(mapper_mfrsd3_addr),
    .flash_addr(flash_mfrsd3_addr),
    .mem_unmaped(mapper_mfrsd3_unmaped),
@@ -303,80 +290,60 @@ mapper_mfrsd3 mfrsd3
    .d_from_sd(d_from_sd),
    .mfrsd_base_ram(mfrsd_base_ram[0]),
    .configReg(mfrsd_configReg),
-   //.oe(mfrsd3_oe),
    .mapper_dout(mapper_mfrsd3_dout),
    .flash_rq(mapper_mfrsd3_flash_rq),
-   .debug_sd_card(debug_sd_card)
+   .debug_sd_card(debug_sd_card),
+   .*
 );
 
 
 //MAPPER MSX RAM
 wire [21:0] mapper_ram_addr;
 wire  [7:0] mapper_ram_dout;
-//wire mapper_ram_req;
 msx2_ram_mapper msx2_ram_mapper
 (
-   .clk(clk),
-   .reset(reset),
-   .cpu_iorq(cpu_iorq),
-   .cpu_m1(cpu_m1),
-   .cpu_wr(cpu_wr),
-   .cpu_rd(cpu_rd),
-   .cpu_addr(cpu_addr),
-   .cpu_dout(cpu_dout),
    .en(bios_config.MSX_typ == MSX2),
    .ram_block_count(bios_config.ram_size),
    .mapper_dout(mapper_ram_dout),
-   //.mapper_req(mapper_ram_req),
-   .mapper_addr(mapper_ram_addr)
+   .mapper_addr(mapper_ram_addr),
+   .*
 );
 
 wire [24:0] mapper_konami_addr;
 wire        mapper_konami_unmaped;
 cart_konami konami
 (
-   .clk(clk),
-   .reset(reset),
    .rom_size(25'(size) << 14),
-   .addr(cpu_addr),
-   .d_from_cpu(cpu_dout),
-   .wr(cpu_mreq & cpu_wr),
+   .din(cpu_dout),
    .cs(mapper == MAPPER_KONAMI),
-   .slot(cart_num),
    .mem_unmaped(mapper_konami_unmaped),
-   .mem_addr(mapper_konami_addr)
+   .mem_addr(mapper_konami_addr),
+   .*
 );
 
 wire [24:0] mapper_ascii8_addr;
 wire        mapper_ascii8_unmaped;
 cart_ascii8 ascii8
 (
-   .clk(clk),
-   .reset(reset),
    .rom_size(25'(size) << 14),
-   .addr(cpu_addr),
-   .d_from_cpu(cpu_dout),
-   .wr(cpu_mreq & cpu_wr),
+   .cpu_addr(cpu_addr),
+   .din(cpu_dout),
    .cs(mapper == MAPPER_ASCII8),
-   .slot(cart_num),
    .mem_unmaped(mapper_ascii8_unmaped),
-   .mem_addr(mapper_ascii8_addr)
+   .mem_addr(mapper_ascii8_addr),
+   .*
 );
 
 wire [24:0] mapper_ascii16_addr;
 wire        mapper_ascii16_unmaped;
 cart_ascii16 ascii16
 (
-   .clk(clk),
-   .reset(reset),
    .rom_size(25'(size) << 14),
-   .addr(cpu_addr),
-   .d_from_cpu(cpu_dout),
-   .wr(cpu_mreq & cpu_wr),
+   .din(cpu_dout),
    .cs(mapper == MAPPER_ASCII16),
-   .slot(cart_num),
    .mem_unmaped(mapper_ascii16_unmaped),
-   .mem_addr(mapper_ascii16_addr)
+   .mem_addr(mapper_ascii16_addr),
+   .*
 );
 
 wire [20:0] mapper_konami_scc_addr;
@@ -385,39 +352,30 @@ wire        mapper_konami_scc_sccReq;
 wire  [1:0] mapper_konami_scc_sccMode;
 cart_konami_scc konami_scc
 (
-   .clk(clk),
-   .reset(reset),
    .mem_size(25'(size) << 14),
-   .addr(cpu_addr),
-   .d_from_cpu(cpu_dout),
-   .wr(cpu_mreq & cpu_wr),
-   .rd(cpu_mreq & cpu_rd),
+   .din(cpu_dout),
    .cs(mapper == MAPPER_KONAMI_SCC),
-   .slot(cart_num),
    .mem_unmaped(mapper_konami_scc_unmaped),
    .mem_addr(mapper_konami_scc_addr), 
    .sccDevice(|(cart_device[cart_num] & DEV_SCC2)) ,
    .scc_req(mapper_konami_scc_sccReq),
-   .scc_mode(mapper_konami_scc_sccMode)
+   .scc_mode(mapper_konami_scc_sccMode),
+   .*
 );
 
 wire        [7:0] scc_sound_dout;
 wire signed [15:0] scc_wave;
 scc_sound scc_sound
 (
-   .clk(clk),
-   .clk_en(clk_en),
-   .reset(reset),
-   .cart_num(cart_num),
    .cs(mapper_konami_scc_sccReq | mapper_mfrdsd1_sccReq),  
-   .cpu_wr(cpu_wr),
    .cpu_addr(cpu_addr[7:0]),
-   .cpu_dout(cpu_dout),
+   .din(cpu_dout),
    .scc_dout(scc_sound_dout),
    .oe({|(cart_device[1] & (DEV_SCC | DEV_SCC2)), |(cart_device[0] & (DEV_SCC | DEV_SCC2))}),
    .wave(scc_wave),
    .sccPlusChip({|(cart_device[1] & DEV_SCC2), |(cart_device[0] & DEV_SCC2)}),
-   .sccPlusMode(mapper_mfrdsd1_sccReq ? {1'b0,mapper_mfrdsd1_sccMode} : mapper_konami_scc_sccMode)
+   .sccPlusMode(mapper_mfrdsd1_sccReq ? {1'b0,mapper_mfrdsd1_sccMode} : mapper_konami_scc_sccMode),
+   .*
 );
 
 wire  [7:0] fm_pac_dout;
@@ -426,26 +384,17 @@ wire        fmpac_req, fmpac_mem_unmaped, fmpac_sram_cs, fmpac_sram_wr;
 wire  [1:0] fmpac_opll_io_enable, fmpac_opll_wr; 
 cart_fm_pac fm_pac
 (
-   .clk(clk),
-   .reset(reset),
-   .addr(cpu_addr),
-   .d_from_cpu(cpu_dout),
+   .din(cpu_dout),
    .mapper_dout(fm_pac_dout),  
    .cs(mapper == MAPPER_FMPAC),
-   .slot(cart_num),
-   .wr(cpu_wr),
-   .rd(cpu_rd),
-   .mreq(cpu_mreq),
    .sram_we(fmpac_sram_wr),
    .sram_cs(fmpac_sram_cs),
    .mem_unmaped(fmpac_mem_unmaped),
    .mem_addr(fmpac_addr),
    .opll_wr(fmpac_opll_wr),
-   .opll_io_enable(fmpac_opll_io_enable)
+   .opll_io_enable(fmpac_opll_io_enable),
+   .*
 );
-
-//IO operace jsou blokovány signálem (FM_PAC)
-//IO operace nejsou blokovány v případě, že se jedná o interní modul.
 
 wire opll_io_wr  = cpu_addr[7:1] == 7'b0111110 & cpu_iorq & ~cpu_m1 & cpu_wr; //7C - 7D
 wire signed [15:0] sound_OPL_int, sound_OPL_EXT[2];
