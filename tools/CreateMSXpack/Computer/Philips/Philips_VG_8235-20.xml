@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>nms8220_basic-bios2.rom</filename>
+        <SHA1>6103b39f1e38d1aa2d84b1c3219c44f1abb5436e</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>nms8250_msx2sub.rom</filename>
+        <SHA1>5c1f9c7fb655e43d38e5dd1fcc6b942b2ff68b02</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>8</block_count>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>vg8235_disk_nms2.2_DE.rom</filename>
+        <SHA1>1ee2abc68a81ae7e39548985021b6532f31171b2</SHA1>
+      </block>
+      <block start="2">
+        <type>IO_MIRROR</type>
+        <block_count>1</block_count>
+        <ref>1</ref>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

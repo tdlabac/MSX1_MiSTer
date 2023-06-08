@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>vg8230_basic-bios2.rom</filename>
+        <SHA1>0de3c802057560560a03d7965fcc4cff69f8575c</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>vg8230_msx2sub.rom</filename>
+        <SHA1>3288894e1be6af705871499b23c85732dbc40993</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>4</block_count>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>vg8230_disk.rom</filename>
+        <SHA1>0f5798850d11b316a4254b222ca08cc4ad6d4da2</SHA1>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

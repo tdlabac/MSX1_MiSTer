@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<fwConfig>  
+  <fw name="FM_PAC">
+    <filename>FM_PAC_EN.ROM</filename>
+    <SHA1>6996489fcec52934b8beed87643cc33d02ecc301</SHA1>
+  </fw>
+  <fw name="GM2">
+    <filename>GM2.ROM</filename>
+    <SHA1>5c00f9e3a48411e08fac89b1dfdd2a6e95853919</SHA1>
+  </fw>
+  <fw name="FDC">
+    <filename>VY010.ROM</filename>
+    <SHA1>8924e3e11eb1c8c1edcb7efa63c26d2bdc142473</SHA1>
+  </fw> 
+  <fw name="MEGA_FLASH_ROM">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+  </fw>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_RECOVERY">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+    <size>16384</size>
+  </fwa>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_ROM">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+    <skip>65536</skip>
+    <size>7274496</size>
+  </fwa>  
+  <fwa name="MEGA_FLASH_ROM_SCC_SD_MEGASD">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+    <skip>7340032</skip>
+    <size>1048576</size>
+  </fwa>  
+</fwConfig>

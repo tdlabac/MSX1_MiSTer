@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>8280fbios.rom</filename>
+        <SHA1>b034764e6a8978db60b1d652917f5e24a66a7925</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>nms8250-19_msx2sub.rom</filename>
+        <SHA1>fd4bcc81a8160a1dea06036c5f79d200f948f4d6</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>8</block_count>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>vg8235-39_disk.rom</filename>
+        <SHA1>959060445e92eb980ddd9df3ef9cfefcae2de1d0</SHA1>
+      </block>
+      <block start="2">
+        <type>IO_MIRROR</type>
+        <block_count>1</block_count>
+        <ref>1</ref>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

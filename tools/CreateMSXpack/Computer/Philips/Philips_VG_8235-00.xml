@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>vg8235_basic-bios2.rom</filename>
+        <SHA1>5e1a4bd6826b29302a1eb88c340477e7cbd0b50a</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>VG8235-ROM2 - Basic2.0.bin</filename>
+        <SHA1>c289dad246364e2dd716c457ca5eecf98e76c9ab</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>8</block_count>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>vg8235-00_disk.rom</filename>
+        <SHA1>7ce255ab63ba79f81d8b83d66f1108062d0b61f1</SHA1>
+      </block>
+      <block start="2">
+        <type>IO_MIRROR</type>
+        <block_count>1</block_count>
+        <ref>1</ref>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

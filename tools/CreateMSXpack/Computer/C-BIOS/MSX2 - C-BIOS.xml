@@ -1,0 +1,51 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>cbios_main_msx2.rom</filename>
+        <SHA1>f929bd1d720b0ef7092c9add8accd0d56fc9c8a3</SHA1>
+      </block>
+      <block start="2">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>cbios_logo_msx2.rom</filename>
+        <SHA1>d4e5b98ce23573669fb44447582d656e390791c0</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>cbios_sub.rom</filename>
+        <SHA1>2fcb40413e7d373f0f2dbdc815ce18746ddf3684</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>8</block_count>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

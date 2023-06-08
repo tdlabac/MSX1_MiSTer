@@ -1,0 +1,58 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>vg8240_basic-bios2.rom</filename>
+        <SHA1>421ac0dbfdf35b35fe5adba5d528efba28edcecb</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>vg8240_msx2sub.rom</filename>
+        <SHA1>b003a5a12920facb30aa3e526a71fb557c669309</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>4</block_count>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>vg8240_disk.rom</filename>
+        <SHA1>24f3bea9f47a4d9f89be1ae1040facbfd0dba1bd</SHA1>
+      </block>
+      <block start="2">
+        <type>IO_MIRROR</type>
+        <block_count>1</block_count>
+        <ref>1</ref>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>

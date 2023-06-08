@@ -25,7 +25,7 @@ module tape
 	input           ce_5m3,
 	input           play,
 	input           rewind,
-	output  [26:0]	 ram_a,
+	output  [27:0]	ram_a,
 	input   [7:0]   ram_di,
 	output          ram_rd,
 	input           buff_mem_ready,
@@ -80,7 +80,7 @@ always @(posedge clk) begin
 		STATE_INIT:	
 			begin
 				if (buff_mem_ready && ~ram_rd) begin
-					ram_a <= 0;
+					ram_a <= 28'h1400000;
 					output_on <= 0;
 					state <= STATE_SEARCH;
 					ram_rd <= 1;

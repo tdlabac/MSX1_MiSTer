@@ -1,2 +1,0 @@
-set_global_assignment -name QIP_FILE           [file join $::quartus(qip_path) vdp18/vdp18.qip   ]
-set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) msx1.sv           ]

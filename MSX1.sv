@@ -175,7 +175,6 @@ module emu
 assign ADC_BUS  = 'Z;
 assign USER_OUT = '1;
 assign {UART_RTS, UART_TXD, UART_DTR} = 0;
-assign {SD_SCK, SD_MOSI, SD_CS} = 'Z;
 
 assign VGA_F1 = 0;
 assign VGA_SCALER  = 0;
@@ -192,14 +191,11 @@ assign LED_POWER = 0;
 assign LED_USER = 0;
 assign BUTTONS = 0;
 
-//UNUSED signal 
-assign mem_data[3]    = 'h00;
-assign mem_wren[3]    = 'b0;
-assign mem_rden[3]    = 'b0;
+localparam VDNUM = 7;
 
-localparam VDNUM = 4;
-
-MSX::config_t    MSXconf;
+MSX::user_config_t msxConfig;
+MSX::bios_config_t bios_config;
+MSX::config_cart_t cart_conf[2];
 wire             forced_scandoubler;
 wire      [21:0] gamma_bus;
 wire       [1:0] buttons;
@@ -210,20 +206,19 @@ wire       [5:0] joy0, joy1;
 wire             ioctl_download;
 wire      [15:0] ioctl_index;
 wire             ioctl_wr;
-wire             ioctl_wait;
 wire      [26:0] ioctl_addr;
 wire       [7:0] ioctl_dout;
-wire      [31:0] sd_lba[VDNUM];
+wire      [31:0] sd_lba[0:VDNUM-1];
 wire [VDNUM-1:0] sd_rd;
 wire [VDNUM-1:0] sd_wr;
 wire [VDNUM-1:0] sd_ack;
-wire       [8:0] sd_buff_addr;
+wire      [13:0] sd_buff_addr;
 wire       [7:0] sd_buff_dout;
-wire       [7:0] sd_buff_din[VDNUM];
+wire       [7:0] sd_buff_din[0:VDNUM-1];
 wire             sd_buff_wr;
-wire [VDNUM-1:0] hps_img_mounted;
-wire      [31:0] hps_img_size;
-wire             hps_img_readonly;
+wire [VDNUM-1:0] img_mounted;
+wire      [31:0] img_size;
+wire             img_readonly;
 wire      [15:0] sdram_sz;
 wire      [64:0] rtc;
 
@@ -251,23 +246,26 @@ wire      [64:0] rtc;
 localparam CONF_STR = {
    "MSX1;",
    "-;",
-   "O[11],MSX type,MSX2,MSX1;",
+   "FSC1,MSX,Load ROM PACK,30000000;",
+   "FSC2,MSX,Load FW  PACK,30100000;",   
+   //"O[11],MSX type,MSX2,MSX1;",
    CONF_STR_SLOT_A,
-   "H3F6,ROM,Load;",
+   "H3FS3,ROM,Load,30A00000;",
    CONF_STR_MAPPER_A,
    CONF_STR_SRAM_SIZE_A,
    "-;",
    CONF_STR_SLOT_B,
-   "H4F7,ROM,Load;",
+   "H4FS4,ROM,Load,30F00000;",
    CONF_STR_MAPPER_B,
    "H6-;",
    "H6R[38],SRAM Save;",
    "H6R[39],SRAM Load;",
    "h1-;",
-   "h1S3,DSK,Mount Drive A:;",
+   "h1S5,DSK,Mount Drive A:;",
+   "S6,VHD,Load SD card;",
    "-;",
    "O[8],Tape Input,File,ADC;",
-   "H0F8,CAS,Cas File;",
+   "H0F5,CAS,Cas File,31400000;",
    "H0T9,Tape Rewind;",
    "-;",
    "P1,Video settings;",
@@ -278,15 +276,15 @@ localparam CONF_STR = {
    "P1O[6:5],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
    "P1O[7],Vertical Crop,No,Yes;",
    //"h2P1O[38],Border,No,Yes;",   //TODO
-   "P2,Advanced settings;",
-   "h2P2F1,ROM,Load MAIN;",
-   "h2P2F2,ROM,Load HANGUL;",	
-   "H2P2F1,ROM,Load MAIN;",
-   "H2P2F2,ROM,Load SUB;",
-   "H2P2F3,ROM,Load DISK;",
-   "P2F8,ROM,Load FW A;",
-   "P2F9,ROM,Load FW B;",
-   CONF_STR_RAM_SIZE,
+   //"P2,Advanced settings;",
+   //"h2P2F1,ROM,Load MAIN;",
+   //"h2P2F2,ROM,Load HANGUL;",	
+   //"H2P2F1,ROM,Load MAIN;",
+   //"H2P2F2,ROM,Load SUB;",
+   //"H2P2F3,ROM,Load DISK;",
+   //"P2F8,ROM,Load FW A;",
+   //"P2F9,ROM,Load FW B;",
+   //CONF_STR_RAM_SIZE,
    "-;",
    "T[0],Reset;",
    "R[10],Reset & Detach ROM Cartridge;",					
@@ -295,14 +293,16 @@ localparam CONF_STR = {
 };
 
 wire [7:0] status_menumask;
-assign status_menumask[0] = MSXconf.cas_audio_src == CAS_AUDIO_ADC;
+wire [1:0] sdram_size;
+assign status_menumask[0] = msxConfig.cas_audio_src == CAS_AUDIO_ADC;
 assign status_menumask[1] = fdc_enabled;
-assign status_menumask[2] = MSXconf.typ == MSX1;
+assign status_menumask[2] = bios_config.MSX_typ == MSX1;
 assign status_menumask[3] = ROM_A_load_hide;
 assign status_menumask[4] = ROM_B_load_hide;
 assign status_menumask[5] = sram_A_select_hide;
 assign status_menumask[6] = sram_loadsave_hide;
 assign status_menumask[7] = sdram_size == 2'd0;
+assign sdram_size         = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
 
 hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
 (
@@ -323,10 +323,9 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .ioctl_wr(ioctl_wr),
    .ioctl_addr(ioctl_addr),
    .ioctl_dout(ioctl_dout),
-   .ioctl_wait(ioctl_wait),
-   .img_mounted(hps_img_mounted),
-   .img_size(hps_img_size),
-   .img_readonly(hps_img_readonly),
+   .img_mounted(img_mounted),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
    .sd_lba(sd_lba),
    .sd_rd(sd_rd),
    .sd_wr(sd_wr),
@@ -339,178 +338,32 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
    .RTC(rtc)
 );
 
-wire [24:0] mem_addr[8];
-wire  [7:0] mem_data[8], mem_q[8];
-wire  [7:0] mem_wren,mem_rden;
-wire  [3:0] cart_rom_offset[2];
-wire [24:0] cart_rom_size[2];
-wire  [5:0] cart_rom_auto_mapper[2];
-wire  [2:0] cart_sram_size[2];
-wire        ioctl_waitROM, img_reset;
-wire  [1:0] sdram_size = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
-
-msx_memory msx_memory
-(
-   .clk(clk21m),
-   .clk_sdram(clk_sdram),
-   .locked_sdram(locked_sdram),
-   .reset(reset),
-   .reset_req(img_reset),
-   .sdram_size(sdram_size),
-   .cart_changed(cart_changed),
-   //FW ROM/SRAM
-   .img_mounted(hps_img_mounted[2:0]),
-   .img_readonly(hps_img_readonly),
-   .img_size(hps_img_size),
-   .sd_lba(sd_lba[0:2]),
-   .sd_rd(sd_rd[2:0]),
-   .sd_wr(sd_wr[2:0]),
-   .sd_ack(sd_ack[2:0]),
-   .sd_buff_addr(sd_buff_addr),
-   .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[0:2]),
-   .sd_buff_wr(sd_buff_wr),
-   .sram_write(status[38]),
-   .sram_load(status[39]),
-   .sram_size(sram_size),
-   //ROM
-   .image_detach(status[10]),
-   .cart_rom_offset(cart_rom_offset),
-   .cart_rom_size(cart_rom_size),
-   .cart_rom_auto_mapper(cart_rom_auto_mapper),
-   .cart_sram_size(cart_sram_size),
-   .ioctl_wait(ioctl_waitROM),
-   //Memory
-   .mem_addr(mem_addr),
-   .mem_data(mem_data),
-   .mem_wren(mem_wren),
-   .mem_rden(mem_rden),
-   .mem_q(mem_q),
-   .*
-);
-
 /////////////////   CONFIG   /////////////////
-wire [2:0] cart_type[2], sram_size[2];
-wire [1:0] cart_changed;
 wire [5:0] mapper_A, mapper_B;
-wire       sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
+wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
 
 msx_config msx_config 
 (
    .clk(clk21m),
    .reset(reset),
    .reset_request(config_reset),
+   .msx_type(bios_config.MSX_typ),
    .HPS_status(status),
    .scandoubler(scandoubler),
-   .mapper_detected(cart_rom_auto_mapper),
-   .sram_size_detected(cart_sram_size),
    .sdram_size(sdram_size),
-   .cart_type(cart_type),
-   .cart_changed(cart_changed),
-   .mapper_A(mapper_A),
-   .mapper_B(mapper_B),
-   .sram_size(sram_size),
+   .cart_conf(cart_conf),
+   .reload(reload),
    .sram_A_select_hide(sram_A_select_hide),
    .sram_loadsave_hide(sram_loadsave_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
    .ROM_B_load_hide(ROM_B_load_hide),
    .fdc_enabled(fdc_enabled),
-   .MSXconf(MSXconf)
-);
-
-/////////////////   CARTIGE   /////////////////
-assign mem_addr[MEM_DSK]  = cart_addr[13:0];
-
-wire [7:0] cart_d_to_cpu_A = cart_type[0] == CART_TYPE_FDC ? cart_d_to_cpu_FDC : cart_d_to_cpu_A_tmp;
-wire [7:0] cart_d_to_cpu_FDC;
-fdc fdc
-(
-   .clk(clk21m),
-   .reset(reset),
-   .clk_en(ce_3m58_p),
-   .cs(fdc_enabled | en_FDC),
-   .mirror_rom(0),
-   .addr(cart_addr),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_FDC),
-   .mreq(~cart_mreq_n),
-   .rd(~cart_rd_n),
-   .wr(~cart_wr_n),
-   .d_from_fdc_rom(mem_q[MEM_DSK]),
-   .img_mounted(hps_img_mounted[3]),
-   .img_size(hps_img_size),
-   .img_wp(hps_img_readonly),
-   .sd_lba(sd_lba[3]),
-   .sd_rd(sd_rd[3]),
-   .sd_wr(sd_wr[3]),
-   .sd_ack(sd_ack[3]),
-   .sd_buff_addr(sd_buff_addr),
-   .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[3]),
-   .sd_buff_wr(sd_buff_wr)
-); 
-
-wire  [7:0] cart_d_to_cpu_A_tmp;
-wire [14:0] cart_sound_A;
-cart_rom ROM_slot_A
-(
-   .clk(clk21m),
-   .clk_en(ce_3m58_p),
-   .reset(reset),
-   .addr(cart_addr),
-   .wr(~cart_wr_n),
-   .rd(~cart_rd_n),
-   .iorq(~cart_iorq_n),
-   .m1(~cart_m1_n),
-   .SLTSL_n(cart_SLTSL1_n),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_A_tmp),
-   .sound(cart_sound_A),
-   .mapper(mapper_A),
-   .cart_type(cart_type[0]),
-   .sram_size(sram_size[0]),
-   .rom_offset(cart_rom_offset[0]),
-   .rom_size(cart_rom_size[0]),
-   //MEMORY
-   .mem_addr(mem_addr[4:5]),
-   .mem_data(mem_data[4:5]),
-   .mem_wren(mem_wren[5:4]),
-   .mem_rden(mem_rden[5:4]),
-   .mem_q(mem_q[4:5])
-);
-
-wire  [7:0] cart_d_to_cpu_B;
-wire [14:0] cart_sound_B;
-cart_rom ROM_slot_B
-(
-   .clk(clk21m),
-   .clk_en(ce_3m58_p),
-   .reset(reset),
-   .addr(cart_addr),
-   .wr(~cart_wr_n),
-   .rd(~cart_rd_n),
-   .iorq(~cart_iorq_n),
-   .mreq(~cart_mreq_n),
-   .m1(~cart_m1_n),
-   .SLTSL_n(cart_SLTSL2_n),
-   .d_from_cpu(cart_d_from_cpu),
-   .d_to_cpu(cart_d_to_cpu_B),
-   .sound(cart_sound_B),
-   .mapper(mapper_B),
-   .cart_type(cart_type[1]),
-   .sram_size(sram_size[1]),
-   .rom_offset(cart_rom_offset[1]),
-   .rom_size(cart_rom_size[1]),
-   //MEMORY
-   .mem_addr(mem_addr[6:7]),
-   .mem_data(mem_data[6:7]),
-   .mem_wren(mem_wren[7:6]),
-   .mem_rden(mem_rden[7:6]),
-   .mem_q(mem_q[6:7])
+   .msxConfig(msxConfig)
 );
 
 /////////////////   CLOCKS   /////////////////
 wire clk21m, clk_sdram, locked_sdram;
+wire ce_10m7_p, ce_10m7_n, ce_5m39_p, ce_5m39_n, ce_3m58_p, ce_3m58_n, ce_10hz;
 pll pll
 (
    .refclk(CLK_50M),
@@ -520,81 +373,167 @@ pll pll
    .locked(locked_sdram)
 );
 
-wire ce_10m7_p, ce_10m7_n, ce_5m39_p, ce_5m39_n, ce_3m58_p, ce_3m58_n, ce_10hz;
 clock clock
 (
    .*
 );
 
 /////////////////    RESET   /////////////////
-wire reset = RESET | status[0] | status[10] | img_reset | config_reset;
+wire reset = RESET | status[0] | status[10] | need_reset | config_reset | reset_rq;
 
 ///////////////// Computer /////////////////
+wire  [7:0] R, G, B, cpu_din, cpu_dout;
+wire [15:0] cpu_addr, audio;
+wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
+wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
+wire        need_reset;
+wire [26:0] ram_addr;
+wire  [7:0] ram_din, ram_dout;
+wire        ram_rnw, sdram_ce, bram_ce;
+wire        sd_tx, sd_rx;
+wire  [7:0] d_to_sd, d_from_sd;
 
-wire [7:0] R,G,B;
-wire hsync, vsync, blank_n, hblank, vblank, ce_pix;
-wire [15:0] audio;
-wire [15:0] cart_addr;
-wire  [7:0] cart_d_from_cpu;
-wire        cart_wr_n, cart_rd_n, cart_SLTSL1_n, cart_SLTSL2_n, cart_iorq_n, cart_m1_n, cart_mreq_n, en_FDC; 
-
+MSX::block_t         slot_layout[64];
+MSX::lookup_RAM_t    lookup_RAM[16];
+MSX::lookup_RAM_t    lookup_SRAM[4];
+dev_typ_t            cart_device[2];
 msx MSX
 (
-   .clk21m(clk21m),
-   .ce_10m7_p(ce_10m7_p),
-   .ce_3m58_p(ce_3m58_p),
-   .ce_3m58_n(ce_3m58_n),
-   .ce_10hz(ce_10hz),
-   .reset(reset),
-   .R(R),
-   .G(G),
-   .B(B),
    .HS(hsync),
    .DE(blank_n),
    .VS(vsync),
-   .hblank(hblank),
-   .vblank(vblank),
-   .audio(audio),
-   .ps2_key(ps2_key),
-   .joy0(joy0),
-   .joy1(joy1),
-   //CART SLOT interface
-   .cart_addr(cart_addr),
-   .cart_d_from_cpu(cart_d_from_cpu),
-   .cart_d_to_cpu_A(cart_d_to_cpu_A),
-   .cart_d_to_cpu_B(cart_d_to_cpu_B),
-   .cart_d_to_cpu_FDC(cart_d_to_cpu_FDC),
-   .cart_wr_n(cart_wr_n),
-   .cart_rd_n(cart_rd_n),
-   .cart_iorq_n(cart_iorq_n),
-   .cart_mreq_n(cart_mreq_n),
-   .cart_m1_n(cart_m1_n),
-   .cart_SLTSL1_n(cart_SLTSL1_n),
-   .cart_SLTSL2_n(cart_SLTSL2_n),
-   .cart_sound_A(cart_sound_A),
-   .cart_sound_B(cart_sound_B),
-   .en_FDC(en_FDC),
-   //MEMORY
-   .mem_addr(mem_addr[0:2]),
-   .mem_data(mem_data[0:2]),
-   .mem_wren(mem_wren[2:0]),
-   .mem_rden(mem_rden[2:0]),
-   .mem_q(mem_q[0:2]),
    .cas_motor(motor),
-   .cas_audio_in(MSXconf.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
+   .cas_audio_in(msxConfig.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
-   .MSXconf(MSXconf)
+   .rom_eject(status[10]),
+   .sram_save(status[38]),
+   .sram_load(status[39]),
+   .ioctl_addr(ioctl_addr[26:0]),
+   //.ddr3_addr(ddr3_addr_download),
+   //.ddr3_rd(ddr3_rd_download),
+   //.ddr3_wr(ddr3_wr_download),
+   //.ddr3_dout(ddr3_dout),
+   //.ddr3_din(ddr3_din_download),
+   //.ddr3_ready(ddr3_ready),
+   //.ddr3_request(ddr3_request_download),
+   .img_mounted(img_mounted[5:0]),
+   .img_size(img_size),
+   .img_readonly(img_readonly),
+   .sd_lba(sd_lba[0:5]),
+   .sd_rd(sd_rd[5:0]),
+   .sd_wr(sd_wr[5:0]),
+   .sd_ack(sd_ack[5:0]),
+   .sd_buff_addr(sd_buff_addr),
+   .sd_buff_dout(sd_buff_dout),
+   .sd_buff_din(sd_buff_din[0:5]),
+   .sd_buff_wr(sd_buff_wr),
+   //SD CARD
+	//.spi_ss(sdss),
+	//.spi_clk(sdclk),
+	//.spi_di(sdmiso),
+	//.spi_do(sdmosi),
+   .slot_layout(slot_layout),
+   .lookup_RAM(lookup_RAM),
+   .lookup_SRAM(lookup_SRAM),
+   .bios_config(bios_config),
+   .cart_device(cart_device),
+   .flash_addr(flash_addr),
+   .flash_din(flash_din),
+   .flash_req(flash_req),
+   .flash_ready(flash_ready),
+   .flash_done(flash_done),
+   .d_to_sd(d_to_sd),
+   .d_from_sd(d_from_sd),
+   .sd_tx(sd_tx),
+   .sd_rx(sd_rx),
+   .*
+);
+
+//////////////////   SD   ///////////////////
+wire sdclk;
+wire sdmosi;
+wire vsdmiso;
+wire sdmiso = vsd_sel ? vsdmiso : SD_MISO;
+wire sdss;
+
+reg vsd_sel = 0;
+always @(posedge clk21m) if(img_mounted[6]) vsd_sel <= |img_size;
+
+assign SD_CS   = sdss   |  vsd_sel;
+assign SD_SCK  = sdclk  & ~vsd_sel;
+assign SD_MOSI = sdmosi & ~vsd_sel;
+
+reg sd_act;
+
+always @(posedge clk21m) begin
+    reg old_mosi, old_miso;
+    integer timeout = 0;
+
+    old_mosi <= sdmosi;
+    old_miso <= sdmiso;
+
+    sd_act <= 0;
+    if(timeout < 1000000) begin
+        timeout <= timeout + 1;
+        sd_act <= 1;
+    end
+
+    if((old_mosi ^ sdmosi) || (old_miso ^ sdmiso)) timeout <= 0;
+end
+
+
+// SPI
+spi_divmmc spi
+(
+   .clk_sys(clk21m),
+   .tx(sd_tx),
+   .rx(sd_rx),
+   .din(d_to_sd),
+   .dout(d_from_sd),
+   .ready(),
+
+   .spi_ce(1'b1),
+   .spi_clk(sdclk),
+   .spi_di(sdmiso),
+   .spi_do(sdmosi)
+);
+
+sd_card sd_card
+(
+    .*,
+    .clk_sys(clk21m),
+    .img_mounted(img_mounted[6]),
+    .img_size(img_size),
+    .sd_lba(sd_lba[6]),
+    .sd_rd(sd_rd[6]),
+    .sd_wr(sd_wr[6]),
+    .sd_ack(sd_ack[6]),
+    .sd_buff_addr(sd_buff_addr),
+    .sd_buff_dout(sd_buff_dout),
+    .sd_buff_din(sd_buff_din[6]),
+    .sd_buff_wr(sd_buff_wr),
+    
+    .clk_spi(clk_sdram),
+    .sdhc(1),
+    .sck(sdclk),
+    .ss(sdss | ~vsd_sel),
+    .mosi(sdmosi),
+    .miso(vsdmiso)
 );
 
 /////////////////  VIDEO  /////////////////
-assign CLK_VIDEO = clk21m;
-assign CE_PIXEL = ce_10m7_p;
-assign VGA_SL = status[4:3];
+logic [9:0] vcrop;
+logic wide;
+wire scandoubler, vcrop_en, vga_de;
+wire [1:0] ar;
 
-wire  scandoubler = forced_scandoubler || status[4:3];
-wire vcrop_en = status[7];
-reg [9:0] vcrop;
-reg wide;
+assign CLK_VIDEO   = clk21m;
+assign CE_PIXEL    = ce_10m7_p;
+assign VGA_SL      = status[4:3];
+assign vcrop_en    = status[7];
+assign ar          = status[2:1];
+assign scandoubler = forced_scandoubler || status[4:3];
+
 always @(posedge CLK_VIDEO) begin
 	vcrop <= 0;
 	wide <= 0;
@@ -614,8 +553,6 @@ always @(posedge CLK_VIDEO) begin
 	end
 end
 
-
-wire [1:0] ar = status[2:1];
 video_freak video_freak
 (
 	.*,
@@ -628,7 +565,6 @@ video_freak video_freak
 	.SCALE(status[6:5])
 );
 
-wire vga_de;
 gamma_fast gamma
 (
 	.clk_vid(CLK_VIDEO),
@@ -638,7 +574,6 @@ gamma_fast gamma
 	.VSync(vsync),
 	.DE(blank_n),
 	.RGB_in({R,G,B}),
-
 	.HSync_out(VGA_HS),
 	.VSync_out(VGA_VS),
 	.DE_out(vga_de),
@@ -646,52 +581,197 @@ gamma_fast gamma
 );
 
 /////////////////  Tape In   /////////////////
-wire tape_in = tape_adc_act & tape_adc;
-wire tape_adc, tape_adc_act;
+wire tape_adc, tape_adc_act, tape_in;
+
+assign tape_in = tape_adc_act & tape_adc;
+
 ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
 (
-  .clk(clk21m),
-  .ADC_BUS(ADC_BUS),
-  .dout(tape_adc),
-  .active(tape_adc_act)
+   .clk(clk21m),
+   .ADC_BUS(ADC_BUS),
+   .dout(tape_adc),
+   .active(tape_adc_act)
 );
 
-///////////////// CAS EMULATE /////////////////
-assign DDRAM_CLK    = clk21m;
-wire   ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd8);
-assign ioctl_wait   = (ioctl_isCAS & ~buff_mem_ready) | ioctl_waitROM;
-wire buff_mem_ready;
+///////////////// LOAD PACK   /////////////////
+
+wire upload_ram_ce, upload_sdram_rq, upload_bram_rq, upload_ram_ready, reset_rq;
+wire [7:0] upload_ram_din, config_msx;
+wire [26:0] upload_ram_addr;
+memory_upload memory_upload(
+    .clk(clk21m),
+    .reset_rq(reset_rq),
+    .ioctl_download(ioctl_download),
+    .ioctl_index(ioctl_index),
+    .ioctl_addr(ioctl_addr),
+    .rom_eject(status[10]),
+    .reload(reload),
+    .ddr3_addr(ddr3_addr_download),
+    .ddr3_rd(ddr3_rd_download),
+    .ddr3_wr(),
+    .ddr3_dout(ddr3_dout),
+    .ddr3_ready(ddr3_ready),
+    .ddr3_request(ddr3_request_download),
+    .ram_addr(upload_ram_addr),
+    .ram_din(upload_ram_din),
+    .ram_dout(),
+    .ram_ce(upload_ram_ce),
+    .sdram_ready(upload_ram_ready),
+    .sdram_rq(upload_sdram_rq),
+    .bram_rq(upload_bram_rq),
+    .kbd_rq(),
+    .sdram_size(sdram_size),
+    .slot_layout(slot_layout),
+    .lookup_RAM(lookup_RAM),
+    .lookup_SRAM(lookup_SRAM),
+    .bios_config(bios_config),
+    .cart_conf(cart_conf), 
+    .cart_device(cart_device)
+);
+
+
+
+wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
+wire  [7:0] ddr3_dout, ddr3_din, ddr3_din_download;
+wire        ddr3_rd, ddr3_rd_download, ddr3_rd_cas, ddr3_wr, ddr3_wr_download, ddr3_ready, ddr3_request_download;
+
+assign ddr3_addr = ddr3_request_download ? ddr3_addr_download : ddr3_addr_cas ;
+assign ddr3_rd   = ddr3_request_download ? ddr3_rd_download   : ddr3_rd_cas   ;
+//assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
+//assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
+assign DDRAM_CLK = clk21m;
+
 ddram buffer
 (
-   .*,
-   .addr(ioctl_isCAS ? ioctl_addr[26:0] : CAS_addr),
-   .dout(CAS_di),
-   .din(ioctl_dout),
-   .we(ioctl_wr && ioctl_isCAS),
-   .rd(~ioctl_isCAS && CAS_rd),
-   .ready(buff_mem_ready),
-   .reset(reset)
+   .DDRAM_CLK(clk21m),
+   .addr(ddr3_addr),
+   .dout(ddr3_dout),
+   .din(ddr3_din),
+   .we(ddr3_wr),
+   .rd(ddr3_rd),
+   .ready(ddr3_ready),
+   .reset(reset),
+   .*
 );
 
-wire motor;
-wire CAS_dout;
-wire play, rewind;
-wire CAS_rd;
-wire [26:0] CAS_addr;
-wire [7:0] CAS_di;
-assign play = ~motor;
-assign rewind = status[9] | ioctl_isCAS | reset;
+assign ram_dout = sdram_ce ? sdram_dout :
+                  bram_ce  ? bram_dout  :
+                             8'hFF;
+
+wire         sdram_ready, sdram_rnw, dw_sdram_we, dw_sdram_ready, flash_ready, flash_req, flash_done;
+wire  [26:0] sdram_addr;
+wire  [24:0] dw_sdram_addr;
+wire  [26:0] flash_addr;
+wire   [7:0] sdram_dout, bram_dout, dw_sdram_din, flash_din;
+sdram sdram
+(
+   .init(~locked_sdram),
+   .clk(clk_sdram),
+   .doRefresh(1'd0),
+   
+   .ch1_dout(),
+   .ch1_din(upload_ram_din),
+   .ch1_addr(upload_ram_addr),
+   .ch1_req(upload_ram_ce & upload_sdram_rq),
+   .ch1_rnw(1'd0),
+   .ch1_ready(upload_ram_ready),   
+  
+   .ch2_dout(sdram_dout),
+   .ch2_din(ram_din),
+   .ch2_addr(ram_addr),
+   .ch2_req(sdram_ce),
+   .ch2_rnw(ram_rnw),
+   .ch2_ready(sdram_ready),
+
+   .ch3_addr(flash_addr),
+   .ch3_dout(),
+   .ch3_din(flash_din),
+   .ch3_req(flash_req),
+   .ch3_rnw(0),
+   .ch3_ready(flash_ready),
+   .ch3_done(flash_done),
+   .*
+);    
+
+
+spram #(.addr_width(18),.mem_name("RAM")) systemRAM
+(
+   .clock( clk21m),
+	.address(18'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
+   .wren( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
+   .data( upload_bram_rq ? upload_ram_din  : ram_din           ),
+   .q(bram_dout)
+/*	
+   .address_a(19'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
+   .wren_a( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
+   .data_a( upload_bram_rq ? upload_ram_din  : ram_din           ),
+   .q_a(bram_dout),
+   .address_b(),
+   .wren_b(),
+   .data_b(),
+   .q_b()*/
+);
+
+
+///////////////// CAS EMULATE /////////////////
+wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;
+
+assign play         = ~motor;
+assign ioctl_isCAS  = ioctl_download & (ioctl_index[5:0] == 6'd5);
+assign rewind       = status[9] | ioctl_isCAS | reset;
+
 tape cass 
 (
    .clk(clk21m),
    .ce_5m3(ce_5m39_p),
    .cas_out(CAS_dout),
-   .ram_a(CAS_addr),
-   .ram_di(CAS_di),
-   .ram_rd(CAS_rd),
-   .buff_mem_ready(buff_mem_ready),
+   .ram_a(ddr3_addr_cas),
+   .ram_di(ddr3_dout),
+   .ram_rd(ddr3_rd_cas),
+   .buff_mem_ready(ddr3_ready),
    .play(play),
    .rewind(rewind)
 );
+
+endmodule
+
+// SPI module
+module spi_divmmc
+(
+	input        clk_sys,
+	output       ready,
+
+	input        tx,        // Byte ready to be transmitted
+	input        rx,        // request to read one byte
+	input  [7:0] din,
+	output [7:0] dout,
+
+	input        spi_ce,
+	output       spi_clk,
+	input        spi_di,
+	output       spi_do
+);
+
+assign    ready   = counter[4];
+assign    spi_clk = counter[0];
+assign    spi_do  = io_byte[7]; // data is shifted up during transfer
+assign    dout    = data;
+
+reg [4:0] counter = 5'b10000;  // tx/rx counter is idle
+reg [7:0] io_byte, data;
+
+always @(posedge clk_sys) begin
+	if(counter[4]) begin
+		if(rx | tx) begin
+			counter <= 0;
+			data    <= io_byte;
+			io_byte <= tx ? din : 8'hff;
+		end
+	end
+	else if (spi_ce) begin
+		if(spi_clk) io_byte <= { io_byte[6:0], spi_di };
+		counter <= counter + 2'd1;
+	end
+end
 
 endmodule
