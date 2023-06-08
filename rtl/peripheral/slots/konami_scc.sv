@@ -53,7 +53,7 @@ module cart_konami_scc
    assign scc_req  = (rd | wr) &&
                      ((sccMode[slot][5] && bank[slot][3][7] && addr[15:8] == 8'hB8)                    ||   //SCC+
                      (~sccMode[slot][5] && bank[slot][2][5:0] == 6'b111111 && addr[15:11] == 5'b10011) ||   //SCC+ mode SCC
-                     (~sccDevice && sccEnable[slot] && addr[15:11] == 5'b10011));                              //SCC
+                     (~sccDevice && sccEnable[slot] && addr[15:11] == 5'b10011));                           //SCC
 
    wire maped, en_ram;
    wire [7:0] bank_base;

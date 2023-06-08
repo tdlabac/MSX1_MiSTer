@@ -107,14 +107,15 @@ typedef enum logic [3:0] {ROM_NONE, ROM_ROM, ROM_RAM, ROM_FDC, ROM_FMPAC, ROM_MF
 typedef enum logic {MSX1,MSX2} MSX_typ_t;
 
 
-typedef logic [5:0] dev_typ_t;
-parameter DEV_NONE   = 6'b00000;
-parameter DEV_FDC    = 6'b00001;
-parameter DEV_OPL3   = 6'b00010;
+typedef logic [6:0] dev_typ_t;
+parameter DEV_NONE   = 7'b000000;
+parameter DEV_FDC    = 7'b000001;
+parameter DEV_OPL3   = 7'b000010;
 /*cart*/
-parameter DEV_SCC    = 6'b00100;
-parameter DEV_SCC2   = 6'b01000;
-parameter DEV_MFRSD2 = 6'b10000;
+parameter DEV_SCC    = 7'b000100;
+parameter DEV_SCC2   = 7'b001000;
+parameter DEV_MFRSD2 = 7'b010000;
+parameter DEV_FLASH  = 7'b100000;
 
 
 package MSX;

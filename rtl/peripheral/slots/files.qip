@@ -11,3 +11,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) k
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) mfrsd.sv                           ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) opll.sv                            ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) scc_sound.sv                       ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) flash.sv                           ]

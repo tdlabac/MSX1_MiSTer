@@ -69,9 +69,9 @@ module msx
    output                   dw_sdram_we,
    input                    dw_sdram_ready,
 */
-   output            [24:0] flash_addr,
+   output            [26:0] flash_addr,
    output             [7:0] flash_din,
-   output                   flash_wr,
+   output                   flash_req,
    input                    flash_ready,
    input                    flash_done,
 
@@ -496,6 +496,12 @@ msx_slots msx_slots
    .sdram_ce(sdram_ce),
    .bram_ce(bram_ce),
    .sdram_size(sdram_size),
+   .flash_addr(flash_addr),
+   .flash_din(flash_din),
+   .flash_req(flash_req),
+   .flash_ready(flash_ready),
+   .flash_done(flash_ready),
+   .slot_layout(slot_layout),
 
    .img_mounted(img_mounted[5]),
    .img_size(img_size),
@@ -510,7 +516,6 @@ msx_slots msx_slots
    .sd_buff_wr(sd_buff_wr),
 
    .active_slot(slot),
-   .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),

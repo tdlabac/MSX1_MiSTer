@@ -43,7 +43,11 @@ module msx_slots
    output                      bram_ce,
    //input                       sdram_ready,
    input                 [1:0] sdram_size,
-
+   output               [26:0] flash_addr,
+   output                [7:0] flash_din,
+   output                      flash_req,
+   input                       flash_ready,
+   input                       flash_done,
    //output               [24:0] dw_sdram_addr,
    //output                [7:0] dw_sdram_din,
    //output                      dw_sdram_we,
@@ -85,7 +89,8 @@ module msx_slots
    input              [7:0] d_from_sd,
    output                   sd_tx,
    output                   sd_rx,
-   output                   debug_FDC_req
+   output                   debug_FDC_req,
+   output                   debug_sd_card
 
 
    //output                      spi_ss,
@@ -145,6 +150,7 @@ wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                
                           mapper == MAPPER_KONAMI     ? 27'(mapper_konami_addr)     :
                           mapper == MAPPER_KONAMI_SCC ? 27'(mapper_konami_scc_addr) :
                           mapper == MAPPER_FMPAC      ? 27'(fmpac_addr)             :
+                          mapper == MAPPER_MFRSD1     ? 27'(mapper_mfrsd1_addr)     :
                           mapper == MAPPER_MFRSD2     ? 27'(mapper_mfrsd2_addr)     :
                           mapper == MAPPER_MFRSD3     ? 27'(mapper_mfrsd3_addr)     :
                           mapper == MAPPER_ASCII8     ? 27'(mapper_ascii8_addr)     :
@@ -158,6 +164,7 @@ assign cpu_din          = mapper_ram_dout                        //IO
                         & fm_pac_dout                            //UNMAPPED
                         & d_to_cpu_FDC                           //UNMAPPED
                         & scc_sound_dout                         //UNMAPPED
+                        & flash_dout
                         & (mem_unmaped  ? 8'hFF : ram_dout);
 
 assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED & ~mem_unmaped;
@@ -173,7 +180,8 @@ wire mem_unmaped = mapper_konami_unmaped     |
                    mapper_ascii8_unmaped     | 
                    mapper_ascii16_unmaped    | 
                    mapper_rd                 | 
-                   FDC_req                   ;
+                   FDC_req                   |
+                   flash_rq                  ;
                    
 wire [3:0] mapper_mask = mapper_mfrd_mask;
 wire sram_cs     = fmpac_sram_cs;
@@ -192,67 +200,55 @@ wire [26:0] mapper_offset_addr  = 27'({(cpu_addr[15:14] - offset_ram),cpu_addr[1
 wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podm9nit mapperem
 
 
-wire [26:0] mapper_mfrsd3_addr;
-wire        mapper_mfrsd3_unmaped, mfrsd3_oe;
-wire  [7:0] mapper_mfrsd3_dout;
 
-/*
 wire flash_rq;
 wire [7:0] flash_dout;
 flash flash 
 (
    .clk(clk),
    .clk_sdram(clk_sdram),
-   .addr(23'(mem_addr)),
-   .din(din),
+   .addr(23'(mapper_mfrsd0_flash_rq ? flash_mfrsd0_addr :
+             mapper_mfrsd3_flash_rq ? flash_mfrsd3_addr : 
+                                      flash_mfrsd1_addr )),
+   .din(cpu_dout),
    .dout(flash_dout),
    .data_valid(flash_rq),
-   .we_n(~(wr & configReg[0])),
+   .we(cpu_mreq & cpu_wr),
    //.ce_n(~(mfrsd_addr_valid & mreq & (wr | rd) )),
-   .ce_n(),
-   .sdram_addr(),
-   .sdram_din(),
-   .sdram_req(),
-	.sdram_ready(),
-   .sdram_done(),
-   .sdram_offset()
-); */
-
-mapper_mfrsd3 mfrsd3
-(
-   .clk(clk),
-   .reset(reset), 
-   .cs(mapper == MAPPER_MFRSD3), 
-   .din(cpu_dout),
-   .wr(cpu_wr & cpu_mreq),
-   .rd(cpu_rd & cpu_mreq),
-   .addr(cpu_addr),
-   .mem_addr(mapper_mfrsd3_addr),
-   .mem_unmaped(mapper_mfrsd3_unmaped),
-   .sd_tx(sd_tx),
-   .sd_rx(sd_rx),
-   .d_from_sd(d_from_sd),
-   .mfrsd_base_ram(mfrsd_base_ram[0]),
-   .configReg(mfrsd_configReg),
-   //.oe(mfrsd3_oe),
-   .mapper_dout(mapper_mfrsd3_dout)
+   .ce((mapper_mfrsd3_flash_rq | mapper_mfrsd1_flash_rq | mapper_mfrsd0_flash_rq) & |(cart_device[cart_num] & DEV_FLASH)),
+   .sdram_addr(flash_addr),
+   .sdram_din(flash_din),
+   .sdram_req(flash_req),
+	.sdram_ready(flash_ready),
+   .sdram_done(flash_done),
+   .sdram_offset(mfrsd_base_ram[0])
 );
 
+
 wire [26:0] mfrsd_base_ram[2];
+wire [22:0] flash_mfrsd0_addr;
+wire        mapper_mfrsd0_flash_rq;
 mapper_mfrsd0 mfrsd0
 (
    .clk(clk),
    .reset(reset),
    .cs(device == DEVICE_MFRSD0),
+   .addr(cpu_addr),
+   .wr(cpu_mreq & cpu_wr),
    .slot(cart_num),
    .base_ram(base_ram),
-   .mfrsd_base_ram(mfrsd_base_ram)
+   .mfrsd_base_ram(mfrsd_base_ram),
+   .flash_addr(flash_mfrsd0_addr),
+   .flash_rq(mapper_mfrsd0_flash_rq)
 );
 
 wire  [3:0] mapper_mfrd_mask;
-wire [19:0] mapper_mfrsd1_addr;
+wire [26:0] mapper_mfrsd1_addr;
 wire        mapper_mfrsd1_unmaped;
 wire  [7:0] mfrsd_configReg; 
+wire [22:0] flash_mfrsd1_addr;
+wire        mapper_mfrsd1_flash_rq;
+wire        mapper_mfrdsd1_sccMode, mapper_mfrdsd1_sccReq;
 mapper_mfrsd1 mfrsd1
 (
    .clk(clk),
@@ -261,12 +257,17 @@ mapper_mfrsd1 mfrsd1
    .cs(mapper == MAPPER_MFRSD1), 
    .din(cpu_dout),
    .wr(cpu_wr & cpu_mreq),
+	.rd(cpu_rd & cpu_mreq),
    .addr(cpu_addr),
    .configReg(mfrsd_configReg),
    .mfrsd_base_ram(mfrsd_base_ram[0]),
    .mapper_mask(mapper_mfrd_mask),
    .mem_addr(mapper_mfrsd1_addr),
-   .mem_unmaped(mapper_mfrsd1_unmaped)
+   .mem_unmaped(mapper_mfrsd1_unmaped),
+   .flash_addr(flash_mfrsd1_addr),
+   .flash_rq(mapper_mfrsd1_flash_rq),
+   .scc_mode(mapper_mfrdsd1_sccMode),
+   .scc_req(mapper_mfrdsd1_sccReq)
 );
 
 wire [21:0] mapper_mfrsd2_addr;
@@ -279,6 +280,35 @@ mapper_mfrsd2 mfrsd2
    //.ram_block_count(size[7:0]),
    .*
 );
+
+wire [26:0] mapper_mfrsd3_addr;
+wire [22:0] flash_mfrsd3_addr;
+wire        mapper_mfrsd3_unmaped, mfrsd3_oe;
+wire  [7:0] mapper_mfrsd3_dout;
+wire        mapper_mfrsd3_flash_rq;
+mapper_mfrsd3 mfrsd3
+(
+   .clk(clk),
+   .reset(reset), 
+   .cs(mapper == MAPPER_MFRSD3), 
+   .din(cpu_dout),
+   .wr(cpu_wr & cpu_mreq),
+   .rd(cpu_rd & cpu_mreq),
+   .addr(cpu_addr),
+   .mem_addr(mapper_mfrsd3_addr),
+   .flash_addr(flash_mfrsd3_addr),
+   .mem_unmaped(mapper_mfrsd3_unmaped),
+   .sd_tx(sd_tx),
+   .sd_rx(sd_rx),
+   .d_from_sd(d_from_sd),
+   .mfrsd_base_ram(mfrsd_base_ram[0]),
+   .configReg(mfrsd_configReg),
+   //.oe(mfrsd3_oe),
+   .mapper_dout(mapper_mfrsd3_dout),
+   .flash_rq(mapper_mfrsd3_flash_rq),
+   .debug_sd_card(debug_sd_card)
+);
+
 
 //MAPPER MSX RAM
 wire [21:0] mapper_ram_addr;
@@ -351,8 +381,8 @@ cart_ascii16 ascii16
 
 wire [20:0] mapper_konami_scc_addr;
 wire        mapper_konami_scc_unmaped;
-wire        scc_req;
-wire  [1:0] scc_mode;
+wire        mapper_konami_scc_sccReq;
+wire  [1:0] mapper_konami_scc_sccMode;
 cart_konami_scc konami_scc
 (
    .clk(clk),
@@ -367,8 +397,8 @@ cart_konami_scc konami_scc
    .mem_unmaped(mapper_konami_scc_unmaped),
    .mem_addr(mapper_konami_scc_addr), 
    .sccDevice(|(cart_device[cart_num] & DEV_SCC2)) ,
-   .scc_req(scc_req),
-   .scc_mode(scc_mode)
+   .scc_req(mapper_konami_scc_sccReq),
+   .scc_mode(mapper_konami_scc_sccMode)
 );
 
 wire        [7:0] scc_sound_dout;
@@ -379,7 +409,7 @@ scc_sound scc_sound
    .clk_en(clk_en),
    .reset(reset),
    .cart_num(cart_num),
-   .cs(scc_req),  
+   .cs(mapper_konami_scc_sccReq | mapper_mfrdsd1_sccReq),  
    .cpu_wr(cpu_wr),
    .cpu_addr(cpu_addr[7:0]),
    .cpu_dout(cpu_dout),
@@ -387,7 +417,7 @@ scc_sound scc_sound
    .oe({|(cart_device[1] & (DEV_SCC | DEV_SCC2)), |(cart_device[0] & (DEV_SCC | DEV_SCC2))}),
    .wave(scc_wave),
    .sccPlusChip({|(cart_device[1] & DEV_SCC2), |(cart_device[0] & DEV_SCC2)}),
-   .sccPlusMode(scc_mode)
+   .sccPlusMode(mapper_mfrdsd1_sccReq ? {1'b0,mapper_mfrdsd1_sccMode} : mapper_konami_scc_sccMode)
 );
 
 wire  [7:0] fm_pac_dout;

@@ -437,11 +437,11 @@ msx MSX
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
    .cart_device(cart_device),
-   .flash_addr(),
-   .flash_din(),
-   .flash_wr(),
-   .flash_ready(),
-   .flash_done(),
+   .flash_addr(flash_addr),
+   .flash_din(flash_din),
+   .flash_req(flash_req),
+   .flash_ready(flash_ready),
+   .flash_done(flash_done),
    .d_to_sd(d_to_sd),
    .d_from_sd(d_from_sd),
    .sd_tx(sd_tx),
@@ -657,9 +657,10 @@ assign ram_dout = sdram_ce ? sdram_dout :
                   bram_ce  ? bram_dout  :
                              8'hFF;
 
-wire         sdram_ready, sdram_rnw, dw_sdram_we, dw_sdram_ready, flash_ready, flash_wr, flash_done;
+wire         sdram_ready, sdram_rnw, dw_sdram_we, dw_sdram_ready, flash_ready, flash_req, flash_done;
 wire  [26:0] sdram_addr;
-wire  [24:0] dw_sdram_addr, flash_addr;
+wire  [24:0] dw_sdram_addr;
+wire  [26:0] flash_addr;
 wire   [7:0] sdram_dout, bram_dout, dw_sdram_din, flash_din;
 sdram sdram
 (
@@ -684,7 +685,7 @@ sdram sdram
    .ch3_addr(flash_addr),
    .ch3_dout(),
    .ch3_din(flash_din),
-   .ch3_req(flash_wr),
+   .ch3_req(flash_req),
    .ch3_rnw(0),
    .ch3_ready(flash_ready),
    .ch3_done(flash_done),

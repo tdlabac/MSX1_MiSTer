@@ -49,7 +49,7 @@ module scc_wave
    input                sccPlusChip,
    input                sccPlusMode
 );
-
+/*verilator tracing_off*/
 //scc registers
 logic [11:0] reg_freq[5];
 logic  [3:0] reg_vol[5];
@@ -80,6 +80,7 @@ always @(posedge clk) begin
       ff_req_dl    <= 1'd0;
    end else begin
       if (req & ~ff_req_dl & adr[7:5] == {2'b10, mode} & wrt) begin
+         $display("SCC reg WR %x val %x",adr,dbo);
          case(adr[3:0])
             4'b0000: begin reg_freq[0][7:0]  <= dbo[7:0]; ff_rst[0] <= reg_mode_sel[5]; end
             4'b0001: begin reg_freq[0][11:8] <= dbo[3:0]; ff_rst[0] <= reg_mode_sel[5]; end
@@ -105,6 +106,7 @@ always @(posedge clk) begin
       end
       if (req & adr[7:5] == {2'b11, ~sccPlusChip} & wrt) begin
          reg_mode_sel <= dbo;
+         $display("SCC regMode WR %x val %x",adr,dbo);
       end
       ff_req_dl <= req;
    end
@@ -237,14 +239,51 @@ end
 
 assign wave = ff_wave;
 
+// Clear waveform ram
+logic [7:0] clear_cnt;
+logic       clear_wr;
+logic       clear_wave;
+always @(posedge clk) begin
+   logic old_reset;
+   clear_wr <= 1'b0;
+   if (clear_wr) clear_cnt <= clear_cnt - 8'b1;
+   if (reset & ~old_reset) begin
+      clear_cnt <= 8'h9F;
+      clear_wave <= 1'b1;
+   end
+   else
+      if (~clear_wr)
+         if (clear_cnt != 8'hFF)
+            clear_wr <= 1'b1;
+         else 
+            clear_wave <= 1'b0;
+   old_reset <= reset;
+end
+
+always @(posedge clk) begin
+   logic old_we;
+   if (ram_we & ~old_we) begin
+      $display("SCC WR RAM %x (%x) val %x",adr, ram_adr,dbo);
+   end
+   old_we = ram_we;
+end
+
+always @(posedge clk) begin
+   logic old_ce;
+   if (ram_ce & ~old_ce & ~wrt) begin
+      $display("SCC RD RAM %x (%x) val %x",adr, ram_adr,ram_dbi);
+   end
+   old_ce = ram_ce;
+end
+
 wire [7:0] wave_dbi, ram_dbi;
 ram2 wavemem
 (
-   .adr_a(ram_adr),
+   .adr_a(clear_wave ? clear_cnt : ram_adr),
    .adr_b(w_wave_adr), 
    .clk(clk),
-   .we_a(ram_we),
-   .data_a(dbo),
+   .we_a(clear_wave ? clear_wr : ram_we),
+   .data_a(clear_wave ? 8'hFF : dbo),
    .q_a(ram_dbi),
    .q_b(wave_dbi)
 );
