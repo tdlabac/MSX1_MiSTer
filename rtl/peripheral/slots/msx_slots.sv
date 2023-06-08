@@ -4,13 +4,6 @@ module msx_slots
    input                       clk_sdram,
    input                       clk_en,
    input                       reset,
-   //input                       rom_eject,
-   //input                       cart_changed,
-   //output                      need_reset,
-   //input                       sram_save,
-   //input                       sram_load,
-   //output                      msx_type,
-   //input MSX::config_cart_t    cart_conf[2],
    //CPU                
    input                [15:0] cpu_addr,
    input                 [7:0] cpu_dout,
@@ -20,20 +13,11 @@ module msx_slots
    input                       cpu_mreq,
    input                       cpu_iorq,
    input                       cpu_m1,
-
    output signed        [15:0] sound,
    //IOCTL
    //input                       ioctl_download,
    //input                [15:0] ioctl_index,
    //input                [26:0] ioctl_addr,
-   //DDR3
-   //output         logic [27:0] ddr3_addr,
-   //output                      ddr3_rd,
-   //output                      ddr3_wr,
-   //input                 [7:0] ddr3_dout,
-   //output                [7:0] ddr3_din,
-   //input                       ddr3_ready,
-   //output                      ddr3_request,
    //SDRAM
    output               [26:0] ram_addr,
    output                [7:0] ram_din,
@@ -41,24 +25,12 @@ module msx_slots
    output                      ram_rnw,
    output                      sdram_ce,
    output                      bram_ce,
-   //input                       sdram_ready,
    input                 [1:0] sdram_size,
    output               [26:0] flash_addr,
    output                [7:0] flash_din,
    output                      flash_req,
    input                       flash_ready,
    input                       flash_done,
-   //output               [24:0] dw_sdram_addr,
-   //output                [7:0] dw_sdram_din,
-   //output                      dw_sdram_we,
-   //input                       dw_sdram_ready,
-   
-   //output               [24:0] flash_addr,
-   //output                [7:0] flash_din,
-   //output                      flash_wr,
-   //input                       flash_ready,
-   //input                       flash_done,
-
    //KBD LAYOUT
    //output                [9:0] kbd_addr,
    //output                [7:0] kbd_din,
@@ -92,13 +64,6 @@ module msx_slots
    output                   debug_FDC_req,
    output                   debug_sd_card,
    output                   debug_erase
-
-
-   //output                      spi_ss,
-   //output                      spi_clk,
-   //input                       spi_di,
-   //output                      spi_do,
-   //output                [2:0] debug_cpu_din_src
 );
 
 assign sound = sound_opll + scc_wave;
@@ -156,6 +121,7 @@ wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                
                           mapper == MAPPER_MFRSD3     ? 27'(mapper_mfrsd3_addr)     :
                           mapper == MAPPER_ASCII8     ? 27'(mapper_ascii8_addr)     :
                           mapper == MAPPER_ASCII16    ? 27'(mapper_ascii16_addr)    :
+                          mapper == MAPPER_GM2        ? 27'(mapper_gm2_addr)        :
                                                         27'hDEAD                    ;
 
 assign cpu_din          = mapper_ram_dout                        //IO
@@ -170,7 +136,8 @@ assign cpu_din          = mapper_ram_dout                        //IO
 
 assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED & ~mem_unmaped;
 assign bram_ce  = (sdram_size == 2'd0 | sram_cs)  & cpu_mreq & (cpu_rd | (cpu_wr & (~ram_ro | sram_cs))) & mapper != MAPPER_UNUSED & ~mem_unmaped;
-assign ram_rnw  = cpu_rd;
+assign ram_rnw  = (sram_cs & ~sram_wr) | (~sram_cs & ~cpu_wr & cpu_mreq);
+
 assign ram_din  = cpu_dout;
 
 wire mem_unmaped = mapper_konami_unmaped     | 
@@ -185,7 +152,8 @@ wire mem_unmaped = mapper_konami_unmaped     |
                    flash_rq                  ;
                    
 wire [3:0] mapper_mask = mapper_mfrd_mask;
-wire sram_cs     = fmpac_sram_cs;
+wire sram_cs     = fmpac_sram_cs | gm2_sram_cs;
+wire sram_wr     = fmpac_sram_wr | gm2_sram_wr;
 
 wire debug_tick = mapper_none_addr == 27'(16'h8000) & active_slot == 2'd3 & cpu_mreq;
 
@@ -196,11 +164,8 @@ wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
 wire [26:0] mapper_linear_addr = 27'(cpu_addr[15:0]) & ((27'(size) << 14)-27'd1);
 
 //NONE 
-//wire [26:0] mapper_offset_addr  = 27'(cpu_addr) - 27'h2000;
 wire [26:0] mapper_offset_addr  = 27'({(cpu_addr[15:14] - offset_ram),cpu_addr[13:0]});
-wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podm9nit mapperem
-
-
+wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podminit mapperem
 
 wire flash_rq;
 wire [7:0] flash_dout;
@@ -295,7 +260,6 @@ mapper_mfrsd3 mfrsd3
    .*
 );
 
-
 //MAPPER MSX RAM
 wire [21:0] mapper_ram_addr;
 wire  [7:0] mapper_ram_dout;
@@ -376,6 +340,17 @@ scc_sound scc_sound
    .sccPlusMode(mapper_mfrdsd1_sccReq ? {1'b0,mapper_mfrdsd1_sccMode} : mapper_konami_scc_sccMode),
    .*
 );
+wire [24:0] mapper_gm2_addr;
+wire        gm2_sram_cs, gm2_sram_wr;
+cart_gamemaster2 cart_gamemaster2
+(
+   .din(cpu_dout),
+   .cs(mapper == MAPPER_GM2),
+   .sram_we(gm2_sram_wr),
+   .sram_cs(gm2_sram_cs),
+   .mem_addr(mapper_gm2_addr),
+   .*
+);
 
 wire  [7:0] fm_pac_dout;
 wire [24:0] fmpac_addr;
@@ -409,8 +384,6 @@ opll opll
    .cs({1'b0, |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
    .sound(sound_opll)
 );
-
-
 
 wire        FDC_req;
 wire  [7:0] d_to_cpu_FDC;

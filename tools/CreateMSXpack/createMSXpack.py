@@ -7,10 +7,7 @@ import base64
 ROM_DIR = 'ROM'
 XML_DIR_COMP = 'Computer'
 XML_DIR_FW = 'Extension'
-#{ROM_NONE, ROM_ROM, ROM_RAM, ROM_FDC, ROM_FMPAC} data_ID_t;
-# "MEGA_FLASH_ROM_SCC_SD_RECOVERY", "MEGA_FLASH_ROM_SCC_SD_ROM", "MEGA_FLASH_ROM_SCC_SD_MEGASD"
 EXTENSIONS  = ["NONE", "ROM", "RAM", "FDC", "FM_PAC", "MEGA_FLASH_ROM", "GM2", "EMPTY" ]
-#{DEVICE_NONE, DEVICE_FDC, DEVICE_OPL3}
 DEVICE_TYPES = ["NONE", "FDC","OPL3"]
 CONFIG_TYPES = ["NONE", "FDC", "SLOT_A", "SLOT_B", "SLOT_INTERNAL", "KBD_LAYOUT", "CONFIG"]
 MAPPER_TYPES = ["MAPPER_UNUSED", "MAPPER_RAM", "MAPPER_AUTO", "MAPPER_NONE"]
@@ -41,8 +38,6 @@ def get_msx_type_id(typ):
 
 def create_MSX_block(primary, secondary, values):
     slotSubslot = ((int(primary) & 3) << 2) | ((int(secondary) & 3))
-    #MSX CONFIG typ + slot/subsllot  DATA_ID, SIZE, MEM_DEV,  MEM_MAP, MODE, PARAM, PATTERN
-    #    3                           4        56    7         8        9     10     11
     head = bytearray()
     head.extend('MSX'.encode('ascii'))
     
@@ -64,8 +59,6 @@ def create_MSX_block(primary, secondary, values):
     mode = 0x00
     param = 0x00
 
-    #00-NONE, 01-MEM-REFERENCE + DEV, 02-MEM + DEV, 03-DEVICE
-    #range = range(0,4) if values['count'] > 4 else range(values['start'], values['start'] + values['count'] )
     if "start" in values :
         block = values['start']
         offset = 0

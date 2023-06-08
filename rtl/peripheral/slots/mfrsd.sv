@@ -10,7 +10,7 @@ module mapper_mfrsd0
    output       [22:0] flash_addr,
    output              flash_rq
 );
-
+/*verilator tracing_off*/
 always @(posedge clk) begin
    if (reset) begin
       mfrsd_base_ram <= '{27'd0,27'd0};
@@ -46,7 +46,7 @@ module mapper_mfrsd1
    output              scc_req,
    output              scc_mode
 );
-
+/*verilator tracing_off*/
 logic [7:0] mapperReg, sccMode;
 logic [9:0] offsetReg;
 
@@ -182,7 +182,7 @@ module mapper_mfrsd2
    input              en,
    output      [21:0] mem_addr
 );
-
+/*verilator tracing_off*/
 msx2_ram_mapper ram_mapper
 (
     .mapper_dout(mapper_dout),
@@ -215,7 +215,7 @@ module mapper_mfrsd3
    output             flash_rq,
    output             debug_sd_card
 );
-
+/*verilator tracing_off*/
 assign debug_sd_card = sd_card_data_en;
 
 logic [7:0] bank[4];
