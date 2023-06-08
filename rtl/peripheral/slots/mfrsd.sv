@@ -102,7 +102,7 @@ wire isRamSegment3  = sccMode[4];
 assign scc_req      = cs & cpu_mreq & (cpu_rd | cpu_wr) & ((cpu_wr & ((EN_SCC & ~isRamSegment2) | (EN_SCCPLUS & ~isRamSegment3))) | (cpu_rd & (EN_SCC | EN_SCCPLUS)));
 assign scc_mode     = EN_SCCPLUS;
 
-wire [2:0] page8kB = cpu_addr[15:13] - 3'd2;
+wire [2:0] page8kB  = cpu_addr[15:13] - 3'd2;
 logic [7:0] bank[4], sccBanks[4];
 always @(posedge clk) begin
    if (reset) begin
@@ -160,11 +160,10 @@ wire  [2:0] page      =  mapperReg[7:6] == 2'b01 ? 3'(cpu_addr[15:14]) : cpu_add
 wire [15:0] bankValue = configReg[4] & page[1:0] == 2'b00 & bank[page[1:0]] == 8'd0 ? 16'h3FA :
                         configReg[4] & page[1:0] == 2'b01 & bank[page[1:0]] == 8'd1 ? 16'h3FB :
                                                                                       16'(bank[page[1:0]]) + 16'(offsetReg);
-
-assign flash_addr = 23'h010000 + 23'(mapperReg[7:6] == 2'b01 ? {bankValue, cpu_addr[13:0]} : {1'b0,bankValue, cpu_addr[12:0]});
 wire flashAddrValid   = page < 3'd4;
-assign flash_rq = cs & flashAddrValid;
-assign mem_addr = mfrsd_base_ram + 27'(flash_addr);
+assign flash_addr     = 23'h010000 + 23'(mapperReg[7:6] == 2'b01 ? {bankValue, cpu_addr[13:0]} : {1'b0,bankValue, cpu_addr[12:0]});
+assign flash_rq       = cs & flashAddrValid;
+assign mem_addr       = mfrsd_base_ram + 27'(flash_addr);
 
 endmodule
 

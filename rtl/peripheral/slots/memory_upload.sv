@@ -99,19 +99,19 @@ module memory_upload
       if (ddr3_ready & ddr3_rd) begin ddr3_rd <= 1'b0; ddr3_addr <= ddr3_addr + 1'd1; end
       if (load) begin
          state <= STATE_CLEAN;
-         ddr3_addr        <= 0;
-         ram_addr         <= 27'd0;
-         sram_addr        <= 27'd0;
-         save_ram_addr    <= 27'd0;
-         block_num        <= 6'd0;
-         config_head_addr <= 4'd0;
-         ref_ram          <= 4'd0;
-         ddr3_rd          <= 1'd0;        
-         save_addr        <= 0;
-         refAdd           <= 1'b0;
-         subslot          <= 2'd0; 
+         ddr3_addr             <= 0;
+         ram_addr              <= 27'd0;
+         sram_addr             <= 27'd0;
+         save_ram_addr         <= 27'd0;
+         block_num             <= 6'd0;
+         config_head_addr      <= 4'd0;
+         ref_ram               <= 4'd0;
+         ddr3_rd               <= 1'd0;        
+         save_addr             <= 0;
+         refAdd                <= 1'b0;
+         subslot               <= 2'd0; 
          cart_slot_expander_en <= 4'd0;
-         cart_device      <= '{0, 0};
+         cart_device           <= '{0, 0};
          bios_config.ram_size <= 8'h00;
       end
       if (ddr3_ready & ~ddr3_rd) begin
