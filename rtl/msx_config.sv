@@ -29,24 +29,15 @@ module msx_config
     input               [5:0] mapper_detected[2],
     input               [2:0] sram_size_detected[2],
     input               [1:0] sdram_size,
-
     output MSX::config_cart_t cart_conf[2],
-    
-    //output         [2:0] cart_type[2],
-    output              [2:0] sram_size[2],
-    //output         [2:0] sram_B_size,
-    //output         [5:0] mapper_A,
-    //output         [5:0] mapper_B,
     output                    sram_A_select_hide,
-    output                    sram_loadsave_hide,
     output                    ROM_A_load_hide, //3 
     output                    ROM_B_load_hide, //4
     output                    fdc_enabled,
     output MSX::user_config_t msxConfig,
-    output                    reset_request,
     output                    reload
-    //output         [1:0] rom_eject
 );
+
 /*verilator tracing_off*/
 logic  [7:0] selected_sram_size_A;
 
@@ -62,20 +53,15 @@ assign cart_conf[0].typ     = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A
                                                                           CART_TYP_EMPTY );
 
 assign cart_conf[1].typ     = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
-// 0-auto 1-ASCII8 2-ASCII16 3-Konami 4-KonamiSCC 5-KOEI 6-linear64 7-R-TYPE 8-WIZARDRY 9-none
-//{MAPPER_AUTO, MAPPER_NONE, MAPPER_LINEAR, MAPPER_OFFSET, MAPPER_KONAMI_SCC, MAPPER_KONAMI, MAPPER_ASCII8, MAPPER_ASCII16, MAPPER_FMPAC, MAPPER_MFRSD1,MAPPER_MFRSD2, MAPPER_MFRSD3, MAPPER_UNUSED, MAPPER_RAM} mapper_typ_t;
-
 assign cart_conf[0].selected_mapper    = mapper_typ_t'(mapper_A_select + 4'd2);
 assign cart_conf[1].selected_mapper    = mapper_typ_t'(mapper_B_select + 4'd2);
 assign cart_conf[0].selected_sram_size = sram_A_select_hide ? 8'd0 : 8'd0; // TODO dopočti
 assign cart_conf[1].selected_sram_size = 8'd0;
 
-//assign MSXconf.typ = MSX_typ_t'(HPS_status[11]);
 assign msxConfig.typ = msx_type;
 assign msxConfig.scandoubler = scandoubler;
 assign msxConfig.video_mode = video_mode_t'(msx_type == MSX1 ? (HPS_status[12] ? 2'd2 : 2'd1) : HPS_status[14:13]);
 assign msxConfig.cas_audio_src = cas_audio_src_t'(HPS_status[8]);
-//assign msxConfig.ram_size = sdram_size == 2'd0 ? SIZE64 : ram_size_t'(HPS_status[16:15]);
 assign msxConfig.border = HPS_status[38];
 
 assign ROM_A_load_hide    = cart_conf[0].typ != CART_TYP_ROM;
@@ -85,19 +71,12 @@ assign fdc_enabled = msx_type == MSX2 | cart_conf[0].typ == CART_TYP_FDC;
 
 
 logic  [18:0] lastConfig;
-//reg  [5:0]  last_cart_type;
-
 wire [18:0] act_config = {cart_conf[1].typ, cart_conf[0].typ, cart_conf[0].selected_mapper, cart_conf[1].selected_mapper, sram_A_select};
-//wire [5:0]  act_cart_type = {cart_typ_B, cart_typ_A};
 
 always @(posedge clk) begin
     if (reset) lastConfig <= act_config;
-//    last_cart_type <= act_cart_type;
 end
 
 assign reload = lastConfig != act_config;
-//assign cart_changed = last_cart_type[5:0] != act_cart_type[5:0];
-//assign rom_eject = {cart_conf[1].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0, cart_conf[0].typ == CART_TYP_ROM ? HPS_status[10] : 1'b0};
-
 
 endmodule

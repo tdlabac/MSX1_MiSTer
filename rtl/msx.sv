@@ -22,7 +22,6 @@ module msx
    input  [           10:0] ps2_key,
    input              [5:0] joy0,
    input              [5:0] joy1,
-   
    //Cassete
    output                   cas_motor,
    input                    cas_audio_in,
@@ -30,56 +29,35 @@ module msx
    input             [64:0] rtc_time,
    input MSX::bios_config_t bios_config,
    input MSX::user_config_t msxConfig,
-   //input MSX::config_cart_t cart_conf[2],
    input  dev_typ_t         cart_device[2],
    input                    rom_eject,
    input                    sram_save,
    input                    sram_load,
-   //input                    cart_changed,
-   output                   need_reset,
    //IOCTL
    input                    ioctl_download,
    input             [15:0] ioctl_index,
    input             [26:0] ioctl_addr,
-   //DDR3
-   /*
-   output      logic [27:0] ddr3_addr,
-   output                   ddr3_rd,
-   output                   ddr3_wr,
-   input              [7:0] ddr3_dout,
-   output             [7:0] ddr3_din,
-   input                    ddr3_ready,
-   output                   ddr3_request,
-   */
    //SDRAM/BRAM
    output            [26:0] ram_addr,
    output             [7:0] ram_din,
    output                   ram_rnw,
    output                   sdram_ce,
    output                   bram_ce,
-   //input                    sdram_ready,
    input              [7:0] ram_dout,
    input              [1:0] sdram_size,
-   input  MSX::block_t      slot_layout[64],
-   input  MSX::lookup_RAM_t lookup_RAM[16],
-   input  MSX::lookup_SRAM_t lookup_SRAM[4],
+   input MSX::block_t       slot_layout[64],
+   input MSX::lookup_RAM_t  lookup_RAM[16],
+   input MSX::lookup_SRAM_t lookup_SRAM[4],
    //KBD
    input                    kbd_request,
    input              [8:0] kbd_addr,
    input              [7:0] kbd_din,
    input                    kbd_we,
-/*
-   output            [24:0] dw_sdram_addr,
-   output             [7:0] dw_sdram_din,
-   output                   dw_sdram_we,
-   input                    dw_sdram_ready,
-*/
    output            [26:0] flash_addr,
    output             [7:0] flash_din,
    output                   flash_req,
    input                    flash_ready,
    input                    flash_done,
-
    //SD FDC
    input                    img_mounted,
    input             [31:0] img_size,
@@ -96,17 +74,11 @@ module msx
    input              [7:0] d_from_sd,
    output                   sd_tx,
    output                   sd_rx
-
-   //output                   spi_ss,
-   //output                   spi_clk,
-   //input                    spi_di,
-   //output                   spi_do
 );
 
 //  -----------------------------------------------------------------------------
 //  -- Audio MIX
 //  -----------------------------------------------------------------------------
-//wire [15:0] sound_slots = {cart_sound_A[14],cart_sound_A} + {cart_sound_B[14],cart_sound_B};
 wire  [9:0] audioPSG    = ay_ch_mix + {keybeep,5'b00000} + {(cas_audio_in & ~cas_motor),4'b0000};
 wire [16:0] fm          = {3'b00, audioPSG, 4'b0000};
 wire [16:0] audio_mix   = {cart_sound[15], cart_sound} + fm;
@@ -164,10 +136,6 @@ always @(posedge clk21m, negedge exwait_n) begin
    else if (ce_3m58_p)
       u1_2_q <= wait_n;
 end
-
-//  -----------------------------------------------------------------------------
-//  -- MSX1 / MSX2 handler
-//  -----------------------------------------------------------------------------
 
 logic map_valid = 0;
 wire ppi_en = ~ppi_n;
@@ -299,7 +267,6 @@ jt49_bus PSG
 //  -- RTC
 //  -----------------------------------------------------------------------------
 wire [7:0] d_from_rtc;
-
 rtc rtc
 (
    .clk21m(clk21m),
@@ -473,28 +440,9 @@ msx_slots msx_slots
    .cpu_rd(~rd_n),
    .cpu_wr(~wr_n),
    .sound(cart_sound),
-   //.rom_eject(rom_eject),
-   //.cart_changed(cart_changed),
-   //.need_reset(need_reset),
-   //.sram_save(sram_save),
-   //.sram_load(sram_load),
-   //.msx_type(msx_type),
-   //.ioctl_download(ioctl_download),
-   //.ioctl_index(ioctl_index),
-   //.ioctl_addr(ioctl_addr),
-   //.cart_conf(cart_conf), 
-   //.ddr3_addr(ddr3_addr),
-   //.ddr3_rd(ddr3_rd),
-   //.ddr3_wr(ddr3_wr),
-   //.ddr3_dout(ddr3_dout),
-   //.ddr3_din(ddr3_din),
-   //.ddr3_ready(ddr3_ready),
-   //.ddr3_request(ddr3_request),
-
    .ram_addr(ram_addr),
    .ram_din(ram_din),
    .ram_rnw(ram_rnw),
-   //.sdram_ready(sdram_ready),
    .ram_dout(ram_dout),
    .sdram_ce(sdram_ce),
    .bram_ce(bram_ce),
@@ -505,7 +453,6 @@ msx_slots msx_slots
    .flash_ready(flash_ready),
    .flash_done(flash_ready),
    .slot_layout(slot_layout),
-
    .img_mounted(img_mounted),
    .img_size(img_size),
    .img_readonly(img_readonly),
@@ -517,7 +464,6 @@ msx_slots msx_slots
    .sd_buff_dout(sd_buff_dout),
    .sd_buff_din(sd_buff_din),
    .sd_buff_wr(sd_buff_wr),
-
    .active_slot(slot),
    .lookup_RAM(lookup_RAM),
    .lookup_SRAM(lookup_SRAM),

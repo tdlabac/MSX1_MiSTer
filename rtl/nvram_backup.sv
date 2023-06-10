@@ -1,7 +1,6 @@
 module nvram_backup
 (
    input                      clk,
-
    input MSX::lookup_SRAM_t   lookup_SRAM[4],
    input                      load_req,
    input                      save_req,
@@ -22,7 +21,6 @@ module nvram_backup
    input                [7:0] ram_dout
 );
 
-//Unused port
 logic [63:0] image_size[4], new_size;
 logic  [3:0] image_mounted; 
 logic        store_new_size = 1'b0;
@@ -36,8 +34,8 @@ always @(posedge clk) begin
 end
 
 logic [3:0] request_load = 4'b0, request_save = 4'b0;
-logic [1:0] num = 2'd0;
-logic       wr = 1'b0, rd = 1'b0;
+logic [1:0] num          = 2'd0;
+logic       wr           = 1'b0, rd = 1'b0;
 
 always @(posedge clk) begin
    logic last_load_req, last_save_req; 
@@ -70,8 +68,8 @@ logic [20:0] block_count;
 logic [31:0] lba_start;
 logic        done = 1'b0;
 
-assign ram_we           = rd & sd_ack[num] ;
-assign ram_addr         = lookup_SRAM[num].addr + 18'({sd_lba[num],sd_buff_addr[8:0]});
+assign ram_we         = rd & sd_ack[num] ;
+assign ram_addr       = lookup_SRAM[num].addr + 18'({sd_lba[num],sd_buff_addr[8:0]});
 assign sd_buff_din[0] = ram_dout;
 assign sd_buff_din[1] = ram_dout;
 assign sd_buff_din[2] = ram_dout;

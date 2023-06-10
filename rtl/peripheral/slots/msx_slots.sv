@@ -4,7 +4,7 @@ module msx_slots
    input                       clk_sdram,
    input                       clk_en,
    input                       reset,
-   //CPU                
+   //BASE                
    input                [15:0] cpu_addr,
    input                 [7:0] cpu_dout,
    output                [7:0] cpu_din,
@@ -13,12 +13,9 @@ module msx_slots
    input                       cpu_mreq,
    input                       cpu_iorq,
    input                       cpu_m1,
+   input                 [1:0] active_slot,
    output signed        [15:0] sound,
-   //IOCTL
-   //input                       ioctl_download,
-   //input                [15:0] ioctl_index,
-   //input                [26:0] ioctl_addr,
-   //SDRAM
+   //RAM
    output               [26:0] ram_addr,
    output                [7:0] ram_din,
    input                 [7:0] ram_dout,
@@ -31,16 +28,10 @@ module msx_slots
    output                      flash_req,
    input                       flash_ready,
    input                       flash_done,
-   //KBD LAYOUT
-   //output                [9:0] kbd_addr,
-   //output                [7:0] kbd_din,
-   //output                      kbd_we,
-   //output                      kbd_request,
-   //SD FDC
+   //Block device
    input                       img_mounted,
    input                [31:0] img_size,
    input                       img_readonly,
-
    output               [31:0] sd_lba,
    output                      sd_rd,
    output                      sd_wr,
@@ -49,18 +40,18 @@ module msx_slots
    input                 [7:0] sd_buff_dout,
    output                [7:0] sd_buff_din,
    input                       sd_buff_wr,
-
-   input                 [1:0] active_slot,
+   //Config
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
    input  MSX::lookup_SRAM_t   lookup_SRAM[4],
    input  MSX::bios_config_t   bios_config,
    input  dev_typ_t            cart_device[2],
-  //SD
+   //SD CARD
    output             [7:0] d_to_sd,
    input              [7:0] d_from_sd,
    output                   sd_tx,
    output                   sd_rx,
+   //DEBUG
    output                   debug_FDC_req,
    output                   debug_sd_card,
    output                   debug_erase
@@ -155,8 +146,6 @@ wire [3:0] mapper_mask = mapper_mfrd_mask;
 wire sram_cs     = fmpac_sram_cs | gm2_sram_cs;
 wire sram_wr     = fmpac_sram_wr | gm2_sram_wr;
 
-wire debug_tick = mapper_none_addr == 27'(16'h8000) & active_slot == 2'd3 & cpu_mreq;
-
 //MAPPER NONE
 wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
 
@@ -165,7 +154,7 @@ wire [26:0] mapper_linear_addr = 27'(cpu_addr[15:0]) & ((27'(size) << 14)-27'd1)
 
 //NONE 
 wire [26:0] mapper_offset_addr  = 27'({(cpu_addr[15:14] - offset_ram),cpu_addr[13:0]});
-wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podminit mapperem
+//wire mapper_offset_unmaped      = cpu_addr[15:14] < offset_ram; //TODO podminit mapperem
 
 wire flash_rq;
 wire [7:0] flash_dout;

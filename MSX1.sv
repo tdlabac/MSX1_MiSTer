@@ -252,7 +252,6 @@ localparam CONF_STR = {
    "-;",
    "FC1,MSX,Load ROM PACK,30000000;",
    "FC2,MSX,Load FW  PACK,30100000;",   
-   //"O[11],MSX type,MSX2,MSX1;",
    CONF_STR_SLOT_A,
    "H3FS3,ROM,Load,30A00000;",
    CONF_STR_MAPPER_A,
@@ -280,15 +279,6 @@ localparam CONF_STR = {
    "P1O[6:5],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;",
    "P1O[7],Vertical Crop,No,Yes;",
    //"h2P1O[38],Border,No,Yes;",   //TODO
-   //"P2,Advanced settings;",
-   //"h2P2F1,ROM,Load MAIN;",
-   //"h2P2F2,ROM,Load HANGUL;",	
-   //"H2P2F1,ROM,Load MAIN;",
-   //"H2P2F2,ROM,Load SUB;",
-   //"H2P2F3,ROM,Load DISK;",
-   //"P2F8,ROM,Load FW A;",
-   //"P2F9,ROM,Load FW B;",
-   //CONF_STR_RAM_SIZE,
    "-;",
    "T[0],Reset;",
    "R[10],Reset & Detach ROM Cartridge;",					
@@ -344,13 +334,12 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
 
 /////////////////   CONFIG   /////////////////
 wire [5:0] mapper_A, mapper_B;
-wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,config_reset;
+wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide;
 
 msx_config msx_config 
 (
    .clk(clk21m),
    .reset(reset),
-   .reset_request(config_reset),
    .msx_type(bios_config.MSX_typ),
    .HPS_status(status),
    .scandoubler(scandoubler),
@@ -382,14 +371,13 @@ clock clock
 );
 
 /////////////////    RESET   /////////////////
-wire reset = RESET | status[0] | status[10] | need_reset | config_reset | reset_rq;
+wire reset = RESET | status[0] | status[10] | reset_rq;
 
 ///////////////// Computer /////////////////
 wire  [7:0] R, G, B, cpu_din, cpu_dout;
 wire [15:0] cpu_addr, audio;
 wire        hsync, vsync, blank_n, hblank, vblank, ce_pix;
 wire        cpu_wr, cpu_rd, cpu_mreq, cpu_iorq, cpu_m1;
-wire        need_reset;
 wire [26:0] ram_addr;
 wire  [7:0] ram_din, ram_dout;
 wire        ram_rnw, sdram_ce, bram_ce;
@@ -409,13 +397,6 @@ msx MSX
    .sram_save(status[38]),
    .sram_load(status[39]),
    .ioctl_addr(ioctl_addr[26:0]),
-   //.ddr3_addr(ddr3_addr_download),
-   //.ddr3_rd(ddr3_rd_download),
-   //.ddr3_wr(ddr3_wr_download),
-   //.ddr3_dout(ddr3_dout),
-   //.ddr3_din(ddr3_din_download),
-   //.ddr3_ready(ddr3_ready),
-   //.ddr3_request(ddr3_request_download),
    .img_mounted(img_mounted[5]),
    .img_size(img_size),
    .img_readonly(img_readonly),
@@ -427,11 +408,6 @@ msx MSX
    .sd_buff_dout(sd_buff_dout),
    .sd_buff_din(sd_buff_din[5]),
    .sd_buff_wr(sd_buff_wr),
-   //SD CARD
-	//.spi_ss(sdss),
-	//.spi_clk(sdclk),
-	//.spi_di(sdmiso),
-	//.spi_do(sdmosi),
    .slot_layout(slot_layout),
    .lookup_RAM(lookup_RAM),
    .lookup_SRAM(lookup_SRAM),
@@ -454,12 +430,11 @@ wire sdclk;
 wire sdmosi;
 wire vsdmiso;
 wire sdmiso = vsd_sel ? vsdmiso : SD_MISO;
-wire sdss;
 
 reg vsd_sel = 0;
 always @(posedge clk21m) if(img_mounted[6]) vsd_sel <= |img_size;
 
-assign SD_CS   = sdss   |  vsd_sel;
+assign SD_CS   = vsd_sel;
 assign SD_SCK  = sdclk  & ~vsd_sel;
 assign SD_MOSI = sdmosi & ~vsd_sel;
 
@@ -481,8 +456,7 @@ always @(posedge clk21m) begin
     if((old_mosi ^ sdmosi) || (old_miso ^ sdmiso)) timeout <= 0;
 end
 
-
-// SPI
+//////////////////   SPI   ///////////////////
 spi_divmmc spi
 (
    .clk_sys(clk21m),
@@ -516,7 +490,7 @@ sd_card sd_card
     .clk_spi(clk_sdram),
     .sdhc(1),
     .sck(sdclk),
-    .ss(sdss | ~vsd_sel),
+    .ss(~vsd_sel),
     .mosi(sdmosi),
     .miso(vsdmiso)
 );
@@ -593,7 +567,7 @@ ltc2308_tape #(.ADC_RATE(120000), .CLK_RATE(21477272)) tape
    .active(tape_adc_act)
 );
 
-///////////////// LOAD PACK   /////////////////
+/////////////////  LOAD PACK   /////////////////
 
 wire upload_ram_ce, upload_sdram_rq, upload_bram_rq, upload_ram_ready, reset_rq;
 wire  [7:0] upload_ram_din, config_msx;
@@ -636,13 +610,11 @@ memory_upload memory_upload(
 );
 
 wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
-wire  [7:0] ddr3_dout, ddr3_din, ddr3_din_download;
-wire        ddr3_rd, ddr3_rd_download, ddr3_rd_cas, ddr3_wr, ddr3_wr_download, ddr3_ready, ddr3_request_download;
+wire  [7:0] ddr3_dout, ddr3_din_download;
+wire        ddr3_rd, ddr3_rd_download, ddr3_rd_cas, ddr3_wr_download, ddr3_ready, ddr3_request_download;
 
 assign ddr3_addr = ddr3_request_download ? ddr3_addr_download : ddr3_addr_cas ;
 assign ddr3_rd   = ddr3_request_download ? ddr3_rd_download   : ddr3_rd_cas   ;
-//assign ddr3_din  = ddr3_request_download ? ddr3_din_download  : 8'hFF         ;
-//assign ddr3_wr   = ddr3_request_download ? ddr3_wr_download   : 1'b0          ;
 assign DDRAM_CLK = clk21m;
 
 ddram buffer
@@ -650,8 +622,8 @@ ddram buffer
    .DDRAM_CLK(clk21m),
    .addr(ddr3_addr),
    .dout(ddr3_dout),
-   .din(ddr3_din),
-   .we(ddr3_wr),
+   .din(),
+   .we(),
    .rd(ddr3_rd),
    .ready(ddr3_ready),
    .reset(reset),
@@ -709,6 +681,7 @@ dpram #(.addr_width(18)) systemRAM
    .data_b(sd_buff_dout),
    .q_b(sram_dout)
 );
+
 ///////////////// NVRAM BACKUP ////////////////
 wire [26:0] sram_addr;
 wire  [7:0] sram_dout;
@@ -733,7 +706,6 @@ nvram_backup nvram_backup
    .ram_we(sram_we)
 );
 
-
 ///////////////// CAS EMULATE /////////////////
 wire ioctl_isCAS, buff_mem_ready, motor, CAS_dout, play, rewind;
 
@@ -753,46 +725,5 @@ tape cass
    .play(play),
    .rewind(rewind)
 );
-
-endmodule
-
-// SPI module
-module spi_divmmc
-(
-	input        clk_sys,
-	output       ready,
-
-	input        tx,        // Byte ready to be transmitted
-	input        rx,        // request to read one byte
-	input  [7:0] din,
-	output [7:0] dout,
-
-	input        spi_ce,
-	output       spi_clk,
-	input        spi_di,
-	output       spi_do
-);
-
-assign    ready   = counter[4];
-assign    spi_clk = counter[0];
-assign    spi_do  = io_byte[7]; // data is shifted up during transfer
-assign    dout    = data;
-
-reg [4:0] counter = 5'b10000;  // tx/rx counter is idle
-reg [7:0] io_byte, data;
-
-always @(posedge clk_sys) begin
-	if(counter[4]) begin
-		if(rx | tx) begin
-			counter <= 0;
-			data    <= io_byte;
-			io_byte <= tx ? din : 8'hff;
-		end
-	end
-	else if (spi_ce) begin
-		if(spi_clk) io_byte <= { io_byte[6:0], spi_di };
-		counter <= counter + 2'd1;
-	end
-end
 
 endmodule

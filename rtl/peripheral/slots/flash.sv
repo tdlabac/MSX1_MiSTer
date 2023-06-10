@@ -96,10 +96,10 @@ module flash (
 					  index == 3'd5 ? int_valid5 :
 					                  1'b0;
 	
-   wire [7:0] num1 = {5'd0,addr[15:13]};
-   wire [7:0] num2 = addr[22:16] + 7;
+   //wire [7:0] num1 = {5'd0,addr[15:13]};
+   //wire [7:0] num2 = addr[22:16] + 7;
 
-reg erase;
+	reg erase;
 //write to SDRAM
 	always @(posedge clk) begin
 		reg sdram_need_wr;
@@ -137,7 +137,6 @@ reg erase;
 			sdram_din <= din;
 			if (sdram_ready) begin
 				sdram_req <= 1;
-				//write_cnt <= write_cnt - 1'b1;
 			end else begin
 				sdram_need_wr <= 1;
 			end
