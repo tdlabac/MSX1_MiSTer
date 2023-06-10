@@ -78,7 +78,6 @@ assign msxConfig.cas_audio_src = cas_audio_src_t'(HPS_status[8]);
 //assign msxConfig.ram_size = sdram_size == 2'd0 ? SIZE64 : ram_size_t'(HPS_status[16:15]);
 assign msxConfig.border = HPS_status[38];
 
-assign sram_loadsave_hide = sram_size[0] == 0 & sram_size[1] == 0;
 assign ROM_A_load_hide    = cart_conf[0].typ != CART_TYP_ROM;
 assign ROM_B_load_hide    = cart_conf[1].typ != CART_TYP_ROM;
 assign sram_A_select_hide = cart_conf[0].typ != CART_TYP_ROM | mapper_A_select == 4'd0; 

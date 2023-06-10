@@ -196,6 +196,10 @@ localparam VDNUM = 7;
 MSX::user_config_t msxConfig;
 MSX::bios_config_t bios_config;
 MSX::config_cart_t cart_conf[2];
+MSX::block_t       slot_layout[64];
+MSX::lookup_RAM_t  lookup_RAM[16];
+MSX::lookup_RAM_t  lookup_SRAM[4];
+
 wire             forced_scandoubler;
 wire      [21:0] gamma_bus;
 wire       [1:0] buttons;
@@ -246,8 +250,8 @@ wire      [64:0] rtc;
 localparam CONF_STR = {
    "MSX1;",
    "-;",
-   "FSC1,MSX,Load ROM PACK,30000000;",
-   "FSC2,MSX,Load FW  PACK,30100000;",   
+   "FC1,MSX,Load ROM PACK,30000000;",
+   "FC2,MSX,Load FW  PACK,30100000;",   
    //"O[11],MSX type,MSX2,MSX1;",
    CONF_STR_SLOT_A,
    "H3FS3,ROM,Load,30A00000;",
@@ -255,7 +259,7 @@ localparam CONF_STR = {
    CONF_STR_SRAM_SIZE_A,
    "-;",
    CONF_STR_SLOT_B,
-   "H4FS4,ROM,Load,30F00000;",
+   "H4F4,ROM,Load,30F00000;",
    CONF_STR_MAPPER_B,
    "H6-;",
    "H6R[38],SRAM Save;",
@@ -300,7 +304,7 @@ assign status_menumask[2] = bios_config.MSX_typ == MSX1;
 assign status_menumask[3] = ROM_A_load_hide;
 assign status_menumask[4] = ROM_B_load_hide;
 assign status_menumask[5] = sram_A_select_hide;
-assign status_menumask[6] = sram_loadsave_hide;
+assign status_menumask[6] = lookup_SRAM[0].size + lookup_SRAM[1].size + lookup_SRAM[2].size + lookup_SRAM[3].size == 0;
 assign status_menumask[7] = sdram_size == 2'd0;
 assign sdram_size         = sdram_sz[15] ? sdram_sz[1:0] : 2'b00;
 
@@ -340,7 +344,7 @@ hps_io #(.CONF_STR(CONF_STR),.VDNUM(VDNUM)) hps_io
 
 /////////////////   CONFIG   /////////////////
 wire [5:0] mapper_A, mapper_B;
-wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,sram_loadsave_hide,config_reset;
+wire       reload, sram_A_select_hide, fdc_enabled, ROM_A_load_hide, ROM_B_load_hide,config_reset;
 
 msx_config msx_config 
 (
@@ -354,7 +358,6 @@ msx_config msx_config
    .cart_conf(cart_conf),
    .reload(reload),
    .sram_A_select_hide(sram_A_select_hide),
-   .sram_loadsave_hide(sram_loadsave_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
    .ROM_B_load_hide(ROM_B_load_hide),
    .fdc_enabled(fdc_enabled),
@@ -393,9 +396,6 @@ wire        ram_rnw, sdram_ce, bram_ce;
 wire        sd_tx, sd_rx;
 wire  [7:0] d_to_sd, d_from_sd;
 
-MSX::block_t         slot_layout[64];
-MSX::lookup_RAM_t    lookup_RAM[16];
-MSX::lookup_RAM_t    lookup_SRAM[4];
 dev_typ_t            cart_device[2];
 msx MSX
 (
@@ -416,16 +416,16 @@ msx MSX
    //.ddr3_din(ddr3_din_download),
    //.ddr3_ready(ddr3_ready),
    //.ddr3_request(ddr3_request_download),
-   .img_mounted(img_mounted[5:0]),
+   .img_mounted(img_mounted[5]),
    .img_size(img_size),
    .img_readonly(img_readonly),
-   .sd_lba(sd_lba[0:5]),
-   .sd_rd(sd_rd[5:0]),
-   .sd_wr(sd_wr[5:0]),
-   .sd_ack(sd_ack[5:0]),
+   .sd_rd(sd_rd[5]),
+   .sd_wr(sd_wr[5]),
+   .sd_ack(sd_ack[5]),
+   .sd_lba(sd_lba[5]),
    .sd_buff_addr(sd_buff_addr),
    .sd_buff_dout(sd_buff_dout),
-   .sd_buff_din(sd_buff_din[0:5]),
+   .sd_buff_din(sd_buff_din[5]),
    .sd_buff_wr(sd_buff_wr),
    //SD CARD
 	//.spi_ss(sdss),
@@ -697,23 +697,40 @@ sdram sdram
    .*
 );    
 
-
-spram #(.addr_width(18),.mem_name("RAM")) systemRAM
+dpram #(.addr_width(18)) systemRAM
 (
-   .clock( clk21m),
-	.address(18'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
-   .wren( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
-   .data( upload_bram_rq ? upload_ram_din  : ram_din           ),
-   .q(bram_dout)
-/*	
-   .address_a(19'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
+   .clock(clk21m),
+   .address_a(18'(upload_bram_rq ? upload_ram_addr : ram_addr)         ),
    .wren_a( upload_bram_rq ? ~ram_rnw        : bram_ce & ~ram_rnw ),
    .data_a( upload_bram_rq ? upload_ram_din  : ram_din           ),
    .q_a(bram_dout),
-   .address_b(),
-   .wren_b(),
-   .data_b(),
-   .q_b()*/
+   .address_b(18'(sram_addr)),
+   .wren_b(sram_we),
+   .data_b(sd_buff_dout),
+   .q_b(sram_dout)
+);
+///////////////// NVRAM BACKUP ////////////////
+wire [26:0] sram_addr;
+wire  [7:0] sram_dout;
+wire        sram_we;
+nvram_backup nvram_backup
+(
+   .clk(clk21m),
+   .lookup_SRAM(lookup_SRAM),
+   .load_req(status[39]),
+   .save_req(status[38]),
+   .img_mounted(img_mounted[3:0]),
+   .img_readonly(img_readonly),
+   .img_size(img_size),
+   .sd_lba(sd_lba[0:3]),
+   .sd_rd(sd_rd[3:0]),
+   .sd_wr(sd_wr[3:0]),
+   .sd_ack(sd_ack[3:0]),
+   .sd_buff_addr(sd_buff_addr),
+   .sd_buff_din(sd_buff_din[0:3]),
+   .ram_addr(sram_addr),
+   .ram_dout(sram_dout),
+   .ram_we(sram_we)
 );
 
 

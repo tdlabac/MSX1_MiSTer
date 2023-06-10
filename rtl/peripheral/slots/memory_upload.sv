@@ -177,8 +177,15 @@ module memory_upload
                            mode        <= cart_mode;
                            param       <= cart_param;
                            data_id     <= cart_rom_id;
-                           sram_size   <= 25'({cart_sram_size, 10'd0});
-                           ref_sram    <= config_typ_t'(conf[3][7:4]) == CONFIG_SLOT_A ? 2'd2 : 2'd3;
+                           if (cart_rom_id == ROM_ROM) begin
+                              if (curr_conf == CONFIG_SLOT_A) begin
+                                 sram_size <= 25'({cart_sram_size, 10'd0});
+                                 ref_sram  <= 2'd0;
+                              end
+                           end else begin
+                              sram_size   <= 25'({cart_sram_size, 10'd0});
+                              ref_sram <= curr_conf == CONFIG_SLOT_A ? 2'd1 : 2'd2;   
+                           end  
                            slotSubslot <= {conf[3][3:2], subslot};
                            case(cart_rom_id)
                               ROM_NONE: ;                          
