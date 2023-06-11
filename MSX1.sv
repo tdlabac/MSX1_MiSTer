@@ -191,7 +191,7 @@ assign LED_USER  = vsd_sel & sd_act;
 assign LED_DISK  = {1'b1, ~vsd_sel & sd_act};
 assign BUTTONS = 0;
 
-localparam VDNUM = 7;
+localparam VDNUM = 6;
 
 MSX::user_config_t msxConfig;
 MSX::bios_config_t bios_config;
@@ -265,7 +265,7 @@ localparam CONF_STR = {
    "H6R[39],SRAM Load;",
    "h1-;",
    "h1S5,DSK,Mount Drive A:;",
-   "S6,VHD,Load SD card;",
+   "S4,VHD,Load SD card;",
    "-;",
    "O[8],Tape Input,File,ADC;",
    "H0F5,CAS,Cas File,31400000;",
@@ -432,7 +432,7 @@ wire vsdmiso;
 wire sdmiso = vsd_sel ? vsdmiso : SD_MISO;
 
 reg vsd_sel = 0;
-always @(posedge clk21m) if(img_mounted[6]) vsd_sel <= |img_size;
+always @(posedge clk21m) if(img_mounted[4]) vsd_sel <= |img_size;
 
 assign SD_CS   = vsd_sel;
 assign SD_SCK  = sdclk  & ~vsd_sel;
@@ -476,15 +476,15 @@ sd_card sd_card
 (
     .*,
     .clk_sys(clk21m),
-    .img_mounted(img_mounted[6]),
+    .img_mounted(img_mounted[4]),
     .img_size(img_size),
-    .sd_lba(sd_lba[6]),
-    .sd_rd(sd_rd[6]),
-    .sd_wr(sd_wr[6]),
-    .sd_ack(sd_ack[6]),
+    .sd_lba(sd_lba[4]),
+    .sd_rd(sd_rd[4]),
+    .sd_wr(sd_wr[4]),
+    .sd_ack(sd_ack[4]),
     .sd_buff_addr(sd_buff_addr),
     .sd_buff_dout(sd_buff_dout),
-    .sd_buff_din(sd_buff_din[6]),
+    .sd_buff_din(sd_buff_din[4]),
     .sd_buff_wr(sd_buff_wr),
     
     .clk_spi(clk_sdram),
