@@ -186,9 +186,9 @@ assign AUDIO_L = audio;
 assign AUDIO_R = audio;
 assign AUDIO_MIX = 0;
 
-assign LED_DISK = 0;
 assign LED_POWER = 0;
-assign LED_USER = 0;
+assign LED_USER  = vsd_sel & sd_act;
+assign LED_DISK  = {1'b1, ~vsd_sel & sd_act};
 assign BUTTONS = 0;
 
 localparam VDNUM = 7;
@@ -198,7 +198,7 @@ MSX::bios_config_t bios_config;
 MSX::config_cart_t cart_conf[2];
 MSX::block_t       slot_layout[64];
 MSX::lookup_RAM_t  lookup_RAM[16];
-MSX::lookup_RAM_t  lookup_SRAM[4];
+MSX::lookup_SRAM_t lookup_SRAM[4];
 
 wire             forced_scandoubler;
 wire      [21:0] gamma_bus;

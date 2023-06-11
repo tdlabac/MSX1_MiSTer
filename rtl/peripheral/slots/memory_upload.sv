@@ -28,7 +28,7 @@ module memory_upload
    input                 [1:0] sdram_size,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
-   output MSX::lookup_RAM_t    lookup_SRAM[4],
+   output MSX::lookup_SRAM_t   lookup_SRAM[4],
    output MSX::bios_config_t   bios_config,
    input  MSX::config_cart_t   cart_conf[2],
    output dev_typ_t            cart_device[2]
@@ -326,7 +326,7 @@ module memory_upload
                      bram_rq                  <= sdram_size == 0;
                   end else 
                      if (sram_size != 25'd0) begin
-                        lookup_SRAM[ref_sram].addr <= sram_addr;
+                        lookup_SRAM[ref_sram].addr <= 18'(sram_addr);
                         lookup_SRAM[ref_sram].size <= 16'(sram_size[24:10]);
                         pattern       <= 3'd1; 
                         data_size     <= sram_size;

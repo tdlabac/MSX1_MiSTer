@@ -2,7 +2,7 @@ module nvram_backup
 (
    input                      clk,
 
-   input MSX::lookup_RAM_t    lookup_SRAM[4],
+   input MSX::lookup_SRAM_t   lookup_SRAM[4],
    input                      load_req,
    input                      save_req,
    // SD config
@@ -17,7 +17,7 @@ module nvram_backup
    input               [13:0] sd_buff_addr,
    output               [7:0] sd_buff_din[4],
    // RAM access
-   output              [26:0] ram_addr,   
+   output              [17:0] ram_addr,   
    output                     ram_we,
    input                [7:0] ram_dout
 );
@@ -71,7 +71,7 @@ logic [31:0] lba_start;
 logic        done = 1'b0;
 
 assign ram_we           = rd & sd_ack[num] ;
-assign ram_addr         = lookup_SRAM[num].addr + 27'({sd_lba[num],sd_buff_addr[8:0]});
+assign ram_addr         = lookup_SRAM[num].addr + 18'({sd_lba[num],sd_buff_addr[8:0]});
 assign sd_buff_din[0] = ram_dout;
 assign sd_buff_din[1] = ram_dout;
 assign sd_buff_din[2] = ram_dout;

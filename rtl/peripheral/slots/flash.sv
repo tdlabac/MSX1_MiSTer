@@ -38,7 +38,7 @@ module flash (
 
 	reg       erase_block = 0;
 	reg [7:0] erase_block_num;
-	reg       erase_chip = 0;
+//	reg       erase_chip = 0;
 
 	reg old_we;
 	reg state;
@@ -49,7 +49,7 @@ module flash (
 	always @(posedge clk) begin
 		if (clk) begin
 		   erase_block <= 0;
-			erase_chip  <= 0;
+//			erase_chip  <= 0;
 			if (~valid) index <= 0;
 			if (we & ~old_we & ce) begin
 				cmd[index] <= din;
@@ -57,7 +57,7 @@ module flash (
 				if (int_valid5) begin
 					index <= 0;
 					if (din == 8'h30) begin erase_block <= 1; erase_block_num <= (addr > 23'hFFFF ? {1'b0,addr[22:16]} : {5'd0,addr[15:13]} ); end
-					if (din == 8'h10) erase_chip  <= 1;
+					//if (din == 8'h10) erase_chip  <= 1;
 				end
 				if (addr[11:1] != (index == 3'd1 | index == 3'd4 ? 11'h2aa : 11'h555) & ~(din == 8'hF0 & index == 0) ) begin
 					index <= 0;

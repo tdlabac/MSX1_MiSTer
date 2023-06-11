@@ -53,7 +53,7 @@ module msx_slots
    input                 [1:0] active_slot,
    input  MSX::block_t         slot_layout[64],
    input  MSX::lookup_RAM_t    lookup_RAM[16],
-   input  MSX::lookup_RAM_t    lookup_SRAM[4],
+   input  MSX::lookup_SRAM_t   lookup_SRAM[4],
    input  MSX::bios_config_t   bios_config,
    input  dev_typ_t            cart_device[2],
   //SD
@@ -104,9 +104,9 @@ assign              device     = slot_layout[layout_id].device;
 wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
 wire         [15:0] size       = lookup_RAM[ref_ram].size;  //16kB * size
 wire                ram_ro     = lookup_RAM[ref_ram].ro;
-wire         [26:0] base_sram  = lookup_SRAM[cart_num ? 2'd3 :2'd2].addr;
+wire         [17:0] base_sram  = lookup_SRAM[cart_num ? 2'd3 :2'd2].addr;
 
-assign ram_addr = (sram_cs ? base_sram : base_ram) + mapper_addr;
+assign ram_addr = (sram_cs ? 27'(base_sram) : base_ram) + mapper_addr;
 
 wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                    :
                           mapper == MAPPER_NONE       ? 27'(mapper_none_addr)       :

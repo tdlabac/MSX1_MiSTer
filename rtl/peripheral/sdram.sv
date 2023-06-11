@@ -171,7 +171,7 @@ always @(posedge clk) begin
 	if(data_ready_delay3[CAS_LATENCY+BURST_LENGTH-1]) ch3_saved_data <= SDRAM_DQ;
 	if(data_ready_delay3[CAS_LATENCY+BURST_LENGTH-1]) ch3_ready <= 1;
 
-    SDRAM_DQ <= 16'bZ;
+    SDRAM_DQ <= 16'bz;
 
     command <= CMD_NOP;
     case (state)

@@ -155,6 +155,11 @@ package MSX;
 
     
     typedef struct {
+        logic [17:0] addr;
+        logic [15:0] size;
+    } lookup_SRAM_t;
+
+    typedef struct {
         cart_typ_t   typ;
         mapper_typ_t selected_mapper;
         logic [7:0]  selected_sram_size;

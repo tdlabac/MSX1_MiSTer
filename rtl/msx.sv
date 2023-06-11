@@ -62,7 +62,7 @@ module msx
    input              [1:0] sdram_size,
    input  MSX::block_t      slot_layout[64],
    input  MSX::lookup_RAM_t lookup_RAM[16],
-   input  MSX::lookup_RAM_t lookup_SRAM[4],
+   input  MSX::lookup_SRAM_t lookup_SRAM[4],
    //KBD
    input                    kbd_request,
    input              [8:0] kbd_addr,
