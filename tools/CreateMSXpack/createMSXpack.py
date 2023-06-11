@@ -105,7 +105,7 @@ def create_FW_block(type, size):
     return head
 
 def createFWpack(root, fileHandle) :
-    #try :
+    try :
         for fw in root.findall("./fw"):
             fw_name = fw.attrib["name"]
             fw_filename = fw.find('filename').text if fw.find('filename') is not None else None
@@ -128,8 +128,6 @@ def createFWpack(root, fileHandle) :
                             fileHandle.write(infile.read(size))
                         else :
                             fileHandle.write(infile.read())
-                        print(size)
-                        print(fileSize)
                         if size > fileSize :
                             fileHandle.write(bytes([0xFF] * (size - fileSize)))
                     else :
@@ -137,9 +135,9 @@ def createFWpack(root, fileHandle) :
                         raise Exception(f"Skip: {filename} Not found ROM {fw_filename} SHA1:{fw_SHA1}")
         fileHandle.close()
         return False
-    #except Exception as e:
-    #    print(e)
-    #    return True
+    except Exception as e:
+        print(e)
+        return True
 
 def getRefereced(secondary, reference) :
     block = secondary.find((f'.//block[@start="{reference}"]'))
@@ -174,7 +172,7 @@ def createMSXpack(root, fileHandle) :
                     block_ref = block.find('ref').text if block.find('ref') is not None else None
                     values = getValues(block, secondary)
                     head = create_MSX_block(primary_slot, secondary_slot, values) 
-                    print(' '.join([f'{byte:02X}' for byte in head[3:15]]) + " {0}/{1} ".format(primary_slot, secondary_slot) + str(values))
+                    #print(' '.join([f'{byte:02X}' for byte in head[3:15]]) + " {0}/{1} ".format(primary_slot, secondary_slot) + str(values))
                     if block_ref is None :
                         fileHandle.write(head)                      
                         if values["SHA1"] is not None :
@@ -195,13 +193,13 @@ def createMSXpack(root, fileHandle) :
         if kbd_layout is not None:
             values = {'type':"KBD LAYOUT", 'count':0}           
             head = create_MSX_block(0,0,values) 
-            print(' '.join([f'{byte:02X}' for byte in head[3:15]]) + " -/- " + str(values))
+            #print(' '.join([f'{byte:02X}' for byte in head[3:15]]) + " -/- " + str(values))
             fileHandle.write(head)
             fileHandle.write(base64.b64decode(kbd_layout.text))
         
         config = config | ((get_msx_type_id(msx_type_value) & 0x3) << 4)
         head = create_MSX_config(config)
-        print(' '.join([f'{byte:02X}' for byte in head[3:15]]))
+        #print(' '.join([f'{byte:02X}' for byte in head[3:15]]))
         fileHandle.write(head)
         fileHandle.close()
         return False
