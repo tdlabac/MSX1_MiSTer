@@ -47,11 +47,13 @@ wire [2:0] sram_A_select   = HPS_status[28:26];
 wire [3:0] mapper_A_select = HPS_status[23:20];
 wire [3:0] mapper_B_select = HPS_status[35:32]; 
 
-assign cart_conf[0].typ     = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
+cart_typ_t typ_A;
+assign typ_A = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
                               msx_type == MSX2                          ? CART_TYP_EMPTY  :
                               slot_A_select == CART_TYP_FDC             ? CART_TYP_FDC    :
                                                                           CART_TYP_EMPTY );
 
+assign cart_conf[0].typ                = typ_A;
 assign cart_conf[1].typ     = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
 assign cart_conf[0].selected_mapper    = mapper_typ_t'(mapper_A_select + 4'd2);
 assign cart_conf[1].selected_mapper    = mapper_typ_t'(mapper_B_select + 4'd2);

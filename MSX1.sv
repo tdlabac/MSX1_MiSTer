@@ -385,6 +385,9 @@ wire        sd_tx, sd_rx;
 wire  [7:0] d_to_sd, d_from_sd;
 
 dev_typ_t            cart_device[2];
+mapper_typ_t selected_mapper[2];
+assign selected_mapper[0] = cart_conf[0].selected_mapper;
+assign selected_mapper[1] = cart_conf[1].selected_mapper;
 msx MSX
 (
    .HS(hsync),
@@ -413,6 +416,7 @@ msx MSX
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
    .cart_device(cart_device),
+   .selected_mapper(selected_mapper),
    .flash_addr(flash_addr),
    .flash_din(flash_din),
    .flash_req(flash_req),

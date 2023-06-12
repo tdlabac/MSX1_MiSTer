@@ -45,6 +45,7 @@ module msx_slots
    input  MSX::lookup_RAM_t    lookup_RAM[16],
    input  MSX::lookup_SRAM_t   lookup_SRAM[4],
    input  MSX::bios_config_t   bios_config,
+   input  mapper_typ_t         selected_mapper[2],
    input  dev_typ_t            cart_device[2],
    //SD CARD
    output             [7:0] d_to_sd,
@@ -113,6 +114,7 @@ wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                
                           mapper == MAPPER_ASCII8     ? 27'(mapper_ascii8_addr)     :
                           mapper == MAPPER_ASCII16    ? 27'(mapper_ascii16_addr)    :
                           mapper == MAPPER_GM2        ? 27'(mapper_gm2_addr)        :
+                          mapper == MAPPER_RTYPE      ? 27'(mapper_ascii16_addr)    :
                                                         27'hDEAD                    ;
 
 assign cpu_din          = mapper_ram_dout                        //IO
@@ -292,7 +294,7 @@ cart_ascii16 ascii16
 (
    .rom_size(25'(size) << 14),
    .din(cpu_dout),
-   .cs(mapper == MAPPER_ASCII16),
+   .cs(mapper == MAPPER_ASCII16 | mapper == MAPPER_RTYPE),
    .mem_unmaped(mapper_ascii16_unmaped),
    .mem_addr(mapper_ascii16_addr),
    .*
