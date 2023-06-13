@@ -133,7 +133,7 @@ always @(posedge clk) begin
             ff_cnt[1] <= reg_freq[1];
          end else begin
             if (ff_cnt[1] == 12'd0) begin
-               ff_ptr[1] <= ff_ptr[0] + 5'd1;
+               ff_ptr[1] <= ff_ptr[1] + 5'd1;
                ff_cnt[1] <= reg_freq[1];
             end else begin
                ff_cnt[1] <= ff_cnt[1] - 12'd1;
