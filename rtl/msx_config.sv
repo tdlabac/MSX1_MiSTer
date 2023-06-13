@@ -12,11 +12,7 @@ parameter CONF_STR_MAPPER_B = {
     "H4O[35:32],Mapper type,auto,none,ASCII8,ASCII16,Konami,KonamiSCC,KOEI,linear64,R-TYPE,WIZARDRY;"
 };
 parameter CONF_STR_SRAM_SIZE_A = {
-    "H7H5O[28:26],SRAM size,auto,1kB,2kB,4kB,8kB,16kB,32kB,none;",
-    "h7H5O[28:26],SRAM size,auto,1kB,2kB,4kB,8kB,none;"
-};
-parameter CONF_STR_RAM_SIZE = {
-    "H7H2P2O[16:15],RAM Size,128kB,64kB,512kB,256kB;"
+    "H5O[28:26],SRAM size,auto,1kB,2kB,4kB,8kB,16kB,32kB,none;"
 };
 
 module msx_config
@@ -26,8 +22,6 @@ module msx_config
     input MSX_typ_t           msx_type,
     input              [63:0] HPS_status,
     input                     scandoubler,
-    input               [5:0] mapper_detected[2],
-    input               [2:0] sram_size_detected[2],
     input               [1:0] sdram_size,
     output MSX::config_cart_t cart_conf[2],
     output                    sram_A_select_hide,
@@ -38,9 +32,6 @@ module msx_config
     output                    reload
 );
 
-/*verilator tracing_off*/
-logic  [7:0] selected_sram_size_A;
-
 wire [2:0] slot_A_select   = HPS_status[19:17];
 wire [2:0] slot_B_select   = HPS_status[31:29];
 wire [2:0] sram_A_select   = HPS_status[28:26];
@@ -49,15 +40,15 @@ wire [3:0] mapper_B_select = HPS_status[35:32];
 
 cart_typ_t typ_A;
 assign typ_A = cart_typ_t'(slot_A_select < CART_TYP_FDC  ? slot_A_select   :
-                              msx_type == MSX2                          ? CART_TYP_EMPTY  :
-                              slot_A_select == CART_TYP_FDC             ? CART_TYP_FDC    :
-                                                                          CART_TYP_EMPTY );
+                           msx_type == MSX2              ? CART_TYP_EMPTY  :
+                           slot_A_select == CART_TYP_FDC ? CART_TYP_FDC    :
+                                                           CART_TYP_EMPTY );
 
 assign cart_conf[0].typ                = typ_A;
-assign cart_conf[1].typ     = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
+assign cart_conf[1].typ                = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
 assign cart_conf[0].selected_mapper    = mapper_typ_t'(mapper_A_select + 4'd2);
 assign cart_conf[1].selected_mapper    = mapper_typ_t'(mapper_B_select + 4'd2);
-assign cart_conf[0].selected_sram_size = sram_A_select_hide ? 8'd0 : 8'd0; // TODO dopočti
+assign cart_conf[0].selected_sram_size = typ_A == CART_TYP_ROM  & mapper_A_select > 4'd1 ? (8'd1 << (sram_A_select - 1'd1)) : 8'd0;
 assign cart_conf[1].selected_sram_size = 8'd0;
 
 assign msxConfig.typ = msx_type;
