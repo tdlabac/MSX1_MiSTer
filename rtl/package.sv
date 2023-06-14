@@ -32,6 +32,7 @@ package MSX;
         logic     [3:0] slot_expander_en;   
         MSX_typ_t       MSX_typ;
         logic     [7:0] ram_size;
+        logic           use_FDC;
     } bios_config_t;    
     
     typedef struct {

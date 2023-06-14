@@ -114,6 +114,7 @@ module memory_upload
          cart_slot_expander_en <= 4'd0;
          cart_device           <= '{0, 0};
          bios_config.ram_size  <= 8'h00;
+         bios_config.use_FDC   <= 1'b0;
          lookup_SRAM[0].size   <= 16'd0;
          lookup_SRAM[1].size   <= 16'd0;
          lookup_SRAM[2].size   <= 16'd0;
@@ -246,6 +247,7 @@ module memory_upload
                         mode        <= conf[9];
                         param       <= conf[10];
                         pattern     <= conf[11][2:0]; //2'd3;
+                        if (device_typ_t'(conf[7]) == DEVICE_FDC) bios_config.use_FDC <= 1'b1;
                         if (data_ID_t'(conf[4]) == ROM_RAM)
                            if (bios_config.ram_size < conf[6]) begin
                               bios_config.ram_size <= conf[6];

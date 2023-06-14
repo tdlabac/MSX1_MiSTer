@@ -290,7 +290,7 @@ wire [7:0] status_menumask;
 wire [1:0] sdram_size;
 assign status_menumask[0] = msxConfig.cas_audio_src == CAS_AUDIO_ADC;
 assign status_menumask[1] = fdc_enabled;
-assign status_menumask[2] = bios_config.MSX_typ == MSX1;
+assign status_menumask[2] = bios_config.use_FDC;
 assign status_menumask[3] = ROM_A_load_hide;
 assign status_menumask[4] = ROM_B_load_hide;
 assign status_menumask[5] = sram_A_select_hide;
@@ -339,7 +339,7 @@ msx_config msx_config
 (
    .clk(clk21m),
    .reset(reset),
-   .msx_type(bios_config.MSX_typ),
+   .bios_config(bios_config),
    .HPS_status(status),
    .scandoubler(scandoubler),
    .sdram_size(sdram_size),
