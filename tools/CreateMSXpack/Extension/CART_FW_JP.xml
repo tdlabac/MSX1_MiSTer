@@ -12,4 +12,8 @@
     <filename>VY010.ROM</filename>
     <SHA1>8924e3e11eb1c8c1edcb7efa63c26d2bdc142473</SHA1>
   </fw>
+  <fw name="MEGA_FLASH_ROM">
+    <filename>mfrsd.ROM</filename>
+    <SHA1>1621f623b834dc57cb2983f30b36bcc3ac56cafd</SHA1>
+  </fw>
 </fwConfig>
