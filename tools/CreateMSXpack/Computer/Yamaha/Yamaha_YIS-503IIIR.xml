@@ -7,8 +7,8 @@
       <block start="0">
         <type>ROM</type>
         <block_count>2</block_count>
-        <filename>yis503iir_basic-bios.rom</filename>
-        <SHA1>807a823d4cac527c9f3758ed412aa2584c7f6d37</SHA1>
+        <filename>yis503iii_basic-bios2.rom</filename>
+        <SHA1>0f851ee7a1cf79819f61cc89e9948ee72a413802</SHA1>
       </block>
     </secondary>
   </primary>
