@@ -1,0 +1,61 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>fs-a1_basic-bios2.rom</filename>
+        <SHA1>0081ea0d25bc5cd8d70b60ad8cfdc7307812c0fd</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0">
+        <type>RAM MAPPER</type>
+        <block_count>4</block_count>
+      </block>
+    </secondary>
+    <secondary slot="1">
+      <block start="0">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>fs-a1_msx2sub.rom</filename>
+        <SHA1>0fbd45ef3dd7bb82d4c31f1947884f411f1ca344</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="1">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>fs-a1_deskpac1.rom</filename>
+        <SHA1>63098f27beac9eca6b39d837d2a552395df33fe1</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>fs-a1_deskpac2.rom</filename>
+        <SHA1>7f5b76605e3d898cc4b5aacf1d7682b82fe84353</SHA1>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>
