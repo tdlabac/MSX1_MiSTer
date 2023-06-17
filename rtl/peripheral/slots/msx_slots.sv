@@ -89,6 +89,7 @@ wire          [1:0] block      = cpu_addr[15:14];
 wire          [1:0] subslot    = mapper_slot[active_slot][(3'd2 * block) +:2];
 wire          [5:0] layout_id  = {active_slot, subslot, block};
 wire          [3:0] ref_ram    = slot_layout[layout_id].ref_ram;
+wire          [1:0] ref_sram   = slot_layout[layout_id].ref_sram;
 wire          [1:0] offset_ram = slot_layout[layout_id].offset_ram;
 wire                cart_num   = slot_layout[layout_id].cart_num;
 assign              mapper     = slot_layout[layout_id].mapper;
@@ -96,7 +97,8 @@ assign              device     = slot_layout[layout_id].device;
 wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
 wire         [15:0] size       = lookup_RAM[ref_ram].size;  //16kB * size
 wire                ram_ro     = lookup_RAM[ref_ram].ro;
-wire         [17:0] base_sram  = lookup_SRAM[cart_num ? 2'd3 :2'd2].addr;
+wire         [17:0] base_sram  = lookup_SRAM[ref_sram].addr;
+wire         [15:0] size_sram  = lookup_SRAM[ref_sram].size;
 
 assign ram_addr = (sram_cs ? 27'(base_sram) : base_ram) + mapper_addr;
 
@@ -145,8 +147,8 @@ wire mem_unmaped = mapper_konami_unmaped     |
                    flash_rq                  ;
                    
 wire [3:0] mapper_mask = mapper_mfrd_mask;
-wire sram_cs     = fmpac_sram_cs | gm2_sram_cs;
-wire sram_wr     = fmpac_sram_wr | gm2_sram_wr;
+wire sram_cs     = fmpac_sram_cs | gm2_sram_cs | ascii16_sram_cs;
+wire sram_wr     = fmpac_sram_wr | gm2_sram_wr | ascii16_sram_wr;
 
 //MAPPER NONE
 wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
@@ -290,6 +292,7 @@ cart_ascii8 ascii8
 
 wire [24:0] mapper_ascii16_addr;
 wire        mapper_ascii16_unmaped;
+wire        ascii16_sram_cs, ascii16_sram_wr;
 cart_ascii16 ascii16
 (
    .rom_size(25'(size) << 14),
@@ -297,6 +300,8 @@ cart_ascii16 ascii16
    .cs(mapper == MAPPER_ASCII16 | mapper == MAPPER_RTYPE),
    .mem_unmaped(mapper_ascii16_unmaped),
    .mem_addr(mapper_ascii16_addr),
+   .sram_cs(ascii16_sram_cs),
+   .sram_we(ascii16_sram_wr),
    .*
 );
 
