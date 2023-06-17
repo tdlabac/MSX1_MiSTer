@@ -528,7 +528,7 @@ assign                                        {mapper             , mem_device  
    typ == CART_TYP_FM_PAC & subslot == 2'd0 ? {MAPPER_FMPAC       , DEVICE_NONE   , ROM_FMPAC          , 8'h08 , 8'h00 , 8'd8               , 8'd0    ,   DEV_OPL3             } : //4000 - 7FFF
    typ == CART_TYP_MFRSD  & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_MFRSD0 , ROM_MFRSD          , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_FLASH            } :
    typ == CART_TYP_MFRSD  & subslot == 2'd1 ? {MAPPER_MFRSD1      , DEVICE_NONE   , ROM_NONE           , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_SCC2 | DEV_FLASH } :
-   typ == CART_TYP_MFRSD  & subslot == 2'd2 ? {MAPPER_MFRSD2      , DEVICE_NONE   , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd32   ,   DEV_MFRSD2           } :
+   typ == CART_TYP_MFRSD  & subslot == 2'd2 ? {MAPPER_MFRSD2      , DEVICE_NONE   , ROM_RAM            , 8'hAA , 8'h00 , 8'd0               , 8'd32   ,   DEV_MFRSD2 | DEV_PSG } :
    typ == CART_TYP_MFRSD  & subslot == 2'd3 ? {MAPPER_MFRSD3      , DEVICE_NONE   , ROM_NONE           , 8'hAA , 8'h00 , 8'd0               , 8'd0    ,   DEV_FLASH            } :
    typ == CART_TYP_GM2    & subslot == 2'd0 ? {MAPPER_GM2         , DEVICE_NONE   , ROM_GM2            , 8'hAA , 8'h00 , 8'd8               , 8'd0    ,   DEV_NONE             } :
    typ == CART_TYP_FDC    & subslot == 2'd0 ? {MAPPER_NONE        , DEVICE_FDC    , ROM_FDC            , 8'h08 , 8'h00 , 8'd0               , 8'd0    ,   DEV_NONE             } :

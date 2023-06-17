@@ -248,7 +248,7 @@ jt49_bus PSG
 (
    .rst_n(~reset),
    .clk(clk21m),
-   .clk_en(ce_3m58_n),
+   .clk_en(ce_3m58_p),
    .bdir(psg_bdir),
    .bc1(psg_bc),
    .din(d_from_cpu),
