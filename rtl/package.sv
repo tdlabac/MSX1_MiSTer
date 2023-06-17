@@ -37,6 +37,7 @@ package MSX;
     
     typedef struct {
         logic  [3:0] ref_ram;
+        logic  [1:0] ref_sram;
         logic  [1:0] offset_ram;
         mapper_typ_t mapper;
         device_typ_t device;

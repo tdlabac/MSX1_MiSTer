@@ -389,6 +389,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd0}].ref_ram     <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd0}].offset_ram  <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].offset_ram : param[1:0];
                   slot_layout[{slotSubslot,2'd0}].cart_num    <= curr_conf == CONFIG_SLOT_B;
+                  slot_layout[{slotSubslot,2'd0}].ref_sram    <= ref_sram;
                end
                if (mode[3:2] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 1 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[3:2], param[3:2]);
@@ -403,6 +404,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd1}].ref_ram     <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd1}].offset_ram  <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].offset_ram : param[3:2];
                   slot_layout[{slotSubslot,2'd1}].cart_num    <= curr_conf == CONFIG_SLOT_B;
+                  slot_layout[{slotSubslot,2'd1}].ref_sram    <= ref_sram;
                end
                if (mode[5:4] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 2 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[5:4], param[5:4]);
@@ -417,6 +419,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd2}].ref_ram     <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd2}].offset_ram  <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].offset_ram : param[5:4];
                   slot_layout[{slotSubslot,2'd2}].cart_num    <= curr_conf == CONFIG_SLOT_B;
+                  slot_layout[{slotSubslot,2'd2}].ref_sram    <= ref_sram;
                end
                if (mode[7:6] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 3 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[7:6], param[7:6]);
@@ -431,6 +434,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd3}].ref_ram     <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
                   slot_layout[{slotSubslot,2'd3}].offset_ram  <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].offset_ram : param[7:6];
                   slot_layout[{slotSubslot,2'd3}].cart_num    <= curr_conf == CONFIG_SLOT_B;
+                  slot_layout[{slotSubslot,2'd3}].ref_sram    <= ref_sram;
                end
                state <= STATE_READ_CONF;
                ref_ram <= ref_ram + 4'(refAdd);
