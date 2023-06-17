@@ -181,7 +181,9 @@ def createMSXpack(root, fileHandle) :
                                 infile = open(rom_hashes[values["SHA1"]], "rb")
                                 if values["skip"] is not None :
                                     infile.seek(values["skip"], os.SEEK_SET)
-                                fileHandle.write(infile.read(values['count'] * 16 * 1024))
+                                write_size = fileHandle.write(infile.read(values['count'] * 16 * 1024))
+                                if write_size < values['count'] * 16 * 1024 :
+                                    fileHandle.write(bytes([0xFF] * (values['count'] * 16 * 1024 - write_size)))
                             else :
                                 fileHandle.close()
                                 raise Exception(f"Skip: {filename} Not found ROM {0} SHA1:{1}",values["filename"],values["SHA1"])
