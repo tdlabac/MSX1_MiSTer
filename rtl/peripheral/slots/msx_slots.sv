@@ -284,7 +284,7 @@ cart_ascii8 ascii8
    .rom_size(25'(size) << 14),
    .cpu_addr(cpu_addr),
    .din(cpu_dout),
-   .cs(mapper == MAPPER_ASCII8),
+   .cs(mapper == MAPPER_ASCII8 | mapper == MAPPER_KOEI),
    .mem_unmaped(mapper_ascii8_unmaped),
    .mem_addr(mapper_ascii8_addr),
    .*
