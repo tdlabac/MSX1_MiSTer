@@ -58,7 +58,7 @@ module msx_slots
    output                   debug_erase
 );
 
-assign sound = sound_opll + scc_wave;
+assign sound = sound_opll + scc_wave + sound_psg;
 assign d_to_sd = cpu_dout;
 assign debug_FDC_req = FDC_req;
 
@@ -379,6 +379,14 @@ opll opll
    .wr({1'b0, (opll_io_wr & fmpac_opll_io_enable[1]) | fmpac_opll_wr[1] , (opll_io_wr & fmpac_opll_io_enable[0]) | fmpac_opll_wr[0]}),
    .cs({1'b0, |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
    .sound(sound_opll)
+);
+wire signed [15:0] sound_psg;
+psg psg
+(
+   .cpu_addr(cpu_addr[7:0]),
+   .cs({|(cart_device[1] & DEV_PSG), |(cart_device[0] & DEV_PSG)}),
+   .sound(sound_psg),
+   .*
 );
 
 wire        FDC_req;
