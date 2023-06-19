@@ -26,6 +26,7 @@ module memory_upload
    output logic          [7:0] kbd_din,
    output logic                kbd_we,
    input                 [1:0] sdram_size,
+   output logic                load_sram,
    output MSX::block_t         slot_layout[64],
    output MSX::lookup_RAM_t    lookup_RAM[16],
    output MSX::lookup_SRAM_t   lookup_SRAM[4],
@@ -95,8 +96,8 @@ module memory_upload
       logic [26:0] save_ram_addr;
       logic  [3:0] cart_slot_expander_en;
       
-      ddr3_wr <= 1'd0;
-      
+      ddr3_wr   <= 1'b0;
+      load_sram <= 1'b0;
       if (ram_ce)               begin ram_ce  <= 1'b0; ram_addr  <= ram_addr + 1'd1; end
       if (ddr3_ready & ddr3_rd) begin ddr3_rd <= 1'b0; ddr3_addr <= ddr3_addr + 1'd1; end
       if (load) begin
@@ -144,7 +145,8 @@ module memory_upload
                state   <= STATE_READ_CONF2;
                if (save_addr == 0) begin
                   if (ddr3_addr >= 28'(ioctl_size[0])) begin
-                     state <= STATE_IDLE;
+                     state     <= STATE_IDLE;
+                     load_sram <= 1'b1;
                   end else begin
                      ddr3_rd    <= 1'b1;
                   end
