@@ -578,6 +578,7 @@ wire [26:0] upload_ram_addr;
 wire  [7:0] kbd_din;
 wire  [8:0] kbd_addr;
 wire        kbd_request, kbd_we;
+wire        load_sram;
 memory_upload memory_upload(
     .clk(clk21m),
     .reset_rq(reset_rq),
@@ -609,7 +610,8 @@ memory_upload memory_upload(
     .lookup_SRAM(lookup_SRAM),
     .bios_config(bios_config),
     .cart_conf(cart_conf), 
-    .cart_device(cart_device)
+    .cart_device(cart_device),
+    .load_sram(load_sram)
 );
 
 wire [27:0] ddr3_addr, ddr3_addr_download, ddr3_addr_cas;
@@ -693,7 +695,7 @@ nvram_backup nvram_backup
 (
    .clk(clk21m),
    .lookup_SRAM(lookup_SRAM),
-   .load_req(status[39]),
+   .load_req(status[39] | load_sram),
    .save_req(status[38]),
    .img_mounted(img_mounted[3:0]),
    .img_readonly(img_readonly),
