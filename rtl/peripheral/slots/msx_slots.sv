@@ -102,6 +102,9 @@ wire         [15:0] size_sram  = lookup_SRAM[ref_sram].size;
 
 assign ram_addr = (sram_cs ? 27'(base_sram) : base_ram) + mapper_addr;
 
+wire cart_ascii8  = mapper == MAPPER_ASCII8  | mapper == MAPPER_KOEI | mapper == MAPPER_WIZARDY;
+wire cart_ascii16 = mapper == MAPPER_ASCII16 | mapper == MAPPER_RTYPE;
+
 wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                    :
                           mapper == MAPPER_NONE       ? 27'(mapper_none_addr)       :
                           mapper == MAPPER_RAM        ? 27'(mapper_ram_addr)        :
@@ -113,10 +116,9 @@ wire [26:0] mapper_addr = mem_unmaped                 ? 27'hDEAD                
                           mapper == MAPPER_MFRSD1     ? 27'(mapper_mfrsd1_addr)     :
                           mapper == MAPPER_MFRSD2     ? 27'(mapper_mfrsd2_addr)     :
                           mapper == MAPPER_MFRSD3     ? 27'(mapper_mfrsd3_addr)     :
-                          mapper == MAPPER_ASCII8     ? 27'(mapper_ascii8_addr)     :
-                          mapper == MAPPER_ASCII16    ? 27'(mapper_ascii16_addr)    :
+                          cart_ascii8                 ? 27'(mapper_ascii8_addr)     :
+                          cart_ascii16                ? 27'(mapper_ascii16_addr)    :
                           mapper == MAPPER_GM2        ? 27'(mapper_gm2_addr)        :
-                          mapper == MAPPER_RTYPE      ? 27'(mapper_ascii16_addr)    :
                                                         27'hDEAD                    ;
 
 assign cpu_din          = mapper_ram_dout                        //IO
@@ -147,8 +149,8 @@ wire mem_unmaped = mapper_konami_unmaped     |
                    flash_rq                  ;
                    
 wire [3:0] mapper_mask = mapper_mfrd_mask;
-wire sram_cs     = fmpac_sram_cs | gm2_sram_cs | ascii16_sram_cs;
-wire sram_wr     = fmpac_sram_wr | gm2_sram_wr | ascii16_sram_wr;
+wire sram_cs     = fmpac_sram_cs | gm2_sram_cs | ascii16_sram_cs | ascii8_sram_cs;
+wire sram_wr     = fmpac_sram_wr | gm2_sram_wr | ascii16_sram_wr | ascii8_sram_wr;
 
 //MAPPER NONE
 wire [26:0] mapper_none_addr = 27'(cpu_addr[13:0]) + (27'(offset_ram) << 14);
@@ -279,14 +281,17 @@ cart_konami konami
 
 wire [24:0] mapper_ascii8_addr;
 wire        mapper_ascii8_unmaped;
+wire        ascii8_sram_cs, ascii8_sram_wr;
 cart_ascii8 ascii8
 (
    .rom_size(25'(size) << 14),
    .cpu_addr(cpu_addr),
    .din(cpu_dout),
-   .cs(mapper == MAPPER_ASCII8 | mapper == MAPPER_KOEI),
+   .cs(cart_ascii8),
    .mem_unmaped(mapper_ascii8_unmaped),
    .mem_addr(mapper_ascii8_addr),
+   .sram_cs(ascii8_sram_cs),
+   .sram_we(ascii8_sram_wr),
    .*
 );
 
@@ -297,7 +302,7 @@ cart_ascii16 ascii16
 (
    .rom_size(25'(size) << 14),
    .din(cpu_dout),
-   .cs(mapper == MAPPER_ASCII16 | mapper == MAPPER_RTYPE),
+   .cs(cart_ascii16),
    .mem_unmaped(mapper_ascii16_unmaped),
    .mem_addr(mapper_ascii16_addr),
    .sram_cs(ascii16_sram_cs),
