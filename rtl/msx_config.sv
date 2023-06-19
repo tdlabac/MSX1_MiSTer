@@ -48,7 +48,7 @@ assign cart_conf[0].typ                = typ_A;
 assign cart_conf[1].typ                = slot_B_select < CART_TYP_MFRSD ? cart_typ_t'(slot_B_select) : CART_TYP_EMPTY;
 assign cart_conf[0].selected_mapper    = mapper_typ_t'(mapper_A_select + 4'd2);
 assign cart_conf[1].selected_mapper    = mapper_typ_t'(mapper_B_select + 4'd2);
-assign cart_conf[0].selected_sram_size = typ_A == CART_TYP_ROM  & mapper_A_select > 4'd1 ? (8'd1 << (sram_A_select - 1'd1)) : 8'd0;
+assign cart_conf[0].selected_sram_size = typ_A == CART_TYP_ROM & mapper_A_select > 4'd1 & sram_A_select > 3'd0 & sram_A_select < 3'd7 ? (8'd1 << (sram_A_select - 1'd1)) : 8'd0;
 assign cart_conf[1].selected_sram_size = 8'd0;
 
 assign msxConfig.typ = bios_config.MSX_typ;
