@@ -68,7 +68,7 @@ logic [20:0] block_count;
 logic [31:0] lba_start;
 logic        done = 1'b0;
 
-assign ram_we         = rd & sd_ack[num] ;
+assign ram_we         = rd & sd_ack[num] & ~sd_buff_addr[9] ;
 assign ram_addr       = lookup_SRAM[num].addr + 18'({sd_lba[num],sd_buff_addr[8:0]});
 assign sd_buff_din[0] = ram_dout;
 assign sd_buff_din[1] = ram_dout;
