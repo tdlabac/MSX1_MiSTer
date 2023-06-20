@@ -55,7 +55,11 @@ def create_MSX_block(primary, secondary, values):
     
     config = BLOCK_TYPES[values["type"]]
     head.append(CONFIG_TYPES.index(config['CONFIG']) << 4 | slotSubslot)
-    head.append(MEM_DEVICE.index(config['MEMORY']))
+    
+    mem_device = config['MEMORY']
+    if values["type"] in ["IO_MIRROR", "MIRROR"] :
+        mem_device = BLOCK_TYPES[values['ref']['type']]["MEMORY"]
+    head.append(MEM_DEVICE.index(mem_device))
     if config['MEMORY'] == "NONE" :
         head.append(0x00)
         head.append(0x00)
@@ -64,8 +68,6 @@ def create_MSX_block(primary, secondary, values):
         head.append(int(values['count']) & 255)
     
     device = config['DEVICE']
-    if values["type"] in ["IO_MIRROR", "MIRROR"] :
-        device = BLOCK_TYPES[values['ref']['type']]["DEVICE"]
     if device != "NONE" :
         head.append(DEVICE_TYPES.index(device) - 1)
     else :
