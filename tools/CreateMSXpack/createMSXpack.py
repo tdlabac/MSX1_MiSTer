@@ -7,23 +7,35 @@ import base64
 ROM_DIR = 'ROM'
 XML_DIR_COMP = 'Computer'
 XML_DIR_FW = 'Extension'
-EXTENSIONS  = ["NONE", "ROM", "RAM", "FDC", "FM_PAC", "MEGA_FLASH_ROM", "GM2", "EMPTY" ]
-DEVICE_TYPES = ["NONE", "FDC","OPL3"]
-CONFIG_TYPES = ["NONE", "FDC", "SLOT_A", "SLOT_B", "SLOT_INTERNAL", "KBD_LAYOUT", "CONFIG"]
-MAPPER_TYPES = ["MAPPER_UNUSED", "MAPPER_RAM", "MAPPER_AUTO", "MAPPER_NONE"]
+EXTENSIONS  =  ["NONE"          , "ROM"           , "RAM"          , "FDC"              , 
+                "FM_PAC"        , "MEGA_FLASH_ROM", "GM2"          , "EMPTY"             ]
+
+MEM_DEVICE  =  ["NONE"          , "ROM"           , "RAM"          , "FDC"               ]
+
+DEVICE_TYPES = ["NONE"          , "KANJI"         , "OPL3"         , "RESET_STATUS"      ]
+
+CONFIG_TYPES = ["NONE"          , "FDC"           , "SLOT_A"       , "SLOT_B"           ,
+                "SLOT_INTERNAL" , "KBD_LAYOUT"    , "CONFIG"       , "DEVICE"            ]
+MAPPER_TYPES = ["MAPPER_UNUSED" , "MAPPER_RAM"    , "MAPPER_AUTO"  , "MAPPER_NONE"      , 
+                "MAPPER_ASCII8" , "MAPPER_ASCII16", "MAPPER_KONAMI", "MAPPER_KONAMI_SCC",
+                "MAPPER_KOEI"   , "MAPPER_LINEAR" , "MAPPER_RTYPE" , "MAPPER_WIZARDY"   , 
+                "MAPPER_FMPAC"  , "MAPPER_OFFSET" , "MAPPER_MFRSD1", "MAPPER_MFRSD2"    , 
+                "MAPPER_MFRSD3" , "MAPPER_GM2"    , "MAPPER_HALNOTE"                     ]
 MSX_TYPES    = ["MSX1", "MSX2"]
 
-BLOCK_TYPES = {"NONE"       : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "NONE"          },
-               "RAM"        : {"MEMORY": "RAM" , "DEVICE" : "NONE", "MAPPER" : "MAPPER_NONE",   "CONFIG" : "SLOT_INTERNAL" },
-               "RAM MAPPER" : {"MEMORY": "RAM" , "DEVICE" : "NONE", "MAPPER" : "MAPPER_RAM",    "CONFIG" : "SLOT_INTERNAL" },
-               "ROM"        : {"MEMORY": "ROM",  "DEVICE" : "NONE", "MAPPER" : "MAPPER_NONE",   "CONFIG" : "SLOT_INTERNAL" },
-               "FDC"        : {"MEMORY": "FDC" , "DEVICE" : "FDC",  "MAPPER" : "MAPPER_NONE",   "CONFIG" : "SLOT_INTERNAL" },
-               "SLOT A"     : {"MEMORY": "ROM" , "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "SLOT_A"        },
-               "SLOT B"     : {"MEMORY": "ROM" , "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "SLOT_B"        },
-               "KBD LAYOUT" : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "KBD_LAYOUT"    },
-               "ROM_MIRROR" : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_NONE",   "CONFIG" : "SLOT_INTERNAL" },
-               "IO_MIRROR"  : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_UNUSED", "CONFIG" : "SLOT_INTERNAL" },
-               "MIRROR"     : {"MEMORY": "NONE", "DEVICE" : "NONE", "MAPPER" : "MAPPER_NONE",   "CONFIG" : "SLOT_INTERNAL" },
+BLOCK_TYPES = {"NONE"       : {"MEMORY": "NONE", "DEVICE" : "NONE" , "MAPPER" : "MAPPER_UNUSED" , "CONFIG" : "NONE"          },
+               "RAM"        : {"MEMORY": "RAM" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
+               "RAM MAPPER" : {"MEMORY": "RAM" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_RAM"    , "CONFIG" : "SLOT_INTERNAL" },
+               "ROM"        : {"MEMORY": "ROM",  "DEVICE" : "NONE" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
+               "FDC"        : {"MEMORY": "FDC" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
+               "SLOT A"     : {"MEMORY": "ROM" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_UNUSED" , "CONFIG" : "SLOT_A"        },
+               "SLOT B"     : {"MEMORY": "ROM" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_UNUSED" , "CONFIG" : "SLOT_B"        },
+               "KBD LAYOUT" : {"MEMORY": "NONE", "DEVICE" : "NONE" , "MAPPER" : "MAPPER_UNUSED" , "CONFIG" : "KBD_LAYOUT"    },
+               "ROM_MIRROR" : {"MEMORY": "NONE", "DEVICE" : "NONE" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
+               "IO_MIRROR"  : {"MEMORY": "NONE", "DEVICE" : "NONE" , "MAPPER" : "MAPPER_UNUSED" , "CONFIG" : "SLOT_INTERNAL" },
+               "MIRROR"     : {"MEMORY": "NONE", "DEVICE" : "NONE" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
+               "HALNOTE"    : {"MEMORY": "ROM" , "DEVICE" : "NONE" , "MAPPER" : "MAPPER_HALNOTE", "CONFIG" : "SLOT_INTERNAL" },
+               "MSX-MUSIC"  : {"MEMORY": "ROM" , "DEVICE" : "OPL3" , "MAPPER" : "MAPPER_NONE"   , "CONFIG" : "SLOT_INTERNAL" },
                }
 
 def file_hash(filename):
@@ -43,17 +55,21 @@ def create_MSX_block(primary, secondary, values):
     
     config = BLOCK_TYPES[values["type"]]
     head.append(CONFIG_TYPES.index(config['CONFIG']) << 4 | slotSubslot)
-    head.append(EXTENSIONS.index(config['MEMORY']))
+    head.append(MEM_DEVICE.index(config['MEMORY']))
     if config['MEMORY'] == "NONE" :
         head.append(0x00)
         head.append(0x00)
     else :
         head.append((int(values['count']) >> 8) & 255)
         head.append(int(values['count']) & 255)
+    
+    device = config['DEVICE']
     if values["type"] in ["IO_MIRROR", "MIRROR"] :
-        head.append(DEVICE_TYPES.index(BLOCK_TYPES[values['ref']['type']]["DEVICE"])) 
+        device = BLOCK_TYPES[values['ref']['type']]["DEVICE"]
+    if device != "NONE" :
+        head.append(DEVICE_TYPES.index(device) - 1)
     else :
-        head.append(DEVICE_TYPES.index(config['DEVICE']))
+        head.append(0xFF)
     head.append(MAPPER_TYPES.index(config['MAPPER']))
 
     mode = 0x00
@@ -93,6 +109,18 @@ def create_MSX_config(config) :
         head.append(0)
     return head
 
+def create_MSX_device(typ, size) :
+    head = bytearray()
+    head.extend('MSX'.encode('ascii'))
+    head.append(CONFIG_TYPES.index("DEVICE") << 4)
+    head.append(0x00)
+    head.append((size >> 8) & 255)
+    head.append(size & 255)
+    head.append(DEVICE_TYPES.index(typ) - 1)
+    for i in range(len(head),16) :
+        head.append(0)
+    return head
+
 def create_FW_block(type, size):
     """Create and return a bytearray representing a block."""
     head = bytearray()
@@ -101,7 +129,8 @@ def create_FW_block(type, size):
     head.append(type)
     head.append(size >> 8)
     head.append(size & 255)
-    head.extend(bytearray(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00'))
+    for i in range(len(head),16) :
+        head.append(0)
     return head
 
 def createFWpack(root, fileHandle) :
@@ -184,6 +213,7 @@ def createMSXpack(root, fileHandle) :
                                 write_size = fileHandle.write(infile.read(values['count'] * 16 * 1024))
                                 if write_size < values['count'] * 16 * 1024 :
                                     fileHandle.write(bytes([0xFF] * (values['count'] * 16 * 1024 - write_size)))
+                                infile.close()
                             else :
                                 fileHandle.close()
                                 raise Exception(f"Skip: {filename} Not found ROM {0} SHA1:{1}",values["filename"],values["SHA1"])
@@ -194,6 +224,25 @@ def createMSXpack(root, fileHandle) :
         for head in heads :             
             fileHandle.write(head)
         
+        for device in root.findall("./device"):
+            device_typ = device.attrib["typ"]
+            rom = device.find("./rom")
+            if rom is not None:
+                rom_name = rom.find('filename').text if rom.find('filename') is not None else None
+                rom_SHA1 = rom.find('sha1').text if rom.find('sha1') is not None else None
+                rom_size = 0
+                if rom_SHA1 is not None:
+                    if rom_SHA1 in rom_hashes.keys() :
+                        rom_size = os.path.getsize(rom_hashes[rom_SHA1]) >> 14
+
+                        
+            head = create_MSX_device(device_typ, rom_size);
+            fileHandle.write(head)
+            if rom_size > 0 :
+                infile = open(rom_hashes[rom_SHA1], "rb") 
+                fileHandle.write(infile.read())
+                infile.close()
+
         kbd_layout = root.find('kbd_layout')
         if kbd_layout is not None:
             values = {'type':"KBD LAYOUT", 'count':0}           

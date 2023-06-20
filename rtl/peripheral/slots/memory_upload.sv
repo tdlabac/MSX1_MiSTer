@@ -32,7 +32,9 @@ module memory_upload
    output MSX::lookup_SRAM_t   lookup_SRAM[4],
    output MSX::bios_config_t   bios_config,
    input  MSX::config_cart_t   cart_conf[2],
-   output dev_typ_t            cart_device[2]
+   output dev_typ_t            cart_device[2],
+   output dev_typ_t            msx_device,
+   output                [3:0] msx_dev_ref_ram[8]
 );
    /*verilator tracing_off*/
    logic [26:0] ioctl_size [4];
@@ -86,7 +88,7 @@ module memory_upload
       logic [24:0] sram_size;
       logic  [1:0] ref_sram;
       mapper_typ_t mapper;
-      device_typ_t device;
+      device_typ_t mem_device;
       data_ID_t    data_id;
       logic [7:0]  mode;
       logic [7:0]  param;
@@ -179,7 +181,7 @@ module memory_upload
                            //mapper      <= cart_conf[curr_conf == CONFIG_SLOT_B].selected_mapper;
                            $display("SELECTED MAPPER: %d CART MAPPER %d", cart_conf[curr_conf == CONFIG_SLOT_B].selected_mapper, cart_mapper);
                            mapper      <= cart_mapper;
-                           device      <= cart_mem_device;
+                           mem_device  <= cart_mem_device;
                            mode        <= cart_mode;
                            param       <= cart_param;
                            data_id     <= cart_rom_id;
@@ -198,7 +200,7 @@ module memory_upload
                               ROM_ROM: begin
                                  if (ioctl_size[curr_conf == CONFIG_SLOT_A ? 2 : 3] > 0) begin                           
                                     save_addr <= ddr3_addr;   
-                                    ddr3_addr <= curr_conf == CONFIG_SLOT_A ? 28'hA00000 : 28'hF00000 ;    //ROM Store
+                                    ddr3_addr <= curr_conf == CONFIG_SLOT_A ? 28'hC00000 : 28'h1100000 ;    //ROM Store
                                     data_size <= ioctl_size[curr_conf == CONFIG_SLOT_A ? 2 : 3][24:0];
                                  end else begin
                                     state     <= STATE_READ_CONF;
@@ -210,7 +212,7 @@ module memory_upload
                               end
                               default: begin
                                  save_addr <= ddr3_addr;   
-                                 ddr3_addr <= 28'h100000;                                                            //FW Store
+                                 ddr3_addr <= 28'h300000;                                                            //FW Store
                                  ddr3_rd   <= 1'b1;                                                                  //Prefetch
                                  state     <= STATE_FIND_ROM;
                               end
@@ -241,16 +243,30 @@ module memory_upload
                         state                        <= STATE_READ_CONF;
                         $display("STORE config  MSX:%d SLOT_EXPANDER:%x (%x %x)",MSX_typ_t'(conf[4][5:4]), conf[4][3:0] | cart_slot_expander_en, conf[4][3:0], cart_slot_expander_en);
                      end
+                     CONFIG_DEVICE: begin
+                        $display("New device ID: %d msx_device Prev:%b New: %b",conf[7], msx_device, msx_device | 1 << conf[7] );
+                        msx_device                    <= msx_device | 1 << conf[7];
+                        msx_dev_ref_ram[conf[7][2:0]] <= ref_ram;
+                        data_size                     <= {conf[5][2:0], conf[6],14'h0};
+                        sram_size                     <= 25'd0;
+                        data_id                       <= ROM_ROM;
+                        mode                          <= 0;
+                     end
                      CONFIG_SLOT_INTERNAL: begin
                         mapper      <= mapper_typ_t'(conf[8]);
-                        device      <= device_typ_t'(conf[7]);
+                        mem_device  <= device_typ_t'(conf[4]);
                         data_size   <= {conf[5][2:0], conf[6],14'h0};
                         sram_size   <= 25'd0;
                         data_id     <= data_ID_t'(conf[4]);
                         mode        <= conf[9];
                         param       <= conf[10];
                         pattern     <= conf[11][2:0]; //2'd3;
-                        if (device_typ_t'(conf[7]) == DEVICE_FDC) bios_config.use_FDC <= 1'b1;
+                        if(conf[7] != 8'hFF) begin
+                           $display("New device ID: %d msx_device Prev:%b New: %b",conf[7], msx_device, msx_device | 1 << conf[7] );
+                           msx_device                    <= msx_device | 1 << conf[7];
+                           msx_dev_ref_ram[conf[7][2:0]] <= ref_ram;
+                        end
+                        if (device_typ_t'(conf[4]) == DEVICE_FDC) bios_config.use_FDC <= 1'b1;
                         if (data_ID_t'(conf[4]) == ROM_RAM)
                            if (bios_config.ram_size < conf[6]) begin
                               bios_config.ram_size <= conf[6];
@@ -371,12 +387,6 @@ module memory_upload
             STATE_STORE_SLOT_CONFIG: begin
                if (curr_conf  == CONFIG_SLOT_A | curr_conf  == CONFIG_SLOT_B) begin
                   cart_device[curr_conf == CONFIG_SLOT_B] <= cart_device[curr_conf == CONFIG_SLOT_B] | conf_device;
-                  /*
-                  if (cart_conf[curr_conf == CONFIG_SLOT_B].typ == CART_TYP_ROM)
-                     if (subslot == 0) cart_device[curr_conf == CONFIG_SLOT_B] <= conf_device;
-                  else
-                     cart_device[curr_conf == CONFIG_SLOT_B] <= conf_device;
-                     */
                end
                if (mode[1:0] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 0 mapper:%d (mapper selecte) mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[1:0], param[1:0]);
@@ -384,8 +394,8 @@ module memory_upload
                                                                  mode[1:0] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
 
-                  slot_layout[{slotSubslot,2'd0}].device      <= mode[1:0] == 2'd2 ? device                                        :
-                                                                 mode[1:0] == 2'd3 ? device                                        :
+                  slot_layout[{slotSubslot,2'd0}].device      <= mode[1:0] == 2'd2 ? mem_device                                    :
+                                                                 mode[1:0] == 2'd3 ? mem_device                                    :
                                                                                      DEVICE_NONE                                   ;
 
                   slot_layout[{slotSubslot,2'd0}].ref_ram     <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
@@ -399,8 +409,8 @@ module memory_upload
                                                                  mode[3:2] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
 
-                  slot_layout[{slotSubslot,2'd1}].device      <= mode[3:2] == 2'd2 ? device                                        :
-                                                                 mode[3:2] == 2'd3 ? device                                        :
+                  slot_layout[{slotSubslot,2'd1}].device      <= mode[3:2] == 2'd2 ? mem_device                                    :
+                                                                 mode[3:2] == 2'd3 ? mem_device                                    :
                                                                                      DEVICE_NONE                                   ;
 
                   slot_layout[{slotSubslot,2'd1}].ref_ram     <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
@@ -414,8 +424,8 @@ module memory_upload
                                                                  mode[5:4] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
 
-                  slot_layout[{slotSubslot,2'd2}].device      <= mode[5:4] == 2'd2 ? device                                        :
-                                                                 mode[5:4] == 2'd3 ? device                                        :
+                  slot_layout[{slotSubslot,2'd2}].device      <= mode[5:4] == 2'd2 ? mem_device                                    :
+                                                                 mode[5:4] == 2'd3 ? mem_device                                    :
                                                                                      DEVICE_NONE                                   ;
 
                   slot_layout[{slotSubslot,2'd2}].ref_ram     <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;
@@ -429,8 +439,8 @@ module memory_upload
                                                                  mode[7:6] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
 
-                  slot_layout[{slotSubslot,2'd3}].device      <= mode[7:6] == 2'd2 ? device                                        :
-                                                                 mode[7:6] == 2'd3 ? device                                        :
+                  slot_layout[{slotSubslot,2'd3}].device      <= mode[7:6] == 2'd2 ? mem_device                                        :
+                                                                 mode[7:6] == 2'd3 ? mem_device                                        :
                                                                                      DEVICE_NONE                                   ;
 
                   slot_layout[{slotSubslot,2'd3}].ref_ram     <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].ref_ram : data_id == ROM_NONE ? 4'd0 : ref_ram;

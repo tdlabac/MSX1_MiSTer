@@ -251,14 +251,14 @@ localparam CONF_STR = {
    "MSX1;",
    "-;",
    "FC1,MSX,Load ROM PACK,30000000;",
-   "FC2,MSX,Load FW  PACK,30100000;",   
+   "FC2,MSX,Load FW  PACK,30300000;",   
    CONF_STR_SLOT_A,
-   "H3FS3,ROM,Load,30A00000;",
+   "H3FS3,ROM,Load,30C00000;",
    CONF_STR_MAPPER_A,
    CONF_STR_SRAM_SIZE_A,
    "-;",
    CONF_STR_SLOT_B,
-   "H4F4,ROM,Load,30F00000;",
+   "H4F4,ROM,Load,31100000;",
    CONF_STR_MAPPER_B,
    "H6-;",
    "H6R[38],SRAM Save;",
@@ -268,7 +268,7 @@ localparam CONF_STR = {
    "S4,VHD,Load SD card;",
    "-;",
    "O[8],Tape Input,File,ADC;",
-   "H0F5,CAS,Cas File,31400000;",
+   "H0F5,CAS,Cas File,31600000;",
    "H0T9,Tape Rewind;",
    "-;",
    "P1,Video settings;",
@@ -383,7 +383,9 @@ wire        ram_rnw, sdram_ce, bram_ce;
 wire        sd_tx, sd_rx;
 wire  [7:0] d_to_sd, d_from_sd;
 
-dev_typ_t            cart_device[2];
+dev_typ_t    cart_device[2];
+dev_typ_t    msx_device;
+wire   [3:0] msx_dev_ref_ram[8];
 mapper_typ_t selected_mapper[2];
 assign selected_mapper[0] = cart_conf[0].selected_mapper;
 assign selected_mapper[1] = cart_conf[1].selected_mapper;
@@ -415,6 +417,8 @@ msx MSX
    .lookup_SRAM(lookup_SRAM),
    .bios_config(bios_config),
    .cart_device(cart_device),
+   .msx_device(msx_device),
+   .msx_dev_ref_ram(msx_dev_ref_ram),
    .selected_mapper(selected_mapper),
    .flash_addr(flash_addr),
    .flash_din(flash_din),
@@ -611,6 +615,8 @@ memory_upload memory_upload(
     .bios_config(bios_config),
     .cart_conf(cart_conf), 
     .cart_device(cart_device),
+    .msx_device(msx_device),
+    .msx_dev_ref_ram(msx_dev_ref_ram),
     .load_sram(load_sram)
 );
 

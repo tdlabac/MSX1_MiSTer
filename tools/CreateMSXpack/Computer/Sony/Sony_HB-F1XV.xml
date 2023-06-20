@@ -1,0 +1,87 @@
+<?xml version="1.0" ?>
+<msxConfig>
+  <type>MSX2</type>
+  <kbd_layout>/yX/cWdlZv//ZP//cHMh////YP9hRgH///9XUCZUAv//MFUxMgQD//+AUzNRRwX//0MnNTRWBv///0I3UgcQ//8iQDZEABH//yMkQRdFEv///yD/FRP//2Ngdxb/FP//////////df///////////////////3L/dv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////Yv//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hIH///+Cg4b/h4X///////90//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8=</kbd_layout>
+  <device typ="KANJI" id="Kanji ROM">
+    <rom>
+      <filename>hb-f1xv_kanjifont.rom</filename>
+      <sha1>218d91eb6df2823c924d3774a9f455492a10aecb</sha1>
+    </rom>
+  </device>
+  <device typ="RESET_STATUS" id="Reset Status register"></device>  
+  <primary slot="0">
+    <secondary slot="0">
+      <block start="0" id="MSX BIOS with BASIC ROM">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>Sony_HB-F1XV.rom</filename>
+        <SHA1>f2a1d326d72d4c70ea214d7883838de8847a82b7</SHA1>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="0" id="HB-F1XV MSX-JE">
+        <type>HALNOTE</type>
+        <block_count>64</block_count>
+        <filename>hb-f1xv.rom</filename>
+        <SHA1>ade0c5ba5574f8114d7079050317099b4519e88f</SHA1>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="1">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT A</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="2">
+    <secondary slot="0">
+      <block start="0">
+        <type>SLOT B</type>
+      </block>
+    </secondary>
+  </primary>
+  <primary slot="3">
+    <secondary slot="0">
+      <block start="0" id="Main RAM">
+        <type>RAM MAPPER</type>
+        <block_count>4</block_count>
+        <pattern>4</pattern>
+      </block>
+    </secondary>
+    <secondary slot="1">
+      <block start="0" id="MSX Sub ROM">
+        <type>ROM</type>
+        <block_count>1</block_count>
+        <filename>Sony_HB-F1XV.rom</filename>
+        <SHA1>f2a1d326d72d4c70ea214d7883838de8847a82b7</SHA1>
+        <skip>32768</skip>
+      </block>
+      <block start="1" id="MSX Kanji Driver with BASIC">
+        <type>ROM</type>
+        <block_count>2</block_count>
+        <filename>Sony_HB-F1XV.rom</filename>
+        <SHA1>f2a1d326d72d4c70ea214d7883838de8847a82b7</SHA1>
+        <skip>65536</skip>
+      </block>
+    </secondary>
+    <secondary slot="2">
+      <block start="1" id="Memory Mapped FDC">
+        <type>FDC</type>
+        <block_count>1</block_count>
+        <filename>Sony_HB-F1XV.rom</filename>
+        <SHA1>f2a1d326d72d4c70ea214d7883838de8847a82b7</SHA1>
+        <skip>49152</skip>
+      </block>
+    </secondary>
+    <secondary slot="3">
+      <block start="1" id="MSX Music">
+        <type>MSX-MUSIC</type>
+        <block_count>1</block_count>
+        <filename>Sony_HB-F1XV.rom</filename>
+        <SHA1>f2a1d326d72d4c70ea214d7883838de8847a82b7</SHA1>
+        <skip>98304</skip>
+      </block>
+    </secondary>
+  </primary>
+</msxConfig>
