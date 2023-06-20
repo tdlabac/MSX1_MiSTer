@@ -387,12 +387,6 @@ module memory_upload
             STATE_STORE_SLOT_CONFIG: begin
                if (curr_conf  == CONFIG_SLOT_A | curr_conf  == CONFIG_SLOT_B) begin
                   cart_device[curr_conf == CONFIG_SLOT_B] <= cart_device[curr_conf == CONFIG_SLOT_B] | conf_device;
-                  /*
-                  if (cart_conf[curr_conf == CONFIG_SLOT_B].typ == CART_TYP_ROM)
-                     if (subslot == 0) cart_device[curr_conf == CONFIG_SLOT_B] <= conf_device;
-                  else
-                     cart_device[curr_conf == CONFIG_SLOT_B] <= conf_device;
-                     */
                end
                if (mode[1:0] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 0 mapper:%d (mapper selecte) mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[1:0], param[1:0]);
