@@ -102,7 +102,8 @@ wire                ram_ro     = lookup_RAM[ref_ram].ro;
 wire         [17:0] base_sram  = lookup_SRAM[ref_sram].addr;
 wire         [15:0] size_sram  = lookup_SRAM[ref_sram].size;
 
-assign ram_addr = (sram_cs ? 27'(base_sram) : base_ram) + mapper_addr;
+assign ram_addr   = device_kanji_ram_ce ? device_kanji_addr                                   :
+                                          (sram_cs ? 27'(base_sram) : base_ram) + mapper_addr ;
 
 wire cart_ascii8  = mapper == MAPPER_ASCII8  | mapper == MAPPER_KOEI | mapper == MAPPER_WIZARDY;
 wire cart_ascii16 = mapper == MAPPER_ASCII16 | mapper == MAPPER_RTYPE;
@@ -133,9 +134,9 @@ assign cpu_din          = mapper_ram_dout                        //IO
                         & flash_dout
                         & (mem_unmaped  ? 8'hFF : ram_dout);
 
-assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED & ~mem_unmaped;
-assign bram_ce  = (sdram_size == 2'd0 | sram_cs)  & cpu_mreq & (cpu_rd | (cpu_wr & (~ram_ro | sram_cs))) & mapper != MAPPER_UNUSED & ~mem_unmaped;
-assign ram_rnw  = (sram_cs & ~sram_wr) | (~sram_cs & ~cpu_wr & cpu_mreq);
+assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & ((cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED & ~mem_unmaped) | device_kanji_ram_ce);
+assign bram_ce  = (sdram_size == 2'd0 | sram_cs)  & ((cpu_mreq & (cpu_rd | (cpu_wr & (~ram_ro | sram_cs))) & mapper != MAPPER_UNUSED & ~mem_unmaped) | device_kanji_ram_ce);
+assign ram_rnw  = ~((sram_cs & sram_wr) | (~sram_cs & cpu_wr & cpu_mreq & ~ram_ro));
 
 assign ram_din  = cpu_dout;
 
@@ -387,6 +388,21 @@ opll opll
    .cs({|(msx_device & DEV_OPL3), |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
    .sound(sound_opll)
 );
+
+wire        device_kanji_ram_ce;
+wire [26:0] device_kanji_addr;
+kanji kanji
+(
+   .addr(cpu_addr[7:0]),
+   .din(cpu_dout),
+   .cs(|(msx_device & DEV_KANJI)),
+   .base_ram(lookup_RAM[msx_dev_ref_ram[0]].addr),
+   .rom_size(lookup_RAM[msx_dev_ref_ram[0]].size),
+   .mem_addr(device_kanji_addr),
+   .ram_ce(device_kanji_ram_ce),
+   .*
+);
+
 wire signed [15:0] sound_psg;
 psg psg
 (
