@@ -47,6 +47,8 @@ module msx_slots
    input  MSX::bios_config_t   bios_config,
    input  mapper_typ_t         selected_mapper[2],
    input  dev_typ_t            cart_device[2],
+   input  dev_typ_t            msx_device,
+   input                 [3:0] msx_dev_ref_ram[8],
    //SD CARD
    output             [7:0] d_to_sd,
    input              [7:0] d_from_sd,
@@ -381,8 +383,8 @@ opll opll
    .cen(clk_en),
    .din(cpu_dout),
    .addr(cpu_addr[0]),
-   .wr({1'b0, (opll_io_wr & fmpac_opll_io_enable[1]) | fmpac_opll_wr[1] , (opll_io_wr & fmpac_opll_io_enable[0]) | fmpac_opll_wr[0]}),
-   .cs({1'b0, |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
+   .wr({opll_io_wr, (opll_io_wr & fmpac_opll_io_enable[1]) | fmpac_opll_wr[1] , (opll_io_wr & fmpac_opll_io_enable[0]) | fmpac_opll_wr[0]}),
+   .cs({|(msx_device & DEV_OPL3), |(cart_device[1] & DEV_OPL3), |(cart_device[0] & DEV_OPL3)}),
    .sound(sound_opll)
 );
 wire signed [15:0] sound_psg;
