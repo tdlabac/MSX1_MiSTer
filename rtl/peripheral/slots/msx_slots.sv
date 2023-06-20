@@ -133,6 +133,7 @@ assign cpu_din          = mapper_ram_dout                        //IO
                         & d_to_cpu_FDC                           //UNMAPPED
                         & scc_sound_dout                         //UNMAPPED
                         & flash_dout
+                        & d_to_cpu_reset_status                  //IO
                         & (mem_unmaped  ? 8'hFF : ram_dout);
 
 assign sdram_ce = (sdram_size != 2'd0 & ~sram_cs) & ((cpu_mreq & (cpu_rd | (cpu_wr & ~ram_ro)) & mapper != MAPPER_UNUSED & ~mem_unmaped) | device_kanji_ram_ce);
@@ -414,6 +415,15 @@ kanji kanji
    .rom_size(lookup_RAM[msx_dev_ref_ram[0]].size),
    .mem_addr(device_kanji_addr),
    .ram_ce(device_kanji_ram_ce),
+   .*
+);
+
+wire [7:0] d_to_cpu_reset_status;
+dev_reset_status dev_reset_status
+(
+   .cpu_addr(cpu_addr[7:0]),
+   .cs(|(msx_device & DEV_RESET_STATUS)),
+   .dout(d_to_cpu_reset_status),
    .*
 );
 
