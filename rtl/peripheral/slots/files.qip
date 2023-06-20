@@ -15,3 +15,4 @@ set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) f
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) gamemaster2.sv                     ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) psg.sv                             ]
 set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) kanji.sv                           ]
+set_global_assignment -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) halnote.sv                         ]
