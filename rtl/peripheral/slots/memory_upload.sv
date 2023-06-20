@@ -200,7 +200,7 @@ module memory_upload
                               ROM_ROM: begin
                                  if (ioctl_size[curr_conf == CONFIG_SLOT_A ? 2 : 3] > 0) begin                           
                                     save_addr <= ddr3_addr;   
-                                    ddr3_addr <= curr_conf == CONFIG_SLOT_A ? 28'hA00000 : 28'hF00000 ;    //ROM Store
+                                    ddr3_addr <= curr_conf == CONFIG_SLOT_A ? 28'hC00000 : 28'h1100000 ;    //ROM Store
                                     data_size <= ioctl_size[curr_conf == CONFIG_SLOT_A ? 2 : 3][24:0];
                                  end else begin
                                     state     <= STATE_READ_CONF;
@@ -212,7 +212,7 @@ module memory_upload
                               end
                               default: begin
                                  save_addr <= ddr3_addr;   
-                                 ddr3_addr <= 28'h100000;                                                            //FW Store
+                                 ddr3_addr <= 28'h300000;                                                            //FW Store
                                  ddr3_rd   <= 1'b1;                                                                  //Prefetch
                                  state     <= STATE_FIND_ROM;
                               end
