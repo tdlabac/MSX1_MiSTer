@@ -24,7 +24,7 @@ always @(posedge clk) begin
       subMapperEnabled <= 1'b0;
       sramEnabled      <= 1'b0;
    end else begin
-      if (cpu_addr[10:0] == 11'b111_1111_1111 & cpu_wr & cpu_mreq) begin
+      if (cpu_addr[10:0] == 11'b111_1111_1111 & cpu_wr & cpu_mreq & cs) begin
          if (cpu_addr[15:12] == 4'b0111) begin
             subBank[cpu_addr[13]] <= din;
          end else begin
