@@ -229,14 +229,13 @@ def createMSXpack(root, fileHandle) :
         for device in root.findall("./device"):
             device_typ = device.attrib["typ"]
             rom = device.find("./rom")
+            rom_size = 0
             if rom is not None:
                 rom_name = rom.find('filename').text if rom.find('filename') is not None else None
                 rom_SHA1 = rom.find('sha1').text if rom.find('sha1') is not None else None
-                rom_size = 0
                 if rom_SHA1 is not None:
                     if rom_SHA1 in rom_hashes.keys() :
                         rom_size = os.path.getsize(rom_hashes[rom_SHA1]) >> 14
-
                         
             head = create_MSX_device(device_typ, rom_size);
             fileHandle.write(head)
