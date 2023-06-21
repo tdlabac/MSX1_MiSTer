@@ -32,6 +32,7 @@ module memory_upload
    output MSX::lookup_SRAM_t   lookup_SRAM[4],
    output MSX::bios_config_t   bios_config,
    input  MSX::config_cart_t   cart_conf[2],
+   output                [1:0] rom_loaded,
    output dev_typ_t            cart_device[2],
    output dev_typ_t            msx_device,
    output                [3:0] msx_dev_ref_ram[8]
@@ -56,11 +57,13 @@ module memory_upload
       if (rom_eject) begin
          ioctl_size[2] <= 0;
          ioctl_size[3] <= 0; 
-         load <= 1;
+         //load <= 1;
       end
       if (reload) load <= 1;
       ioctl_download_last <= ioctl_download;
    end 
+
+   assign rom_loaded = {|ioctl_size[3],|ioctl_size[2]};
 
    typedef enum logic [3:0] {STATE_IDLE, STATE_CLEAN, STATE_READ_CONF, STATE_READ_CONF2, STATE_CHECK_CONFIG, STATE_FILL_RAM, STATE_FILL_RAM2, STATE_STORE_SLOT_CONFIG, STATE_FIND_ROM, STATE_FILL_KBD, STATE_ERROR} state_t;
    state_t state;
@@ -97,7 +100,7 @@ module memory_upload
       logic [26:0] sram_addr;
       logic [26:0] save_ram_addr;
       logic  [3:0] cart_slot_expander_en;
-      
+      logic        external;
       ddr3_wr   <= 1'b0;
       load_sram <= 1'b0;
       if (ram_ce)               begin ram_ce  <= 1'b0; ram_addr  <= ram_addr + 1'd1; end
@@ -132,9 +135,10 @@ module memory_upload
             end
             STATE_CLEAN: begin
                ddr3_request  <= 1'd1;
-               slot_layout[block_num].mapper <= MAPPER_UNUSED;
-               slot_layout[block_num].device <= DEVICE_NONE;
-               block_num                     <= block_num + 1'd1;
+               slot_layout[block_num].mapper   <= MAPPER_UNUSED;
+               slot_layout[block_num].device   <= DEVICE_NONE;
+               slot_layout[block_num].external <= 1'b0;
+               block_num                       <= block_num + 1'd1;
                if (block_num == 63) begin
                   state      <= STATE_READ_CONF;
                   block_num  <= 0;
@@ -170,6 +174,7 @@ module memory_upload
                state <= STATE_IDLE;
                data_size <= 25'd0;
                sram_size <= 25'd0;
+               external  <= 1'd0;
                if ({conf[0],conf[1],conf[2]} == {"M","S","X"}) begin
                   state <= STATE_FILL_RAM;
                   slotSubslot <= conf[3][3:0];
@@ -185,6 +190,7 @@ module memory_upload
                            mode        <= cart_mode;
                            param       <= cart_param;
                            data_id     <= cart_rom_id;
+                           external    <= 1'd1;
                            if (cart_rom_id == ROM_ROM) begin
                               if (curr_conf == CONFIG_SLOT_A) begin
                                  sram_size <= 25'({cart_sram_size, 10'd0});
@@ -402,9 +408,10 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd0}].offset_ram  <= mode[1:0] == 2'd1 ? slot_layout[{slotSubslot,param[1:0]}].offset_ram : param[1:0];
                   slot_layout[{slotSubslot,2'd0}].cart_num    <= curr_conf == CONFIG_SLOT_B;
                   slot_layout[{slotSubslot,2'd0}].ref_sram    <= ref_sram;
+                  slot_layout[{slotSubslot,2'd0}].external    <= external;
                end
                if (mode[3:2] != 2'd0) begin
-                  $display("STORE slot %d subslot %d block 1 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[3:2], param[3:2]);
+                  $display("STORE slot %d subslot %d block 1 mapper:%d mode:%d param:%d device:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[3:2], param[3:2], mem_device);
                   slot_layout[{slotSubslot,2'd1}].mapper      <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].mapper  :
                                                                  mode[3:2] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
@@ -417,9 +424,10 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd1}].offset_ram  <= mode[3:2] == 2'd1 ? slot_layout[{slotSubslot,param[3:2]}].offset_ram : param[3:2];
                   slot_layout[{slotSubslot,2'd1}].cart_num    <= curr_conf == CONFIG_SLOT_B;
                   slot_layout[{slotSubslot,2'd1}].ref_sram    <= ref_sram;
+                  slot_layout[{slotSubslot,2'd1}].external    <= external;
                end
                if (mode[5:4] != 2'd0) begin
-                  $display("STORE slot %d subslot %d block 2 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[5:4], param[5:4]);
+                  $display("STORE slot %d subslot %d block 2 mapper:%d mode:%d param:%d device:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[5:4], param[5:4],mem_device);
                   slot_layout[{slotSubslot,2'd2}].mapper      <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].mapper  :
                                                                  mode[5:4] == 2'd2 ? mapper                                        :
                                                                                      MAPPER_UNUSED                                 ;
@@ -432,6 +440,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd2}].offset_ram  <= mode[5:4] == 2'd1 ? slot_layout[{slotSubslot,param[5:4]}].offset_ram : param[5:4];
                   slot_layout[{slotSubslot,2'd2}].cart_num    <= curr_conf == CONFIG_SLOT_B;
                   slot_layout[{slotSubslot,2'd2}].ref_sram    <= ref_sram;
+                  slot_layout[{slotSubslot,2'd2}].external    <= external;
                end
                if (mode[7:6] != 2'd0) begin
                   $display("STORE slot %d subslot %d block 3 mapper:%d mode:%d param:%d",slotSubslot[3:2],slotSubslot[1:0], mapper, mode[7:6], param[7:6]);
@@ -447,6 +456,7 @@ module memory_upload
                   slot_layout[{slotSubslot,2'd3}].offset_ram  <= mode[7:6] == 2'd1 ? slot_layout[{slotSubslot,param[7:6]}].offset_ram : param[7:6];
                   slot_layout[{slotSubslot,2'd3}].cart_num    <= curr_conf == CONFIG_SLOT_B;
                   slot_layout[{slotSubslot,2'd3}].ref_sram    <= ref_sram;
+                  slot_layout[{slotSubslot,2'd3}].external    <= external;
                end
                state <= STATE_READ_CONF;
                ref_ram <= ref_ram + 4'(refAdd);

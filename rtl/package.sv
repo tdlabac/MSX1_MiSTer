@@ -45,6 +45,7 @@ package MSX;
         mapper_typ_t mapper;
         device_typ_t device;
         logic        cart_num;
+        logic        external;
     } block_t;    
     
     typedef struct {
