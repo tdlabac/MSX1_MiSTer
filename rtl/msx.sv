@@ -33,7 +33,6 @@ module msx
    input  dev_typ_t         msx_device,
    input              [3:0] msx_dev_ref_ram[8],
    input  mapper_typ_t      selected_mapper[2],
-   input                    rom_eject,
    input                    sram_save,
    input                    sram_load,
    //IOCTL

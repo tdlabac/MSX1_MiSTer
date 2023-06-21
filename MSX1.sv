@@ -345,6 +345,7 @@ msx_config msx_config
    .sdram_size(sdram_size),
    .cart_conf(cart_conf),
    .reload(reload),
+   .rom_loaded(rom_loaded),
    .sram_A_select_hide(sram_A_select_hide),
    .ROM_A_load_hide(ROM_A_load_hide),
    .ROM_B_load_hide(ROM_B_load_hide),
@@ -397,7 +398,6 @@ msx MSX
    .cas_motor(motor),
    .cas_audio_in(msxConfig.cas_audio_src == CAS_AUDIO_FILE  ? CAS_dout : tape_in),
    .rtc_time(rtc),
-   .rom_eject(status[10]),
    .sram_save(status[38]),
    .sram_load(status[39]),
    .ioctl_addr(ioctl_addr[26:0]),
@@ -583,6 +583,7 @@ wire  [7:0] kbd_din;
 wire  [8:0] kbd_addr;
 wire        kbd_request, kbd_we;
 wire        load_sram;
+wire  [1:0] rom_loaded;
 memory_upload memory_upload(
     .clk(clk21m),
     .reset_rq(reset_rq),
@@ -613,7 +614,8 @@ memory_upload memory_upload(
     .lookup_RAM(lookup_RAM),
     .lookup_SRAM(lookup_SRAM),
     .bios_config(bios_config),
-    .cart_conf(cart_conf), 
+    .cart_conf(cart_conf),
+    .rom_loaded(rom_loaded),
     .cart_device(cart_device),
     .msx_device(msx_device),
     .msx_dev_ref_ram(msx_dev_ref_ram),

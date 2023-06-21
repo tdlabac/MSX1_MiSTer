@@ -94,8 +94,11 @@ wire          [3:0] ref_ram    = slot_layout[layout_id].ref_ram;
 wire          [1:0] ref_sram   = slot_layout[layout_id].ref_sram;
 wire          [1:0] offset_ram = slot_layout[layout_id].offset_ram;
 wire                cart_num   = slot_layout[layout_id].cart_num;
-assign              mapper     = slot_layout[layout_id].mapper;
+wire                external   = slot_layout[layout_id].external;
 assign              device     = slot_layout[layout_id].device;
+assign              mapper     = selected_mapper[cart_num] == MAPPER_UNUSED 
+                               & device == DEVICE_ROM 
+                               & external                                     ? MAPPER_UNUSED : slot_layout[layout_id].mapper;                              
 wire         [26:0] base_ram   = lookup_RAM[ref_ram].addr;
 wire         [15:0] size       = lookup_RAM[ref_ram].size;  //16kB * size
 wire                ram_ro     = lookup_RAM[ref_ram].ro;
